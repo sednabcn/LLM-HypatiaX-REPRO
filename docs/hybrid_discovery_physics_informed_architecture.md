@@ -1787,3 +1787,17 @@ All transforms and coefficients are re-fit within each training fold. Full-train
 - The selected winner and Pareto front are reproducible under fixed seeds and independent of far/test values.
 
 Acceptance criterion: a typed HybridDiscovery report can contain independently gated, fold-evaluated candidates from both LLM and PySR paths when both were actually generated. A report containing only one source must explain why the other source was not run or produced no admissible candidate.
+
+
+## Finite-grid screening is not a continuous-domain proof
+
+The runtime domain checks evaluate declared expressions on a deterministic,
+bounded Cartesian grid. A sample with no violations is now reported as
+unknown, not pass, and carries explicit sampled_screening_status,
+grid_is_exhaustive, and continuous_domain_proof_established=false evidence.
+This applies even when every point in the finite grid was evaluated: a finite
+grid cannot establish positivity, nonnegativity, or finiteness over a
+continuous domain. A sampled violation remains a fail. Consequently, a hard
+sample-only constraint blocks candidate eligibility; a soft constraint
+retains its screening evidence without blocking eligibility. No symbolic
+continuous-domain proof engine is claimed by this change.

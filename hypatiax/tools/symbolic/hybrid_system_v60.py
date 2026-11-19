@@ -8,16 +8,19 @@ far-evaluation API. The default path remains V50.2 compatible.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import wraps
 from hashlib import sha256
 import json
+from threading import RLock
 from typing import Any, Mapping
 
 import numpy as np
 
 from hypatiax.tools.symbolic.discovery_contracts import DiscoveryProblem, discovery_problem_from_dict
+from hypatiax.tools.symbolic.discovery_budget_runtime import DiscoveryBudgetRuntime
 from hypatiax.tools.symbolic.discovery_report_integrity import build_native_discovery_report
 from hypatiax.tools.symbolic.hybrid_system_v50_2 import HybridDiscoverySystem
-from hypatiax.tools.symbolic.v60_candidate_generation import generate_native_template_candidates
+from hypatiax.tools.symbolic.v60_candidate_generation import generate_native_template_candidates_with_audit
 from hypatiax.tools.symbolic.v60_external_producers import ingest_external_candidate_proposals
 from hypatiax.tools.symbolic.v60_candidate_normalization import normalize_candidate_proposals
 from hypatiax.tools.symbolic.v60_candidate_fitting import fit_native_candidates
@@ -33,6 +36,15 @@ from hypatiax.tools.symbolic.v60_native_finalization import finalize_native_v60_
 from hypatiax.tools.symbolic.v60_production_handoff import (
     build_native_v60_result, evaluate_frozen_native_v60_model,
 )
+
+
+def _serialize_v60_state(method):
+    """Serialize entry points that read or mutate per-instance V60 audit state."""
+    @wraps(method)
+    def wrapped(self, *args, **kwargs):
+        with self._v60_state_lock:
+            return method(self, *args, **kwargs)
+    return wrapped
 
 
 @dataclass(frozen=True)
@@ -122,10 +134,13 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
 
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
+        self._v60_state_lock = RLock()
         self._last_v60_run_context: V60RunContext | None = None
         self._last_v60_candidate_proposals: tuple[dict[str, Any], ...] = ()
         self._last_v60_normalization_audit: dict[str, Any] = {}
         self._last_v60_fitting_audit: dict[str, Any] = {}
+        self._last_v60_generation_audit: dict[str, Any] = {}
+        self._last_v60_budget_runtime: DiscoveryBudgetRuntime | None = None
 
     def _reset_v60_call_state(self) -> None:
         """Clear every V60 audit before a new call to prevent cross-call leakage."""
@@ -133,6 +148,8 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_candidate_proposals = ()
         self._last_v60_normalization_audit = {}
         self._last_v60_fitting_audit = {}
+        self._last_v60_generation_audit = {}
+        self._last_v60_budget_runtime = None
         self._last_v60_training_fit_audit = {}
         self._last_v60_multi_basis_fit_audit = {}
         self._last_v60_multi_basis_validation_audit = {}
@@ -150,6 +167,8 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
     def _annotate_v60_result(self, result: Any) -> Any:
         if not isinstance(result, dict):
             return result
+        if self._last_v60_budget_runtime is not None:
+            self._last_v60_budget_runtime.expired()
         annotated = dict(result)
         provenance = annotated.get("implementation_provenance")
         provenance = dict(provenance) if isinstance(provenance, dict) else {}
@@ -167,6 +186,11 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             "native_v60_candidate_normalization": self._last_v60_run_context is not None,
             "native_v60_candidate_fitting": self._last_v60_run_context is not None,
             "native_v60_fitting_audit": dict(self._last_v60_fitting_audit),
+            "native_v60_generation_audit": dict(self._last_v60_generation_audit),
+            "native_v60_budget_runtime": (
+                self._last_v60_budget_runtime.to_dict()
+                if self._last_v60_budget_runtime is not None else None
+            ),
             "native_v60_candidate_count": len(self._last_v60_candidate_proposals),
             "native_v60_external_producer_audit": dict(self._last_v60_external_producer_audit),
             "native_v60_normalization_audit": dict(self._last_v60_normalization_audit),
@@ -237,7 +261,14 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         external_spec: Mapping[str, Any],
     ) -> dict[str, Any]:
         """Run the complete native training-only pipeline; far data is not accepted."""
-        generated = list(generate_native_template_candidates(problem))
+        budget = problem.budget
+        budget_runtime = DiscoveryBudgetRuntime(budget)
+        self._last_v60_budget_runtime = budget_runtime
+
+        def _remaining_wall_time() -> float | None:
+            remaining = budget_runtime.remaining_wall_time_seconds
+            return None if remaining is None else max(remaining, 1e-9)
+
         unknown_fields = set(external_spec) - {
             "llm_proposals", "pysr_proposals", "llm_call_count",
             "llm_token_count", "pysr_search_attempt_count",
@@ -252,8 +283,33 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             llm_token_count=external_spec.get("llm_token_count", 0),
             pysr_search_attempt_count=external_spec.get("pysr_search_attempt_count", 0),
         )
-        cap = min(problem.budget.max_candidates, problem.budget.max_search_attempts)
+        cap = problem.budget.max_candidates
+        remaining_search_attempts = max(
+            0, problem.budget.max_search_attempts
+            - external["pysr_usage"]["search_attempt_count"]
+        )
+        remaining_candidate_slots = max(0, cap - len(external["proposals"]))
+        generation = generate_native_template_candidates_with_audit(
+            problem, limit=remaining_candidate_slots,
+            search_attempt_limit=remaining_search_attempts,
+        )
+        for _ in range(external["pysr_usage"]["search_attempt_count"]):
+            budget_runtime.record_search_attempt()
+        for _ in range(generation["generation_attempt_count"]):
+            budget_runtime.record_search_attempt()
+        generated = list(generation["proposals"])
+        self._last_v60_generation_audit = {
+            key: value for key, value in generation.items() if key != "proposals"
+        }
+        self._last_v60_generation_audit.update({
+            "external_pysr_search_attempt_count": external["pysr_usage"]["search_attempt_count"],
+            "total_search_attempt_count": (
+                external["pysr_usage"]["search_attempt_count"]
+                + generation["generation_attempt_count"]
+            ),
+        })
         combined = (external["proposals"] + [item.to_dict() for item in generated])[:cap]
+        budget_runtime.record_candidates(len(combined))
         self._last_v60_external_producer_audit = dict(external)
         normalized = normalize_candidate_proposals(
             combined, variable_names=problem.variable_names,
@@ -264,7 +320,6 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_normalization_audit = normalized.to_dict()
         self._last_v60_normalization_audit.pop("candidates", None)
 
-        budget = problem.budget
         gate = validate_native_candidate_pool(candidates, problem)
         self._last_v60_gate_audit = gate
         eligible_ids = [
@@ -278,7 +333,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             eligible_candidates, X, y, variable_names=problem.variable_names,
             max_candidates=budget.max_candidates,
             max_search_attempts=budget.max_search_attempts,
-            max_wall_time_seconds=budget.max_wall_time_seconds,
+            max_wall_time_seconds=_remaining_wall_time(),
         )
         self._last_v60_fitting_audit = fitted.to_dict()
         single_validation = validate_native_training_candidates(
@@ -287,7 +342,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             split_protocol=problem.split_protocol, seed=budget.seed,
             max_candidates=budget.max_candidates,
             max_search_attempts=budget.max_search_attempts,
-            max_wall_time_seconds=budget.max_wall_time_seconds,
+            max_wall_time_seconds=_remaining_wall_time(),
         )
         self._last_v60_training_validation_audit = single_validation
         single_selection = select_native_candidates_from_training_evidence(
@@ -303,7 +358,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             max_candidates=budget.max_candidates,
             max_search_attempts=budget.max_search_attempts,
             max_basis_terms=3,
-            max_wall_time_seconds=budget.max_wall_time_seconds,
+            max_wall_time_seconds=_remaining_wall_time(),
         )
         self._last_v60_multi_basis_fit_audit = multi_fit
         multi_validation = validate_native_multi_basis_candidates(
@@ -312,15 +367,16 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             split_protocol=problem.split_protocol, seed=budget.seed,
             max_candidates=budget.max_candidates,
             max_search_attempts=budget.max_search_attempts,
-            max_wall_time_seconds=budget.max_wall_time_seconds,
+            max_wall_time_seconds=_remaining_wall_time(),
         )
         self._last_v60_multi_basis_validation_audit = multi_validation
-        if multi_validation.get("validation_status") == "completed":
+        if multi_validation.get("validation_status") == "completed" and not budget_runtime.expired():
             multi_evidence = verify_native_multi_basis_validation_evidence(
                 multi_validation, eligible_candidates, X, y,
                 variable_names=problem.variable_names,
                 max_groups=budget.max_candidates,
                 max_search_attempts=budget.max_search_attempts,
+                max_wall_time_seconds=_remaining_wall_time(),
             )
             multi_selection = select_native_multi_basis_candidates_from_verified_evidence(
                 eligible_candidates, gate, multi_fit, multi_validation, multi_evidence,
@@ -351,16 +407,42 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_multi_basis_evidence_audit = multi_evidence
         self._last_v60_multi_basis_selection_audit = multi_selection
 
-        self._last_v60_residual_stability_audit = diagnose_native_training_residuals(
-            candidates, single_validation, X, y,
-            variable_names=problem.variable_names,
-            max_candidates=budget.max_candidates,
-            max_search_attempts=budget.max_search_attempts,
-        )
+        if budget_runtime.expired():
+            self._last_v60_residual_stability_audit = {
+                "schema": "v60_native_residual_stability_v1",
+                "diagnostic_status": "budget_limited",
+                "reason": "max_wall_time_seconds",
+                "input_candidate_count": len(candidates),
+                "diagnosed_candidate_count": 0,
+                "rejected_candidate_count": 0,
+                "budget_truncated_count": len(candidates),
+                "candidate_diagnostics": [],
+                "rejected_candidates": [],
+                "diagnostic_scope": "training_only_held_out_fold_residuals_and_fold_local_coefficients",
+                "selection_performed": False,
+                "far_or_evaluation_data_used": False,
+            }
+        else:
+            self._last_v60_residual_stability_audit = diagnose_native_training_residuals(
+                candidates, single_validation, X, y,
+                variable_names=problem.variable_names,
+                max_candidates=budget.max_candidates,
+                max_search_attempts=budget.max_search_attempts,
+                max_wall_time_seconds=_remaining_wall_time(),
+            )
         final_audit = finalize_native_v60_model(
             candidates, single_selection, multi_selection, X, y,
             variable_names=problem.variable_names,
         )
+        if budget_runtime.expired():
+            final_audit = {
+                "schema": "v60_native_final_model_v1",
+                "execution_status": "stage_failed",
+                "selection_performed": False,
+                "far_or_evaluation_data_used": False,
+                "selected_model": None,
+                "reason": "max_wall_time_seconds",
+            }
         self._last_v60_final_model_audit = final_audit
         return build_native_v60_result(final_audit) if final_audit.get("execution_status") == "selected" else {
             "success": False, "error": "NO_CREDIBLE_CANDIDATE",
@@ -368,6 +450,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             "strategy": "native_v60",
         }
 
+    @_serialize_v60_state
     def evaluate_native_far_set(self, X_far: Any, y_far: Any) -> dict[str, Any]:
         """Evaluate only the frozen finalized model; this method cannot change selection."""
         if self._last_v60_activate_native_result is not True:
@@ -381,6 +464,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_far_evaluation_audit = audit
         return dict(audit)
 
+    @_serialize_v60_state
     def discover(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
         """Run native V60 discovery; preserve V50.2 unless explicit handoff is requested."""
         self._reset_v60_call_state()
@@ -446,7 +530,12 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_fitting_audit = {}
         if self._last_v60_run_context is not None:
             problem = prepared["discovery_problem"]
-            generated = list(generate_native_template_candidates(problem))
+            budget_runtime = DiscoveryBudgetRuntime(problem.budget)
+            self._last_v60_budget_runtime = budget_runtime
+
+            def _remaining_wall_time() -> float | None:
+                remaining = budget_runtime.remaining_wall_time_seconds
+                return None if remaining is None else max(remaining, 1e-9)
             external_spec = prepared.get("v60_external_candidate_proposals", {}) or {}
             if not isinstance(external_spec, Mapping):
                 raise TypeError("v60_external_candidate_proposals must be a mapping")
@@ -464,8 +553,34 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
                 llm_token_count=external_spec.get("llm_token_count", 0),
                 pysr_search_attempt_count=external_spec.get("pysr_search_attempt_count", 0),
             )
+            candidate_cap = problem.budget.max_candidates
+            remaining_search_attempts = max(
+                0, problem.budget.max_search_attempts
+                - external_audit["pysr_usage"]["search_attempt_count"]
+            )
+            remaining_candidate_slots = max(0, candidate_cap - len(external_audit["proposals"]))
+            generation = generate_native_template_candidates_with_audit(
+                problem, limit=remaining_candidate_slots,
+                search_attempt_limit=remaining_search_attempts,
+            )
+            for _ in range(external_audit["pysr_usage"]["search_attempt_count"]):
+                budget_runtime.record_search_attempt()
+            for _ in range(generation["generation_attempt_count"]):
+                budget_runtime.record_search_attempt()
+            generated = list(generation["proposals"])
+            self._last_v60_generation_audit = {
+                key: value for key, value in generation.items() if key != "proposals"
+            }
+            self._last_v60_generation_audit.update({
+                "external_pysr_search_attempt_count": external_audit["pysr_usage"]["search_attempt_count"],
+                "total_search_attempt_count": (
+                    external_audit["pysr_usage"]["search_attempt_count"]
+                    + generation["generation_attempt_count"]
+                ),
+            })
             combined = external_audit["proposals"] + [item.to_dict() for item in generated]
-            combined = combined[:min(problem.budget.max_candidates, problem.budget.max_search_attempts)]
+            combined = combined[:candidate_cap]
+            budget_runtime.record_candidates(len(combined))
             self._last_v60_external_producer_audit = dict(external_audit)
             normalized = normalize_candidate_proposals(
                 combined, variable_names=problem.variable_names,
@@ -479,7 +594,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
                 variable_names=problem.variable_names,
                 max_candidates=problem.budget.max_candidates,
                 max_search_attempts=problem.budget.max_search_attempts,
-                max_wall_time_seconds=problem.budget.max_wall_time_seconds,
+                max_wall_time_seconds=_remaining_wall_time(),
             )
             self._last_v60_fitting_audit = fitted.to_dict()
         if forwarded is not None:
@@ -498,6 +613,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             result = super().discover(**call_kwargs)
         return self._annotate_v60_result(result)
 
+    @_serialize_v60_state
     def discover_validate_interpret(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
         """Run the legacy compatibility entry point without leaking V60 call state.
 

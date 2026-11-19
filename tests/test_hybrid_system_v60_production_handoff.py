@@ -11,7 +11,10 @@ from hypatiax.tools.symbolic.hybrid_system_v60 import HybridDiscoverySystemV60
 from hypatiax.tools.symbolic.v60_native_finalization import finalize_native_v60_model
 from hypatiax.tools.symbolic.v60_production_handoff import (
     evaluate_frozen_native_v60_model,
+    calibrate_frozen_native_v60_model,
+    predict_frozen_native_v60_interval,
     verify_final_model_audit,
+    build_native_v60_result,
 )
 
 
@@ -262,6 +265,169 @@ class NativeV60ProductionHandoffTests(unittest.TestCase):
         self.assertEqual(result["native_v60_candidate_proposals"], [])
         self.assertNotIn("native_v60_production_handoff", result)
 
+    def test_final_model_verifier_rejects_rank_deficient_training_design(self):
+        X = np.arange(1.0, 9.0).reshape(-1, 1)
+        y = 3.0 * X[:, 0] + 2.0
+        candidates = [{
+            "candidate_id": "c1",
+            "expression": "x",
+            "normalized_expression": "x",
+            "producer_provenance": [],
+        }]
+        single = {
+            "schema": "v60_native_objective_selection_v1",
+            "selection_status": "selected",
+            "selection_performed": True,
+            "far_or_evaluation_data_used": False,
+            "pareto_candidate_ids": ["c1"],
+            "selected_candidate_id": "c1",
+            "objective_evidence": [{
+                "candidate_id": "c1", "expression": "x",
+                "mean_validation_rmse": 0.0, "mean_validation_nrmse": 0.0,
+                "std_validation_rmse": 0.0, "std_validation_nrmse": 0.0,
+                "complexity": 1,
+            }],
+        }
+        evidence = single["objective_evidence"][0]
+        digest = hashlib.sha256(
+            json.dumps(evidence, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+        ).hexdigest()
+        evidence["objective_evidence_sha256"] = digest
+        single["selected_objective_evidence_sha256"] = digest
+        multi = {"selection_status": "no_credible_candidate", "objective_evidence": []}
+        final = finalize_native_v60_model(
+            candidates, single, multi, X, y, variable_names=["x"]
+        )
+        final["selected_model"]["training_design_rank"] = 1
+        encoded = json.dumps(
+            final["selected_model"], sort_keys=True, separators=(",", ":"), allow_nan=False
+        )
+        final["selected_model_sha256"] = hashlib.sha256(encoded.encode()).hexdigest()
+        with self.assertRaisesRegex(ValueError, "full column rank"):
+            verify_final_model_audit(final)
+
 
 if __name__ == "__main__":
     unittest.main()
+
+
+
+class NativeV60SplitConformalTests(unittest.TestCase):
+    def _frozen_model(self):
+        return _audit({
+            "basis_candidate_ids": ["c1"],
+            "basis_expressions": ["x"],
+            "variable_names": ["x"],
+            "fitted_expression": "(3)*(x) + (2)",
+            "coefficients": [3.0, 2.0],
+        })
+
+    def test_split_conformal_calibrates_and_predicts_without_changing_model(self):
+        final = self._frozen_model()
+        X_cal = np.arange(20.0, 39.0).reshape(-1, 1)
+        predictions = 3.0 * X_cal[:, 0] + 2.0
+        residuals = np.arange(1.0, 20.0)
+        provenance = {
+            "training_split_id": "train-v1",
+            "calibration_split_id": "cal-v1",
+            "disjoint_from_training": True,
+            "exchangeability_assumed": True,
+        }
+        calibration = calibrate_frozen_native_v60_model(
+            final, X_cal, predictions + residuals, variable_names=["x"],
+            nominal_coverage=0.95, calibration_provenance=provenance,
+        )
+        assert calibration["calibration_status"] == "calibrated"
+        assert calibration["finite_sample_quantile_rank"] == 19
+        assert calibration["interval_radius"] == 19.0
+        X_new = np.asarray([[40.0], [41.0]])
+        intervals = predict_frozen_native_v60_interval(
+            final, calibration, X_new, variable_names=["x"],
+        )
+        assert intervals["lower"][0] == 3.0 * 40.0 + 2.0 - 19.0
+        assert intervals["upper"][0] == 3.0 * 40.0 + 2.0 + 19.0
+        assert intervals["coverage_claim"] == "finite_sample_marginal_coverage_under_exchangeability"
+        assert intervals["extra_domain_or_distribution_shift_guarantee"] is False
+        assert calibration["selection_changed"] is False
+
+    def test_small_calibration_split_does_not_emit_finite_interval(self):
+        final = self._frozen_model()
+        X_cal = np.asarray([[20.0], [21.0], [22.0]])
+        y_cal = 3.0 * X_cal[:, 0] + 2.0
+        calibration = calibrate_frozen_native_v60_model(
+            final, X_cal, y_cal, variable_names=["x"],
+            nominal_coverage=0.95,
+            calibration_provenance={
+                "training_split_id": "train-v1",
+                "calibration_split_id": "cal-v1",
+                "disjoint_from_training": True,
+                "exchangeability_assumed": True,
+            },
+        )
+        assert calibration["calibration_status"] == "insufficient_calibration_size"
+        assert calibration["interval_radius"] is None
+        with self.assertRaisesRegex(ValueError, "finite-radius"):
+            predict_frozen_native_v60_interval(
+                final, calibration, np.asarray([[23.0]]), variable_names=["x"],
+            )
+
+    def test_calibration_requires_disjoint_exchangeable_split_attestation(self):
+        final = self._frozen_model()
+        X_cal = np.asarray([[20.0], [21.0], [22.0]])
+        y_cal = 3.0 * X_cal[:, 0] + 2.0
+        with self.assertRaisesRegex(ValueError, "distinct"):
+            calibrate_frozen_native_v60_model(
+                final, X_cal, y_cal, variable_names=["x"],
+                calibration_provenance={
+                    "training_split_id": "same",
+                    "calibration_split_id": "same",
+                    "disjoint_from_training": True,
+                    "exchangeability_assumed": True,
+                },
+            )
+
+    def _calibration(self):
+        final = self._frozen_model()
+        X_cal = np.arange(20.0, 39.0).reshape(-1, 1)
+        predictions = 3.0 * X_cal[:, 0] + 2.0
+        calibration = calibrate_frozen_native_v60_model(
+            final, X_cal, predictions + np.arange(1.0, 20.0),
+            variable_names=["x"], nominal_coverage=0.95,
+            calibration_provenance={
+                "training_split_id": "train-v1",
+                "calibration_split_id": "cal-v1",
+                "disjoint_from_training": True,
+                "exchangeability_assumed": True,
+            },
+        )
+        return final, calibration
+
+    def test_prediction_rejects_tampered_finite_sample_rank(self):
+        final, calibration = self._calibration()
+        calibration["finite_sample_quantile_rank"] = 18
+        with self.assertRaisesRegex(ValueError, "quantile rank"):
+            predict_frozen_native_v60_interval(
+                final, calibration, np.asarray([[40.0]]), variable_names=["x"],
+            )
+
+    def test_prediction_rejects_removed_split_attestation(self):
+        final, calibration = self._calibration()
+        calibration["calibration_provenance"]["disjoint_from_training"] = False
+        with self.assertRaisesRegex(ValueError, "caller attestations"):
+            predict_frozen_native_v60_interval(
+                final, calibration, np.asarray([[40.0]]), variable_names=["x"],
+            )
+
+    def test_native_result_preserves_verified_calibration_audit(self):
+        final, calibration = self._calibration()
+        result = build_native_v60_result(final, calibration)
+        self.assertEqual(result["native_model_calibration"], calibration)
+        self.assertEqual(result["native_model_calibration_status"], "calibrated")
+        with self.assertRaisesRegex(ValueError, "different frozen model"):
+            build_native_v60_result(_audit({
+                "basis_candidate_ids": ["other"],
+                "basis_expressions": ["x"],
+                "variable_names": ["x"],
+                "fitted_expression": "(3)*(x) + (2)",
+                "coefficients": [3.0, 2.0],
+            }), calibration)

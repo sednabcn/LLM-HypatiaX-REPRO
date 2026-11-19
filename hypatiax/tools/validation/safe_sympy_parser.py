@@ -3,6 +3,14 @@
 import ast
 
 
+ALLOWED_UNARY_FUNCTIONS = frozenset({
+    "exp", "log", "ln", "log10", "sqrt", "sin", "cos", "tan",
+    "abs", "Abs", "sign", "safe_asin", "safe_acos", "asin", "acos",
+    "atan", "arcsin", "arccos", "arctan", "asin_of_sin",
+    "acos_of_cos", "atan_of_tan",
+})
+
+
 def _insert_implicit_multiplication(source):
     """Insert multiplication only between adjacent mathematical operands."""
     import io
@@ -76,6 +84,8 @@ def parse_sympy_expression(source, variable_names=None):
         "acos_of_cos": lambda x: sp.acos(sp.Max(-1, sp.Min(1, sp.cos(x)))),
         "atan_of_tan": sp.atan,
     }
+    if frozenset(functions) != ALLOWED_UNARY_FUNCTIONS:
+        raise RuntimeError("restricted parser unary-function allowlist is inconsistent")
     constants = {"pi": sp.pi, "E": sp.E}
     declared = set(variable_names or [])
 

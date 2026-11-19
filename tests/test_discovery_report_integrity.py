@@ -8,7 +8,9 @@ from hypatiax.tools.symbolic.discovery_report_integrity import (
     ENVELOPE_SCHEMA,
     seal_discovery_report,
     verify_discovery_report_envelope,
+    attach_native_v60_calibration_to_report,
 )
+from hypatiax.tools.symbolic.v60_production_handoff import calibrate_frozen_native_v60_model
 
 
 def _envelope():
@@ -214,6 +216,20 @@ def test_worker_verifier_accepts_semantically_consistent_final_model():
     payload["provenance"]["native_final_model"] = _native_final_model_audit()
     verified = verify_discovery_report_envelope(seal_discovery_report(payload))
     assert verified["provenance"]["native_final_model"]["execution_status"] == "selected"
+
+def test_worker_verifier_rejects_rank_deficient_final_model():
+    from hashlib import sha256
+    import json
+
+    payload = copy.deepcopy(_envelope()["report"])
+    audit = _native_final_model_audit()
+    audit["selected_model"]["training_design_rank"] = 1
+    audit["selected_model_sha256"] = sha256(
+        json.dumps(audit["selected_model"], sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+    ).hexdigest()
+    payload["provenance"]["native_final_model"] = audit
+    with pytest.raises(ValueError, match="full column rank"):
+        verify_discovery_report_envelope(seal_discovery_report(payload))
 
 
 def test_worker_verifier_rejects_forged_cross_family_finalization_winner():
@@ -442,3 +458,48 @@ def test_worker_verifier_rejects_multi_basis_model_with_single_basis_shape():
     payload["provenance"]["native_final_model"] = audit
     with pytest.raises(ValueError, match="multi-basis final model identity is inconsistent"):
         verify_discovery_report_envelope(seal_discovery_report(payload))
+
+
+def _native_calibration_audit(final_model):
+    features = [[float(index)] for index in range(20, 39)]
+    predictions = [2.0 * row[0] + 1.0 for row in features]
+    targets = [value + float(index + 1) for index, value in enumerate(predictions)]
+    return calibrate_frozen_native_v60_model(
+        final_model, features, targets, variable_names=["x"], nominal_coverage=0.95,
+        calibration_provenance={
+            "training_split_id": "training-v1", "calibration_split_id": "calibration-v1",
+            "disjoint_from_training": True, "exchangeability_assumed": True,
+        },
+    )
+
+
+def test_worker_report_round_trips_attached_native_calibration_audit():
+    final_model = _native_final_model_audit()
+    payload = copy.deepcopy(_envelope()["report"])
+    payload["provenance"]["native_final_model"] = final_model
+    sealed = seal_discovery_report(payload)
+    calibrated = attach_native_v60_calibration_to_report(
+        sealed, _native_calibration_audit(final_model)
+    )
+    verified = verify_discovery_report_envelope(calibrated)
+    audit = verified["provenance"]["native_split_conformal_calibration"]
+    assert audit["calibration_status"] == "calibrated"
+    assert audit["selected_model_sha256"] == final_model["selected_model_sha256"]
+    assert audit["calibration_provenance"]["verification"] == "caller_attested_not_independently_verified"
+
+
+def test_worker_report_rejects_tampered_embedded_calibration_audit():
+    final_model = _native_final_model_audit()
+    payload = copy.deepcopy(_envelope()["report"])
+    payload["provenance"]["native_final_model"] = final_model
+    payload["provenance"]["native_split_conformal_calibration"] = _native_calibration_audit(final_model)
+    payload["provenance"]["native_split_conformal_calibration"]["finite_sample_quantile_rank"] = 18
+    with pytest.raises(ValueError, match="quantile rank"):
+        verify_discovery_report_envelope(seal_discovery_report(payload))
+
+
+def test_calibration_cannot_be_attached_without_finalized_model_in_report():
+    with pytest.raises(ValueError, match="does not contain a finalized native V60 model"):
+        attach_native_v60_calibration_to_report(
+            _envelope(), _native_calibration_audit(_native_final_model_audit())
+        )

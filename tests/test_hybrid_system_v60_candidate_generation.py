@@ -1,6 +1,9 @@
 """Offline contract tests for native V60 bounded template proposals."""
 from hypatiax.tools.symbolic.discovery_contracts import DiscoveryBudget, DiscoveryProblem
-from hypatiax.tools.symbolic.v60_candidate_generation import generate_native_template_candidates
+from hypatiax.tools.symbolic.v60_candidate_generation import (
+    generate_native_template_candidates,
+    generate_native_template_candidates_with_audit,
+)
 
 
 def _problem(*, budget=None):
@@ -22,6 +25,160 @@ def test_v60_template_generation_is_deterministic_and_budget_bounded():
     assert all(item.source == "domain_template" for item in first)
     assert len({item.candidate_id for item in first}) == len(first)
 
+def test_v60_template_generation_uses_only_declared_supported_unary_operators():
+    problem = DiscoveryProblem(
+        target_name="target",
+        variable_names=("x", "y"),
+        allowed_unary_operators=("sin", "sqrt", "unknown"),
+        allowed_binary_operators=("+",),
+        budget=DiscoveryBudget(max_search_attempts=3, max_candidates=10, seed=17),
+    )
+
+    proposals = generate_native_template_candidates(problem)
+    assert [item.expression for item in proposals] == [
+        "x", "y", "sin(x)", "sqrt(x)", "sin(y)",
+    ]
+
+
+def test_v60_unary_templates_obey_candidate_cap_and_attempt_budget():
+    problem = DiscoveryProblem(
+        target_name="target",
+        variable_names=("x", "y"),
+        allowed_unary_operators=("exp", "log"),
+        budget=DiscoveryBudget(max_search_attempts=1, max_candidates=3, seed=17),
+    )
+
+    proposals = generate_native_template_candidates(problem)
+    assert [item.expression for item in proposals] == ["x", "y", "exp(x)"]
+
+
+def test_v60_template_generation_composes_declared_unary_and_binary_operators():
+    problem = DiscoveryProblem(
+        target_name="target",
+        variable_names=("x", "y"),
+        allowed_unary_operators=("sin",),
+        allowed_binary_operators=("+",),
+        budget=DiscoveryBudget(max_search_attempts=4, max_candidates=10, seed=17),
+    )
+
+    proposals = generate_native_template_candidates(problem)
+    assert [item.expression for item in proposals] == [
+        "x", "y", "sin(x)", "sin(y)", "(x + y)", "sin((x + y))",
+    ]
+
+
+def test_v60_template_generation_emits_square_only_when_power_is_declared():
+    problem = DiscoveryProblem(
+        target_name="target",
+        variable_names=("x", "y"),
+        allowed_binary_operators=("**",),
+        budget=DiscoveryBudget(max_search_attempts=2, max_candidates=10, seed=17),
+    )
+
+    proposals = generate_native_template_candidates(problem)
+    assert [item.expression for item in proposals] == [
+        "x", "y", "(x ** 2)", "(y ** 2)",
+    ]
+
+
+def test_v60_template_limit_rejects_coercible_or_invalid_values():
+    problem = _problem()
+    for invalid in (True, 2.5, "3"):
+        try:
+            generate_native_template_candidates(problem, limit=invalid)
+        except TypeError:
+            pass
+        else:
+            raise AssertionError(f"limit {invalid!r} should be rejected")
+    try:
+        generate_native_template_candidates(problem, limit=-1)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("negative limit should be rejected")
+
+
+def test_v60_template_generation_deduplicates_declared_operator_lists():
+    problem = DiscoveryProblem(
+        target_name="target",
+        variable_names=("x", "y"),
+        allowed_unary_operators=("sin", "sin"),
+        allowed_binary_operators=("+", "+"),
+        budget=DiscoveryBudget(max_search_attempts=3, max_candidates=10, seed=17),
+    )
+    proposals = generate_native_template_candidates(problem)
+    assert [item.expression for item in proposals] == [
+        "x", "y", "sin(x)", "sin(y)", "(x + y)",
+    ]
+
+
+def test_v60_template_generation_composes_binary_operators_over_unary_terms():
+    problem = DiscoveryProblem(
+        target_name="target",
+        variable_names=("x", "y"),
+        allowed_unary_operators=("sin",),
+        allowed_binary_operators=("+",),
+        budget=DiscoveryBudget(max_search_attempts=5, max_candidates=12, seed=17),
+    )
+
+    proposals = generate_native_template_candidates(problem)
+    assert [item.expression for item in proposals] == [
+        "x", "y", "sin(x)", "sin(y)", "(x + y)",
+        "sin((x + y))", "(x + sin(x))",
+    ]
+
+
+def test_v60_template_generation_uses_declared_multiplication_for_self_products():
+    problem = DiscoveryProblem(
+        target_name="target",
+        variable_names=("x", "y"),
+        allowed_binary_operators=("*",),
+        budget=DiscoveryBudget(max_search_attempts=2, max_candidates=10, seed=17),
+    )
+
+    proposals = generate_native_template_candidates(problem)
+    assert [item.expression for item in proposals] == [
+        "x", "y", "(x * x)", "(y * y)",
+    ]
+
+
+def test_v60_template_generation_returns_auditable_budget_and_operator_counts():
+    problem = DiscoveryProblem(
+        target_name="target",
+        variable_names=("x", "y"),
+        allowed_unary_operators=("sin", "unsupported"),
+        allowed_binary_operators=("+", "unknown"),
+        budget=DiscoveryBudget(max_search_attempts=3, max_candidates=8, seed=19),
+    )
+
+    audit = generate_native_template_candidates_with_audit(problem)
+    assert audit["schema"] == "v60_native_template_generation_v1"
+    assert audit["candidate_count"] == 5
+    assert audit["generation_attempt_count"] == 3
+    assert audit["base_variable_candidate_count"] == 2
+    assert audit["ignored_unary_operators"] == ["unsupported"]
+    assert audit["ignored_binary_operators"] == ["unknown"]
+    assert audit["seed"] == 19
+    assert [item.to_dict() for item in audit["proposals"]] == [
+        item.to_dict() for item in generate_native_template_candidates(problem)
+    ]
+
+
+def test_v60_template_generation_honors_remaining_global_search_budget():
+    problem = DiscoveryProblem(
+        target_name="target",
+        variable_names=("x", "y", "z"),
+        budget=DiscoveryBudget(max_search_attempts=5, max_candidates=10, seed=17),
+    )
+
+    audit = generate_native_template_candidates_with_audit(
+        problem, search_attempt_limit=2
+    )
+    assert audit["contract_search_attempt_budget"] == 5
+    assert audit["search_attempt_budget"] == 2
+    assert audit["generation_attempt_count"] == 2
+    assert audit["search_attempt_budget_exhausted"] is True
+
 
 def test_v60_template_generation_respects_zero_candidate_budget():
     problem = _problem(budget=DiscoveryBudget(
@@ -35,7 +192,7 @@ def test_v60_template_generation_does_not_invent_unsupported_operators():
     problem = DiscoveryProblem(
         target_name="target",
         variable_names=("x", "y"),
-        allowed_binary_operators=("**", "unknown"),
+        allowed_binary_operators=("^", "unknown"),
         budget=DiscoveryBudget(max_search_attempts=10, max_candidates=10),
     )
 

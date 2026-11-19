@@ -8,7 +8,7 @@ from hypatiax.tools.symbolic.discovery_contracts import (
 from hypatiax.tools.symbolic.discovery_validation import CandidateValidator
 
 
-def test_declared_nonnegative_constraint_passes_and_is_audited():
+def test_declared_nonnegative_sample_pass_does_not_claim_continuous_proof():
     problem = DiscoveryProblem(
         target_name="energy",
         variable_names=("x",),
@@ -24,9 +24,12 @@ def test_declared_nonnegative_constraint_passes_and_is_audited():
 
     candidate = CandidateValidator().validate(problem, "x**2")
 
-    assert candidate.eligible is True
+    assert candidate.eligible is False
     assert candidate.constraint_outcomes[-1].constraint_id == "energy-nonnegative"
-    assert candidate.constraint_outcomes[-1].status == "pass"
+    assert candidate.constraint_outcomes[-1].status == "unknown"
+    assert candidate.constraint_outcomes[-1].evidence["sampled_screening_status"] == "pass"
+    assert candidate.constraint_outcomes[-1].evidence["continuous_domain_proof_established"] is False
+    assert candidate.constraint_outcomes[-1].evidence["proof_scope"] == "finite_sample_screening_only_not_continuous_domain_proof"
 
 
 def test_declared_positive_constraint_rejects_zero_boundary():
@@ -109,9 +112,10 @@ def test_candidate_validator_expands_engineered_features_to_declared_raw_variabl
         },
     )
 
-    assert candidate.eligible is True
+    assert candidate.eligible is False
     assert "sqrt" in candidate.expression
-    assert candidate.constraint_outcomes[-1].status == "pass"
+    assert candidate.constraint_outcomes[-1].status == "unknown"
+    assert candidate.constraint_outcomes[-1].evidence["sampled_screening_status"] == "pass"
 
 
 def test_candidate_validator_supports_expanded_fold_log_transform_safely():
@@ -137,9 +141,10 @@ def test_candidate_validator_supports_expanded_fold_log_transform_safely():
         },
     )
 
-    assert candidate.eligible is True
+    assert candidate.eligible is False
     assert "sign" in candidate.expression
-    assert candidate.constraint_outcomes[-1].status == "pass"
+    assert candidate.constraint_outcomes[-1].status == "unknown"
+    assert candidate.constraint_outcomes[-1].evidence["sampled_screening_status"] == "pass"
 
 
 def test_soft_constraint_reports_quantitative_violation_fraction_without_rejecting():
@@ -211,3 +216,25 @@ def test_finite_output_violation_count_includes_nonfinite_samples():
     assert outcome.evidence["evaluation_count"] == 3
     assert outcome.evidence["violation_count"] == 1
     assert outcome.evidence["violation_fraction"] == pytest.approx(1.0 / 3.0)
+
+
+def test_soft_constraint_sample_pass_is_reported_as_unknown_not_proof():
+    problem = DiscoveryProblem(
+        target_name="energy",
+        variable_names=("x",),
+        variable_domains={"x": {"minimum": -2, "maximum": 2}},
+        constraints=(
+            ConstraintSpec(
+                constraint_id="soft-nonnegative",
+                kind="nonnegative_output",
+                severity="soft",
+            ),
+        ),
+    )
+    candidate = CandidateValidator().validate(problem, "x**2")
+    outcome = candidate.constraint_outcomes[-1]
+    assert candidate.eligible is True
+    assert outcome.status == "unknown"
+    assert outcome.evidence["sampled_screening_status"] == "pass"
+    assert outcome.evidence["grid_is_exhaustive"] is True
+    assert outcome.evidence["continuous_domain_proof_established"] is False

@@ -14,6 +14,7 @@ from typing import Any, Mapping, Sequence
 import numpy as np
 
 from hypatiax.tools.validation.safe_sympy_parser import parse_sympy_expression
+from hypatiax.tools.uncertainty import SplitConformalRegressor
 
 
 def _canonical_digest(value: Mapping[str, Any]) -> str:
@@ -128,8 +129,8 @@ def verify_final_model_audit(audit: Mapping[str, Any]) -> dict[str, Any]:
     if condition is not None and float(condition) < 0:
         raise ValueError("selected model design condition number cannot be negative")
     rank = model.get("training_design_rank")
-    if isinstance(rank, bool) or not isinstance(rank, int) or not 1 <= rank <= len(expressions) + 1:
-        raise ValueError("selected model design rank is invalid")
+    if isinstance(rank, bool) or not isinstance(rank, int) or rank != len(expressions) + 1:
+        raise ValueError("selected model training design must have full column rank")
 
     metric = model.get("selection_metric")
     if metric not in {"cv_rmse", "cv_nrmse"}:
@@ -284,10 +285,218 @@ def evaluate_frozen_native_v60_model(
     }
 
 
-def build_native_v60_result(final_model_audit: Mapping[str, Any]) -> dict[str, Any]:
-    """Create the canonical outward result fields from a verified final model."""
+def _predict_verified_native_model(model: Mapping[str, Any], features: np.ndarray) -> np.ndarray:
+    """Predict from a previously verified frozen V60 model record."""
+    names = list(model["variable_names"])
+    import sympy as sp
+    symbols = [sp.Symbol(name, real=True) for name in names]
+    basis_values = []
+    for expression in model["basis_expressions"]:
+        parsed = parse_sympy_expression(expression, names)
+        function = sp.lambdify(symbols, parsed, modules="numpy")
+        values = np.asarray(
+            function(*[features[:, index] for index in range(features.shape[1])]),
+            dtype=np.float64,
+        )
+        if values.ndim == 0:
+            values = np.full(features.shape[0], float(values), dtype=np.float64)
+        values = values.reshape(-1)
+        if values.size != features.shape[0] or not np.all(np.isfinite(values)):
+            raise ValueError("frozen selected basis produced non-finite or misaligned predictions")
+        basis_values.append(values)
+    design = np.column_stack((*basis_values, np.ones(features.shape[0], dtype=np.float64)))
+    predictions = design @ np.asarray(model["coefficients"], dtype=np.float64)
+    if not np.all(np.isfinite(predictions)):
+        raise ValueError("frozen selected model produced non-finite predictions")
+    return predictions
+
+
+def calibrate_frozen_native_v60_model(
+    final_model_audit: Mapping[str, Any],
+    X_calibration: Any,
+    y_calibration: Any,
+    *,
+    variable_names: Sequence[str],
+    nominal_coverage: float = 0.95,
+    calibration_provenance: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Calibrate intervals on a caller-attested disjoint calibration split.
+
+    Calibration is post-selection and never changes or re-ranks the frozen
+    model. The caller must attest that the calibration rows are disjoint from
+    training and that calibration/future observations are exchangeable.
+    """
     model = verify_final_model_audit(final_model_audit)
+    names = tuple(variable_names)
+    if names != tuple(model["variable_names"]):
+        raise ValueError("calibration variable_names must exactly match the frozen model order")
+    if not isinstance(calibration_provenance, Mapping):
+        raise TypeError("calibration_provenance must be a mapping")
+    training_split_id = calibration_provenance.get("training_split_id")
+    calibration_split_id = calibration_provenance.get("calibration_split_id")
+    if (not isinstance(training_split_id, str) or not training_split_id.strip()
+            or not isinstance(calibration_split_id, str) or not calibration_split_id.strip()):
+        raise ValueError("training_split_id and calibration_split_id must be non-empty strings")
+    if training_split_id == calibration_split_id:
+        raise ValueError("calibration split must be distinct from the training split")
+    if calibration_provenance.get("disjoint_from_training") is not True:
+        raise ValueError("caller must attest disjoint_from_training=true")
+    if calibration_provenance.get("exchangeability_assumed") is not True:
+        raise ValueError("caller must attest exchangeability_assumed=true")
+
+    features = _array(X_calibration, "X_calibration", len(names))
+    truth = _targets(y_calibration, features.shape[0], "y_calibration")
+    predictions = _predict_verified_native_model(model, features)
+    calibrator = SplitConformalRegressor(nominal_coverage).fit(truth, predictions)
+    radius = calibrator.quantile()
+    rank = int(math.ceil((truth.size + 1) * calibrator.nominal_coverage))
+    minimum_n = int(math.ceil(calibrator.nominal_coverage / (1.0 - calibrator.nominal_coverage)))
+    digest = sha256()
+    for array in (features, truth):
+        contiguous = np.ascontiguousarray(array, dtype=np.float64)
+        digest.update(json.dumps(list(contiguous.shape)).encode("ascii"))
+        digest.update(contiguous.tobytes())
+    finite_radius = math.isfinite(radius)
     return {
+        "schema": "v60_native_split_conformal_calibration_v1",
+        "calibration_status": "calibrated" if finite_radius else "insufficient_calibration_size",
+        "selected_model_sha256": final_model_audit["selected_model_sha256"],
+        "calibration_set_sha256": digest.hexdigest(),
+        "calibration_row_count": int(truth.size),
+        "nominal_coverage": calibrator.nominal_coverage,
+        "finite_sample_quantile_rank": rank,
+        "minimum_calibration_size_for_finite_radius": minimum_n,
+        "interval_radius": float(radius) if finite_radius else None,
+        "calibration_metadata": calibrator.calibration_metadata,
+        "calibration_provenance": {
+            "training_split_id": training_split_id,
+            "calibration_split_id": calibration_split_id,
+            "disjoint_from_training": True,
+            "exchangeability_assumed": True,
+            "verification": "caller_attested_not_independently_verified",
+        },
+        "coverage_claim": "finite_sample_marginal_coverage_under_exchangeability",
+        "extra_domain_or_distribution_shift_guarantee": False,
+        "selection_changed": False,
+        "selection_performed": False,
+        "far_or_evaluation_data_used": False,
+    }
+
+
+def verify_native_v60_calibration_audit(
+    final_model_audit: Mapping[str, Any],
+    calibration_audit: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Verify calibration provenance and finite-sample metadata against a frozen model."""
+    verify_final_model_audit(final_model_audit)
+    if not isinstance(calibration_audit, Mapping) or calibration_audit.get("schema") != "v60_native_split_conformal_calibration_v1":
+        raise ValueError("unsupported native V60 calibration audit")
+    if calibration_audit.get("selected_model_sha256") != final_model_audit.get("selected_model_sha256"):
+        raise ValueError("calibration audit belongs to a different frozen model")
+    digest = calibration_audit.get("calibration_set_sha256")
+    if not isinstance(digest, str) or len(digest) != 64 or any(ch not in "0123456789abcdef" for ch in digest):
+        raise ValueError("calibration set digest must be a lowercase SHA-256 value")
+    count = calibration_audit.get("calibration_row_count")
+    if isinstance(count, bool) or not isinstance(count, int) or count < 1:
+        raise ValueError("calibration row count must be a positive integer")
+    coverage = calibration_audit.get("nominal_coverage")
+    if isinstance(coverage, bool) or not isinstance(coverage, (int, float)):
+        raise ValueError("calibration nominal coverage must be numeric")
+    level = SplitConformalRegressor._validate_coverage(coverage)
+    expected_rank = int(math.ceil((count + 1) * level))
+    expected_minimum = int(math.ceil(level / (1.0 - level)))
+    if calibration_audit.get("finite_sample_quantile_rank") != expected_rank:
+        raise ValueError("calibration finite-sample quantile rank does not reproduce")
+    if calibration_audit.get("minimum_calibration_size_for_finite_radius") != expected_minimum:
+        raise ValueError("calibration minimum finite-radius sample size does not reproduce")
+    expected_status = "calibrated" if expected_rank <= count else "insufficient_calibration_size"
+    if calibration_audit.get("calibration_status") != expected_status:
+        raise ValueError("calibration status does not match its finite-sample rank")
+    radius = calibration_audit.get("interval_radius")
+    if expected_status == "calibrated":
+        if isinstance(radius, bool) or not isinstance(radius, (int, float)) or not math.isfinite(float(radius)) or float(radius) < 0:
+            raise ValueError("calibrated interval radius must be finite and non-negative")
+    elif radius is not None:
+        raise ValueError("insufficient calibration size cannot publish a finite interval radius")
+    expected_metadata = {
+        "method": "split_conformal_absolute_residual",
+        "calibration_n": count,
+        "nominal_coverage": level,
+        "calibration_score": "absolute_residual",
+        "coverage_assumption": "exchangeability_of_calibration_and_evaluation_observations",
+        "extra_domain_guarantee": False,
+    }
+    if calibration_audit.get("calibration_metadata") != expected_metadata:
+        raise ValueError("calibration metadata does not match the split-conformal contract")
+    provenance = calibration_audit.get("calibration_provenance")
+    if not isinstance(provenance, Mapping):
+        raise ValueError("calibration provenance must be a mapping")
+    training_id, calibration_id = provenance.get("training_split_id"), provenance.get("calibration_split_id")
+    if (not isinstance(training_id, str) or not training_id.strip()
+            or not isinstance(calibration_id, str) or not calibration_id.strip()
+            or training_id == calibration_id):
+        raise ValueError("calibration provenance must identify distinct non-empty splits")
+    if provenance.get("disjoint_from_training") is not True or provenance.get("exchangeability_assumed") is not True:
+        raise ValueError("calibration provenance must retain both caller attestations")
+    if provenance.get("verification") != "caller_attested_not_independently_verified":
+        raise ValueError("calibration provenance verification scope is invalid")
+    if calibration_audit.get("coverage_claim") != "finite_sample_marginal_coverage_under_exchangeability":
+        raise ValueError("calibration coverage claim is unsupported")
+    for key in ("extra_domain_or_distribution_shift_guarantee", "selection_changed", "selection_performed", "far_or_evaluation_data_used"):
+        if calibration_audit.get(key) is not False:
+            raise ValueError(f"calibration audit {key} must be false")
+    return dict(calibration_audit)
+
+
+def predict_frozen_native_v60_interval(
+    final_model_audit: Mapping[str, Any],
+    calibration_audit: Mapping[str, Any],
+    X: Any,
+    *,
+    variable_names: Sequence[str],
+) -> dict[str, Any]:
+    """Return prediction intervals from a matching frozen model/calibration pair."""
+    model = verify_final_model_audit(final_model_audit)
+    calibration_audit = verify_native_v60_calibration_audit(final_model_audit, calibration_audit)
+    if calibration_audit.get("calibration_status") != "calibrated":
+        raise ValueError("a finite-radius completed calibration is required")
+    radius = float(calibration_audit["interval_radius"])
+    level = float(calibration_audit["nominal_coverage"])
+    names = tuple(variable_names)
+    if names != tuple(model["variable_names"]):
+        raise ValueError("prediction variable_names must exactly match the frozen model order")
+    features = _array(X, "X", len(names))
+    predictions = _predict_verified_native_model(model, features)
+    return {
+        "schema": "v60_native_split_conformal_prediction_intervals_v1",
+        "prediction_status": "completed",
+        "selected_model_sha256": final_model_audit["selected_model_sha256"],
+        "calibration_set_sha256": calibration_audit["calibration_set_sha256"],
+        "nominal_coverage": level,
+        "interval_radius": float(radius),
+        "prediction": predictions.tolist(),
+        "lower": (predictions - float(radius)).tolist(),
+        "upper": (predictions + float(radius)).tolist(),
+        "interval_kind": "symmetric_split_conformal_prediction_interval",
+        "coverage_claim": "finite_sample_marginal_coverage_under_exchangeability",
+        "extra_domain_or_distribution_shift_guarantee": False,
+        "selection_changed": False,
+        "selection_performed": False,
+        "evaluation_targets_used": False,
+    }
+
+
+def build_native_v60_result(
+    final_model_audit: Mapping[str, Any],
+    calibration_audit: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Create canonical result fields, optionally carrying verified calibration provenance."""
+    model = verify_final_model_audit(final_model_audit)
+    calibration = (
+        verify_native_v60_calibration_audit(final_model_audit, calibration_audit)
+        if calibration_audit is not None else None
+    )
+    result = {
         "success": True,
         "formula": model["fitted_expression"],
         "expression": model["fitted_expression"],
@@ -300,10 +509,17 @@ def build_native_v60_result(final_model_audit: Mapping[str, Any]) -> dict[str, A
         "native_model": model,
         "native_model_sha256": final_model_audit["selected_model_sha256"],
     }
+    if calibration is not None:
+        result["native_model_calibration"] = calibration
+        result["native_model_calibration_status"] = calibration["calibration_status"]
+    return result
 
 
 __all__ = [
     "verify_final_model_audit",
     "evaluate_frozen_native_v60_model",
+    "calibrate_frozen_native_v60_model",
+    "predict_frozen_native_v60_interval",
+    "verify_native_v60_calibration_audit",
     "build_native_v60_result",
 ]

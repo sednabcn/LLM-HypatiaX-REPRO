@@ -78,3 +78,16 @@ def test_incomplete_validation_does_not_emit_diagnostics():
     )
     assert result["diagnostic_status"] == "insufficient_validation_evidence"
     assert result["candidate_diagnostics"] == []
+
+
+
+def test_residual_diagnostics_honor_expired_wall_time_budget():
+    X = np.arange(1.0, 9.0).reshape(-1, 1)
+    y = 2.0 * X[:, 0] + 1.0
+    result = diagnose_native_training_residuals(
+        [_candidate()], _validation(X, y), X, y,
+        variable_names=("x",), max_wall_time_seconds=1e-12,
+    )
+    assert result["diagnostic_status"] == "timed_out"
+    assert result["timed_out"] is True
+    assert result["candidate_diagnostics"] == []
