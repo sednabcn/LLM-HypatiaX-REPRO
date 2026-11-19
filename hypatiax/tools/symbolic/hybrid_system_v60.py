@@ -21,6 +21,7 @@ from hypatiax.tools.symbolic.v60_candidate_generation import generate_native_tem
 from hypatiax.tools.symbolic.v60_external_producers import ingest_external_candidate_proposals
 from hypatiax.tools.symbolic.v60_candidate_normalization import normalize_candidate_proposals
 from hypatiax.tools.symbolic.v60_candidate_fitting import fit_native_candidates
+from hypatiax.tools.symbolic.v60_production_handoff import build_native_v60_result
 
 
 @dataclass(frozen=True)
