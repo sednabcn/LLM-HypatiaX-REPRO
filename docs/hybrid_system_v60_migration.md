@@ -428,3 +428,19 @@ Regression-test source verifies that multiple injected LLM proposals are not
 incorrectly truncated by a smaller search-attempt budget. Tests have not been
 run; no CI, experiment, worker, benchmark, smoke workflow, or provider call
 was launched.
+
+
+## Stage 58 — enforce one V60 wall-time budget across fitting stages
+
+V60 now creates a single monotonic per-discovery budget runtime. Remaining wall
+time, rather than the original full allowance, is passed into single-basis
+fitting/validation and multi-basis fitting/validation. The runtime records
+actual shared search attempts and admitted candidate count in implementation
+provenance. A multi-basis evidence-verification stage is not entered after the
+shared deadline has expired.
+
+The compatibility typed-contract path uses the same runtime and remaining-time
+accounting for its fitting stage. Regression-test source checks the runtime
+clock API and the shared search/candidate counters. Tests have not been run;
+no CI, experiment, worker, benchmark, smoke workflow, or provider call was
+launched.
