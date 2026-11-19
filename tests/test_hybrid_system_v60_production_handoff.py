@@ -15,6 +15,7 @@ from hypatiax.tools.symbolic.v60_production_handoff import (
     predict_frozen_native_v60_interval,
     verify_final_model_audit,
     build_native_v60_result,
+    calibrate_native_v60_result,
 )
 
 
@@ -417,6 +418,36 @@ class NativeV60SplitConformalTests(unittest.TestCase):
             predict_frozen_native_v60_interval(
                 final, calibration, np.asarray([[40.0]]), variable_names=["x"],
             )
+
+    def test_result_calibration_integration_preserves_frozen_model_and_audit(self):
+        final, _ = self._calibration()
+        X_cal = np.arange(20.0, 39.0).reshape(-1, 1)
+        predictions = 3.0 * X_cal[:, 0] + 2.0
+        result = {
+            "success": True,
+            "native_v60_final_model": final,
+            "discovery_report_envelope": None,
+        }
+        calibrated = calibrate_native_v60_result(
+            result,
+            X_cal,
+            predictions + np.arange(1.0, 20.0),
+            variable_names=["x"],
+            calibration_provenance={
+                "training_split_id": "train-v1",
+                "calibration_split_id": "cal-v2",
+                "disjoint_from_training": True,
+                "exchangeability_assumed": True,
+            },
+        )
+        self.assertEqual(calibrated["native_v60_final_model"], final)
+        self.assertEqual(calibrated["native_model"], final["selected_model"])
+        self.assertEqual(calibrated["native_model_calibration_status"], "calibrated")
+        self.assertEqual(
+            calibrated["native_v60_calibration_audit"]["selected_model_sha256"],
+            final["selected_model_sha256"],
+        )
+        self.assertIsNone(calibrated["discovery_report_envelope"])
 
     def test_native_result_preserves_verified_calibration_audit(self):
         final, calibration = self._calibration()
