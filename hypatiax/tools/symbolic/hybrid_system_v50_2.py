@@ -1744,6 +1744,21 @@ class HybridDiscoverySystem:
             best_result["candidate_selection_policy"] = "training_only_physics_gated_pareto"
 
         if best_result:
+            _acceptance_threshold = getattr(
+                self, "_active_training_acceptance_threshold", None
+            )
+            if (
+                _acceptance_threshold is not None
+                and (
+                    not np.isfinite(best_r2)
+                    or best_r2 < _acceptance_threshold
+                )
+            ):
+                raise ValueError(
+                    "TRAINING_ACCEPTANCE_FAILED: selected V50.2 candidate "
+                    f"training R2={best_r2:.6g} is below the required "
+                    f"training-only acceptance threshold={_acceptance_threshold:.6g}"
+                )
             if best_r2 >= 0.97:
                 logger.info(
                     "[SUCCESS] Returning Pareto-selected candidate "
@@ -2107,6 +2122,19 @@ class HybridDiscoverySystem:
         if _llm_runtime_engine is not None:
             _llm_runtime_engine.budget_runtime = self._active_budget_runtime
         self._training_only_search_selection = None
+        _acceptance_threshold = metadata.get("training_acceptance_threshold")
+        self._active_training_acceptance_threshold = None
+        if _acceptance_threshold is not None:
+            if (
+                isinstance(_acceptance_threshold, bool)
+                or not isinstance(_acceptance_threshold, (int, float, np.integer, np.floating))
+                or not np.isfinite(float(_acceptance_threshold))
+                or not 0.0 <= float(_acceptance_threshold) <= 1.0
+            ):
+                raise ValueError(
+                    "metadata['training_acceptance_threshold'] must be a finite number in [0, 1]"
+                )
+            self._active_training_acceptance_threshold = float(_acceptance_threshold)
 
         _validation_settings = metadata.get("training_only_search_validation")
         self._active_training_validation_settings = _validation_settings or None
