@@ -164,6 +164,22 @@ def test_v60_template_generation_returns_auditable_budget_and_operator_counts():
     ]
 
 
+def test_v60_template_generation_honors_remaining_global_search_budget():
+    problem = DiscoveryProblem(
+        target_name="target",
+        variable_names=("x", "y", "z"),
+        budget=DiscoveryBudget(max_search_attempts=5, max_candidates=10, seed=17),
+    )
+
+    audit = generate_native_template_candidates_with_audit(
+        problem, search_attempt_limit=2
+    )
+    assert audit["contract_search_attempt_budget"] == 5
+    assert audit["search_attempt_budget"] == 2
+    assert audit["generation_attempt_count"] == 2
+    assert audit["search_attempt_budget_exhausted"] is True
+
+
 def test_v60_template_generation_respects_zero_candidate_budget():
     problem = _problem(budget=DiscoveryBudget(
         max_search_attempts=10, max_candidates=0, seed=17
