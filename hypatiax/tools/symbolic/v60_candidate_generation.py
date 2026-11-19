@@ -93,7 +93,7 @@ def generate_native_template_candidates(
 
     # Multiplication also permits a variable's self-product. Prefer the
     # explicit square form when exponentiation was declared as well.
-    if "*" in allowed_binary and not allow_square:
+    if "*" in problem.allowed_binary_operators and not allow_square:
         for name in names:
             if attempts >= budget.max_search_attempts or len(proposals) >= cap:
                 break
