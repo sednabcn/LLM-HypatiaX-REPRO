@@ -413,8 +413,8 @@ def _verify_native_final_model_audit(audit: Any) -> None:
         if condition_number is not None and float(condition_number) < 0:
             raise ValueError("native final-model design condition number cannot be negative")
         rank = model.get("training_design_rank")
-        if isinstance(rank, bool) or not isinstance(rank, int) or rank < 1 or rank > len(expressions) + 1:
-            raise ValueError("native final-model design rank is invalid")
+        if isinstance(rank, bool) or not isinstance(rank, int) or rank != len(expressions) + 1:
+            raise ValueError("native final-model training design must have full column rank")
     elif status in {"no_credible_candidate", "stage_failed", "not_run"}:
         if audit.get("selection_performed") is not False:
             raise ValueError("unselected native final model cannot claim selection")
