@@ -515,6 +515,58 @@ def build_native_v60_result(
     return result
 
 
+def calibrate_native_v60_result(
+    discovery_result: Mapping[str, Any],
+    X_calibration: Any,
+    y_calibration: Any,
+    *,
+    variable_names: Sequence[str],
+    calibration_provenance: Mapping[str, Any],
+    nominal_coverage: float = 0.95,
+) -> dict[str, Any]:
+    """Attach post-selection conformal calibration to a native V60 result.
+
+    This helper consumes only an already-finalized result and a caller-supplied
+    calibration split. It never refits, re-ranks, or changes the frozen model.
+    When a sealed discovery report is present, its calibration provenance is
+    updated and resealed in the same operation.
+    """
+    if not isinstance(discovery_result, Mapping):
+        raise TypeError("discovery_result must be a mapping")
+    if discovery_result.get("success") is not True:
+        raise ValueError("calibration requires a successful native V60 discovery result")
+    final_model_audit = discovery_result.get("native_v60_final_model")
+    if not isinstance(final_model_audit, Mapping):
+        final_model_audit = discovery_result.get("native_model")
+    if not isinstance(final_model_audit, Mapping):
+        raise ValueError("discovery result does not contain a finalized native V60 model")
+
+    calibration = calibrate_frozen_native_v60_model(
+        final_model_audit,
+        X_calibration,
+        y_calibration,
+        variable_names=variable_names,
+        nominal_coverage=nominal_coverage,
+        calibration_provenance=calibration_provenance,
+    )
+    updated = dict(discovery_result)
+    updated.update(build_native_v60_result(final_model_audit, calibration))
+    updated["native_v60_final_model"] = dict(final_model_audit)
+    updated["native_v60_calibration_audit"] = calibration
+
+    report_envelope = discovery_result.get("discovery_report_envelope")
+    if report_envelope is not None:
+        if not isinstance(report_envelope, Mapping):
+            raise TypeError("discovery_report_envelope must be a mapping")
+        from hypatiax.tools.symbolic.discovery_report_integrity import (
+            attach_native_v60_calibration_to_report,
+        )
+        updated["discovery_report_envelope"] = attach_native_v60_calibration_to_report(
+            report_envelope, calibration
+        )
+    return updated
+
+
 __all__ = [
     "verify_final_model_audit",
     "evaluate_frozen_native_v60_model",
@@ -522,4 +574,5 @@ __all__ = [
     "predict_frozen_native_v60_interval",
     "verify_native_v60_calibration_audit",
     "build_native_v60_result",
+    "calibrate_native_v60_result",
 ]
