@@ -240,11 +240,6 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         external_spec: Mapping[str, Any],
     ) -> dict[str, Any]:
         """Run the complete native training-only pipeline; far data is not accepted."""
-        generation = generate_native_template_candidates_with_audit(problem)
-        generated = list(generation["proposals"])
-        self._last_v60_generation_audit = {
-            key: value for key, value in generation.items() if key != "proposals"
-        }
         unknown_fields = set(external_spec) - {
             "llm_proposals", "pysr_proposals", "llm_call_count",
             "llm_token_count", "pysr_search_attempt_count",
@@ -260,6 +255,26 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             pysr_search_attempt_count=external_spec.get("pysr_search_attempt_count", 0),
         )
         cap = min(problem.budget.max_candidates, problem.budget.max_search_attempts)
+        remaining_search_attempts = max(
+            0, problem.budget.max_search_attempts
+            - external["pysr_usage"]["search_attempt_count"]
+        )
+        remaining_candidate_slots = max(0, cap - len(external["proposals"]))
+        generation = generate_native_template_candidates_with_audit(
+            problem, limit=remaining_candidate_slots,
+            search_attempt_limit=remaining_search_attempts,
+        )
+        generated = list(generation["proposals"])
+        self._last_v60_generation_audit = {
+            key: value for key, value in generation.items() if key != "proposals"
+        }
+        self._last_v60_generation_audit.update({
+            "external_pysr_search_attempt_count": external["pysr_usage"]["search_attempt_count"],
+            "total_search_attempt_count": (
+                external["pysr_usage"]["search_attempt_count"]
+                + generation["generation_attempt_count"]
+            ),
+        })
         combined = (external["proposals"] + [item.to_dict() for item in generated])[:cap]
         self._last_v60_external_producer_audit = dict(external)
         normalized = normalize_candidate_proposals(
@@ -453,11 +468,6 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_fitting_audit = {}
         if self._last_v60_run_context is not None:
             problem = prepared["discovery_problem"]
-            generation = generate_native_template_candidates_with_audit(problem)
-            generated = list(generation["proposals"])
-            self._last_v60_generation_audit = {
-                key: value for key, value in generation.items() if key != "proposals"
-            }
             external_spec = prepared.get("v60_external_candidate_proposals", {}) or {}
             if not isinstance(external_spec, Mapping):
                 raise TypeError("v60_external_candidate_proposals must be a mapping")
@@ -475,8 +485,29 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
                 llm_token_count=external_spec.get("llm_token_count", 0),
                 pysr_search_attempt_count=external_spec.get("pysr_search_attempt_count", 0),
             )
+            candidate_cap = min(problem.budget.max_candidates, problem.budget.max_search_attempts)
+            remaining_search_attempts = max(
+                0, problem.budget.max_search_attempts
+                - external_audit["pysr_usage"]["search_attempt_count"]
+            )
+            remaining_candidate_slots = max(0, candidate_cap - len(external_audit["proposals"]))
+            generation = generate_native_template_candidates_with_audit(
+                problem, limit=remaining_candidate_slots,
+                search_attempt_limit=remaining_search_attempts,
+            )
+            generated = list(generation["proposals"])
+            self._last_v60_generation_audit = {
+                key: value for key, value in generation.items() if key != "proposals"
+            }
+            self._last_v60_generation_audit.update({
+                "external_pysr_search_attempt_count": external_audit["pysr_usage"]["search_attempt_count"],
+                "total_search_attempt_count": (
+                    external_audit["pysr_usage"]["search_attempt_count"]
+                    + generation["generation_attempt_count"]
+                ),
+            })
             combined = external_audit["proposals"] + [item.to_dict() for item in generated]
-            combined = combined[:min(problem.budget.max_candidates, problem.budget.max_search_attempts)]
+            combined = combined[:candidate_cap]
             self._last_v60_external_producer_audit = dict(external_audit)
             normalized = normalize_candidate_proposals(
                 combined, variable_names=problem.variable_names,
