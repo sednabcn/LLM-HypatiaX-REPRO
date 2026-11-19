@@ -3381,10 +3381,11 @@ class HybridSystemV50_2Method(BaseMethod):
         # Three full searches could consume the entire outer budget before
         # the worker has a chance to return its best result.
         _MAX_RETRIES_V50_2 = 2
-        _reserved_overhead = 400
-        # Reserve a bounded 3-strategy × 2-fold validation budget before the
-        # final full-training retries. Fold searches use a shorter per-fit cap.
-        _fold_validation_reserve = 120
+        _reserved_overhead = 300
+        # Reserve a bounded 3-strategy × 3-fold validation budget before the
+        # final full-training retries. Every strategy sees the same three
+        # training-only partitions; each fold gets a 30-second search cap.
+        _fold_validation_reserve = 270
         _t_available = max(120, _METHOD_TIMEOUT_SECS - _reserved_overhead)
         _budget_per_attempt = max(
             60, (_t_available - _fold_validation_reserve) // _MAX_RETRIES_V50_2
@@ -3413,10 +3414,11 @@ class HybridSystemV50_2Method(BaseMethod):
             # Fold searches use pure PySR; the final full-training search keeps
             # the configured LLM-guided HybridDiscovery arm.
             "training_only_search_validation": {
-                "n_splits": 2,
+                "n_splits": 3,
                 "validation_fraction": 0.2,
-                "fold_iterations": 20,
-                "fold_timeout_seconds": 20,
+                "minimum_valid_folds": 3,
+                "fold_iterations": 30,
+                "fold_timeout_seconds": 30,
             },
         }
         _active = globals().get("_ACTIVE_SUITE")
