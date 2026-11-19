@@ -109,6 +109,20 @@ def test_v60_template_generation_deduplicates_declared_operator_lists():
     ]
 
 
+def test_v60_template_generation_uses_declared_multiplication_for_self_products():
+    problem = DiscoveryProblem(
+        target_name="target",
+        variable_names=("x", "y"),
+        allowed_binary_operators=("*",),
+        budget=DiscoveryBudget(max_search_attempts=2, max_candidates=10, seed=17),
+    )
+
+    proposals = generate_native_template_candidates(problem)
+    assert [item.expression for item in proposals] == [
+        "x", "y", "(x * x)", "(y * y)",
+    ]
+
+
 def test_v60_template_generation_respects_zero_candidate_budget():
     problem = _problem(budget=DiscoveryBudget(
         max_search_attempts=10, max_candidates=0, seed=17
