@@ -70,3 +70,15 @@ def test_far_evaluation_claim_fails_closed():
         assert "exclude far/evaluation" in str(exc)
     else:
         raise AssertionError("far/evaluation data must be rejected")
+
+
+
+def test_evidence_verification_honors_expired_wall_time_budget():
+    X, y, candidates, validation = _fixture()
+    audit = verify_native_multi_basis_validation_evidence(
+        validation, candidates, X, y, variable_names=("x", "y"),
+        max_wall_time_seconds=1e-12,
+    )
+    assert audit["verification_status"] == "timed_out"
+    assert audit["timed_out"] is True
+    assert audit["verified_candidate_groups"] == []

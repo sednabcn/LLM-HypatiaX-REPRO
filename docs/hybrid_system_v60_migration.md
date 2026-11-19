@@ -279,3 +279,190 @@ only the final winner was identifiable.
 Regression-test source covers rank-deficient family options at both
 verification boundaries. Tests have not been run; no CI, experiment, worker,
 benchmark, smoke workflow, or provider call was launched.
+
+
+## Stage 47 — honor declared unary operators in native proposal generation
+
+The bounded native template generator now emits unary-function proposals only
+when the immutable problem contract explicitly declares a supported function.
+The function allowlist matches the restricted expression parser; unknown
+operator names are ignored rather than guessed or evaluated. Unary proposals
+consume the same search-attempt and candidate budgets as binary templates,
+remain deterministic under the declared seed, and do not inspect training
+targets or evaluation data.
+
+The default contract with no declared unary functions retains its previous
+candidate sequence. Regression-test source covers explicit allowlisting,
+unsupported names, deterministic order, and budget truncation. Tests have not
+been run; no CI, experiment, worker, benchmark, smoke workflow, or provider
+call was launched.
+
+
+## Stage 48 — generate bounded square templates for declared exponentiation
+
+The native generator now emits the bounded variable-to-the-second-power
+structural template only when exponentiation (**) is explicitly declared in
+the contract's binary-operator allowlist. Each square consumes one search
+attempt and obeys the same candidate cap. Undeclared exponentiation, caret
+notation, and unknown operators remain excluded. This adds a minimal nonlinear
+polynomial basis without introducing arbitrary exponents or unrestricted
+expression search.
+
+Regression-test source covers explicit declaration and the unsupported-operator
+case. Tests have not been run; no CI, experiment, worker, benchmark, smoke
+workflow, or provider call was launched.
+
+
+## Stage 49 — compose declared unary and binary templates
+
+When both operator families are declared, native proposal generation now
+also emits bounded unary applications over each admitted pairwise binary
+template (for example, sin(x + y)). The inner binary expression is retained
+as its own proposal, and the composed expression is a separate candidate.
+Each generation consumes one attempt, preserving deterministic ordering and
+the shared attempt/candidate limits. No undeclared function or operator is
+introduced.
+
+Regression-test source covers the combined operator path and budget order.
+Tests have not been run; no CI, experiment, worker, benchmark, smoke workflow,
+or provider call was launched.
+
+
+## Stage 50 — validate candidate-generation limits without coercion
+
+The public native template generator now rejects boolean, floating-point,
+string, and negative limit values rather than coercing them into a candidate
+cap. Declared unary and binary operator lists are deduplicated in stable
+first-seen order before proposal attempts are charged, so repeated declarations
+cannot consume the bounded search budget or suppress distinct templates.
+
+Regression-test source covers strict limit types and duplicate operator
+declarations. Tests have not been run; no CI, experiment, worker, benchmark,
+smoke workflow, or provider call was launched.
+
+
+## Stage 51 — use declared multiplication for self-product templates
+
+When multiplication is declared but exponentiation is not, native proposal
+generation now includes bounded self-products such as x*x. If exponentiation
+is also declared, the generator prefers the explicit x**2 form and avoids
+spending budget on the duplicate self-product. Each self-product consumes one
+search attempt and remains subject to the candidate cap.
+
+Regression-test source covers multiplication-only self-products. Tests have
+not been run; no CI, experiment, worker, benchmark, smoke workflow, or provider
+call was launched.
+
+
+## Stage 53 — share the safe unary-function allowlist
+
+The native template generator now imports the unary-function allowlist from
+the restricted AST parser instead of maintaining a second copy. The parser
+checks that its callable mapping and exported allowlist remain identical.
+This prevents generator/parser drift: a generated function call is admitted
+only when the exact same parser accepts that function name.
+
+Regression-test source remains offline and exercises supported and
+unsupported declarations. Tests have not been run; no CI, experiment, worker,
+benchmark, smoke workflow, or provider call was launched.
+
+
+## Stage 54 — compose binary operators over admitted basis terms
+
+Pairwise binary templates now operate over the bounded one-level basis pool:
+raw variables plus any declared unary, square, and self-product templates
+already admitted. This allows mixed forms such as sin(x) + y without
+unbounded recursive expression growth. Unary wrapping of each admitted binary
+expression remains bounded by the same shared attempt and candidate budgets.
+With no additional declared operators, the default pairwise variable order is
+unchanged.
+
+Regression-test source covers a binary combination that uses a unary basis
+term. Tests have not been run; no CI, experiment, worker, benchmark, smoke
+workflow, or provider call was launched.
+
+
+## Stage 55 — persist bounded template-generation audit
+
+Native proposal generation now has an audit-returning API alongside the
+backward-compatible tuple-returning function. The audit records declared,
+accepted, and ignored operator declarations; attempt and candidate budgets;
+effective cap; generated/base/operator candidate counts; duplicate count;
+budget-exhaustion flags; and seed. V60 attaches this audit to implementation
+provenance for both native activation and typed-contract compatibility calls.
+
+The audit contains no training values, far/evaluation data, credentials, or
+provider output. Regression-test source checks budget/operator accounting and
+parity with the compatibility API. Tests have not been run; no CI, experiment,
+worker, benchmark, smoke workflow, or provider call was launched.
+
+
+## Stage 56 — share search-attempt budget with injected PySR usage
+
+External PySR search attempts are now accounted before deterministic template
+generation. The generator receives only the remaining search-attempt budget
+and remaining candidate slots after externally supplied proposals are admitted.
+The combined audit records external PySR attempts and total search attempts,
+so native templates cannot independently consume a fresh copy of the same
+per-discovery search budget. The typed-contract compatibility path uses the
+same accounting.
+
+LLM calls/tokens remain separately governed by their dedicated budget fields.
+No producer is invoked by this change; externally produced proposals and usage
+counters are still supplied by the caller. Regression-test source covers
+remaining-budget enforcement. Tests have not been run; no CI, experiment,
+worker, benchmark, smoke workflow, or provider call was launched.
+
+
+## Stage 57 — keep candidate and search budgets independent
+
+External proposal ingestion and V60 orchestration now use max_candidates as
+the candidate-pool ceiling, while max_search_attempts governs the combined
+native-template and injected-PySR search work. This preserves the separate
+contract budgets: LLM proposals are constrained by LLM call/token budgets and
+the candidate cap; PySR and native template generation share the search-attempt
+ceiling. Remaining candidate slots and remaining search attempts are both
+calculated before native templates are generated.
+
+Regression-test source verifies that multiple injected LLM proposals are not
+incorrectly truncated by a smaller search-attempt budget. Tests have not been
+run; no CI, experiment, worker, benchmark, smoke workflow, or provider call
+was launched.
+
+
+## Stage 58 — enforce one V60 wall-time budget across fitting stages
+
+V60 now creates a single monotonic per-discovery budget runtime. Remaining wall
+time, rather than the original full allowance, is passed into single-basis
+fitting/validation and multi-basis fitting/validation. The runtime records
+actual shared search attempts and admitted candidate count in implementation
+provenance. A multi-basis evidence-verification stage is not entered after the
+shared deadline has expired.
+
+The compatibility typed-contract path uses the same runtime and remaining-time
+accounting for its fitting stage. Residual diagnostics are skipped with an
+explicit budget-limited audit when the shared deadline has already expired.
+If the deadline is exhausted before finalization completes, the selected-model
+handoff is replaced by a stage-failed audit and no production model is emitted.
+Regression-test source checks the runtime clock API and the shared
+search/candidate counters. Tests have not been run;
+no CI, experiment, worker, benchmark, smoke workflow, or provider call was
+launched.
+
+
+## Stage 59 — make post-validation V60 diagnostics deadline-aware
+
+Independent multi-basis evidence verification and training-only residual
+stability diagnostics now accept the remaining per-discovery wall-time
+allowance. Both check a monotonic deadline between candidate/group and fold
+operations, stop without emitting partially verified evidence for an
+incomplete group/candidate, and report timeout/attempt/truncation metadata.
+The native orchestration passes the remaining shared deadline to both stages.
+This closes the prior gap where post-validation reconstruction could continue
+after the main fitting deadline had elapsed.
+
+The deadline is cooperative: an individual NumPy/SymPy operation already in
+progress cannot be preempted, but no subsequent group/fold begins after the
+deadline is observed. Regression-test source covers already-expired budgets.
+Tests have not been run; no CI, experiment, worker, benchmark, smoke workflow,
+or provider call was launched.
