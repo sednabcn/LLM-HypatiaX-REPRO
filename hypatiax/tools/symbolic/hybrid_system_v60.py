@@ -394,12 +394,28 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_multi_basis_evidence_audit = multi_evidence
         self._last_v60_multi_basis_selection_audit = multi_selection
 
-        self._last_v60_residual_stability_audit = diagnose_native_training_residuals(
-            candidates, single_validation, X, y,
-            variable_names=problem.variable_names,
-            max_candidates=budget.max_candidates,
-            max_search_attempts=budget.max_search_attempts,
-        )
+        if budget_runtime.expired():
+            self._last_v60_residual_stability_audit = {
+                "schema": "v60_native_residual_stability_v1",
+                "diagnostic_status": "budget_limited",
+                "reason": "max_wall_time_seconds",
+                "input_candidate_count": len(candidates),
+                "diagnosed_candidate_count": 0,
+                "rejected_candidate_count": 0,
+                "budget_truncated_count": len(candidates),
+                "candidate_diagnostics": [],
+                "rejected_candidates": [],
+                "diagnostic_scope": "training_only_held_out_fold_residuals_and_fold_local_coefficients",
+                "selection_performed": False,
+                "far_or_evaluation_data_used": False,
+            }
+        else:
+            self._last_v60_residual_stability_audit = diagnose_native_training_residuals(
+                candidates, single_validation, X, y,
+                variable_names=problem.variable_names,
+                max_candidates=budget.max_candidates,
+                max_search_attempts=budget.max_search_attempts,
+            )
         final_audit = finalize_native_v60_model(
             candidates, single_selection, multi_selection, X, y,
             variable_names=problem.variable_names,
