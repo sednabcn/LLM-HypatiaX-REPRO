@@ -566,3 +566,24 @@ def test_candidate_identity_is_stable_and_report_rejects_duplicate_candidates():
     assert first.candidate_id == second.candidate_id
     with pytest.raises(ValueError, match="unique"):
         DiscoveryReport(status="provisional", candidates=(first, second))
+
+
+def test_exp2_v50_2_search_selection_uses_three_paired_training_only_folds():
+    """Keep the V50.2 strategy selector adequately evidenced within its method budget."""
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[3]
+    source = (
+        root / "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py"
+    ).read_text(encoding="utf-8")
+    method = source.split("class HybridSystemV50_2Method", 1)[1].split(
+        "class ProtocolBenchmarkSuite", 1
+    )[0]
+
+    assert '"n_splits": 3' in method
+    assert '"minimum_valid_folds": 3' in method
+    assert '"fold_iterations": 30' in method
+    assert '"fold_timeout_seconds": 30' in method
+    assert "_reserved_overhead = 300" in method
+    assert "_fold_validation_reserve = 270" in method
+    assert "extrapolation_metric_used_for_selection" in method
