@@ -1,10 +1,16 @@
 """End-to-end native V60 orchestration and strict data-boundary contracts."""
 
+import time
+from concurrent.futures import ThreadPoolExecutor
+from threading import Lock
+from unittest.mock import patch
+
 import numpy as np
 import pytest
 
 from hypatiax.tools.symbolic.discovery_contracts import DiscoveryBudget, DiscoveryProblem
 from hypatiax.tools.symbolic.hybrid_system_v60 import HybridDiscoverySystemV60
+from hypatiax.tools.symbolic.hybrid_system_v50_2 import HybridDiscoverySystem
 
 
 def _problem():
@@ -156,3 +162,32 @@ def test_native_activation_flag_must_be_boolean():
                 "v60_activate_native_model": "true",
             },
         )
+
+
+def test_stateful_entrypoints_serialize_concurrent_calls_on_one_engine():
+    engine = HybridDiscoverySystemV60(use_llm=False)
+    active = 0
+    maximum_active = 0
+    counter_lock = Lock()
+
+    def slow_compatibility_discovery(self, **kwargs):
+        nonlocal active, maximum_active
+        with counter_lock:
+            active += 1
+            maximum_active = max(maximum_active, active)
+        time.sleep(0.04)
+        with counter_lock:
+            active -= 1
+        return {"success": True}
+
+    X, y = _training_data()
+    with patch.object(HybridDiscoverySystem, "discover", slow_compatibility_discovery):
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            futures = [
+                pool.submit(engine.discover, X=X, y=y, var_names=["x"])
+                for _ in range(2)
+            ]
+            results = [future.result() for future in futures]
+
+    assert all(result["success"] for result in results)
+    assert maximum_active == 1
