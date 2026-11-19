@@ -91,6 +91,22 @@ def test_far_evaluation_is_rejected_before_native_finalization():
         engine.evaluate_native_far_set([[1.0]], [1.0])
 
 
+
+def test_far_arrays_are_rejected_from_native_discovery_metadata():
+    engine = HybridDiscoverySystemV60(use_llm=False)
+    X, y = _training_data()
+
+    with pytest.raises(ValueError, match="far/evaluation arrays are not accepted"):
+        engine.discover(
+            X=X, y=y, var_names=["x"],
+            metadata={
+                "discovery_problem": _problem(),
+                "v60_activate_native_model": True,
+                "X_far": [[100.0]],
+                "y_far": [251.25],
+            },
+        )
+
 def test_native_activation_flag_must_be_boolean():
     engine = HybridDiscoverySystemV60(use_llm=False)
     X, y = _training_data()
