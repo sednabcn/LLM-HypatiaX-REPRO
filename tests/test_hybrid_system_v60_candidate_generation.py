@@ -78,6 +78,37 @@ def test_v60_template_generation_emits_square_only_when_power_is_declared():
     ]
 
 
+def test_v60_template_limit_rejects_coercible_or_invalid_values():
+    problem = _problem()
+    for invalid in (True, 2.5, "3"):
+        try:
+            generate_native_template_candidates(problem, limit=invalid)
+        except TypeError:
+            pass
+        else:
+            raise AssertionError(f"limit {invalid!r} should be rejected")
+    try:
+        generate_native_template_candidates(problem, limit=-1)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("negative limit should be rejected")
+
+
+def test_v60_template_generation_deduplicates_declared_operator_lists():
+    problem = DiscoveryProblem(
+        target_name="target",
+        variable_names=("x", "y"),
+        allowed_unary_operators=("sin", "sin"),
+        allowed_binary_operators=("+", "+"),
+        budget=DiscoveryBudget(max_search_attempts=4, max_candidates=10, seed=17),
+    )
+    proposals = generate_native_template_candidates(problem)
+    assert [item.expression for item in proposals] == [
+        "x", "y", "sin(x)", "sin(y)", "(x + y)",
+    ]
+
+
 def test_v60_template_generation_respects_zero_candidate_budget():
     problem = _problem(budget=DiscoveryBudget(
         max_search_attempts=10, max_candidates=0, seed=17
