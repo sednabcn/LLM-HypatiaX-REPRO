@@ -17,6 +17,7 @@ def test_exp1_llm_sensitivity_is_wired_to_both_canonical_launchers():
     assert 'exp1_llm_sens' in launcher.split('_STEP_ORDER=', 1)[1].splitlines()[0]
     assert 'run exp1_llm_sens ' in launcher
     assert 'exactly one condition per shard' in launcher
+    assert "IFS=', ' read -r -a seed_args" in launcher
 
 
 def test_exp1_llm_sensitivity_driver_and_adapter_contract_exist():
