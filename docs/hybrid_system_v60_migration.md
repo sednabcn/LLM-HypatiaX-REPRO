@@ -352,3 +352,16 @@ search attempt and remains subject to the candidate cap.
 Regression-test source covers multiplication-only self-products. Tests have
 not been run; no CI, experiment, worker, benchmark, smoke workflow, or provider
 call was launched.
+
+
+## Stage 53 — share the safe unary-function allowlist
+
+The native template generator now imports the unary-function allowlist from
+the restricted AST parser instead of maintaining a second copy. The parser
+checks that its callable mapping and exported allowlist remain identical.
+This prevents generator/parser drift: a generated function call is admitted
+only when the exact same parser accepts that function name.
+
+Regression-test source remains offline and exercises supported and
+unsupported declarations. Tests have not been run; no CI, experiment, worker,
+benchmark, smoke workflow, or provider call was launched.
