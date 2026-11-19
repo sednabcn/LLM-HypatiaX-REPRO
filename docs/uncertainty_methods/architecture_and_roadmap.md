@@ -104,3 +104,15 @@ quantiles; missing levels are reported rather than interpolated. Quantile
 crossings are surfaced in diagnostics and are not silently rearranged. The
 resulting conditional-quantile intervals are not automatically calibrated and
 carry no extrapolation coverage guarantee.
+
+
+## V60 integration boundary
+
+The native V60 production handoff optionally supports the existing split-
+conformal baseline after model finalization. It requires a caller-supplied
+calibration split and an explicit caller attestation of row disjointness and
+exchangeability. The calibration API does not refit or change the frozen model.
+A finite-sample marginal coverage claim is made only under the stated
+exchangeability assumption; no extrapolation or distribution-shift guarantee
+is provided. Ensemble spread, bootstrap fitted-mean spread, and uncalibrated
+quantile intervals are not substituted for this calibrated prediction interval.

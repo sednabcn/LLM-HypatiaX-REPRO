@@ -11,6 +11,8 @@ from hypatiax.tools.symbolic.hybrid_system_v60 import HybridDiscoverySystemV60
 from hypatiax.tools.symbolic.v60_native_finalization import finalize_native_v60_model
 from hypatiax.tools.symbolic.v60_production_handoff import (
     evaluate_frozen_native_v60_model,
+    calibrate_frozen_native_v60_model,
+    predict_frozen_native_v60_interval,
     verify_final_model_audit,
 )
 
@@ -306,3 +308,79 @@ class NativeV60ProductionHandoffTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+
+class NativeV60SplitConformalTests(unittest.TestCase):
+    def _frozen_model(self):
+        return _audit({
+            "basis_candidate_ids": ["c1"],
+            "basis_expressions": ["x"],
+            "variable_names": ["x"],
+            "fitted_expression": "(3)*(x) + (2)",
+            "coefficients": [3.0, 2.0],
+        })
+
+    def test_split_conformal_calibrates_and_predicts_without_changing_model(self):
+        final = self._frozen_model()
+        X_cal = np.arange(20.0, 39.0).reshape(-1, 1)
+        predictions = 3.0 * X_cal[:, 0] + 2.0
+        residuals = np.arange(1.0, 20.0)
+        provenance = {
+            "training_split_id": "train-v1",
+            "calibration_split_id": "cal-v1",
+            "disjoint_from_training": True,
+            "exchangeability_assumed": True,
+        }
+        calibration = calibrate_frozen_native_v60_model(
+            final, X_cal, predictions + residuals, variable_names=["x"],
+            nominal_coverage=0.95, calibration_provenance=provenance,
+        )
+        assert calibration["calibration_status"] == "calibrated"
+        assert calibration["finite_sample_quantile_rank"] == 19
+        assert calibration["interval_radius"] == 19.0
+        X_new = np.asarray([[40.0], [41.0]])
+        intervals = predict_frozen_native_v60_interval(
+            final, calibration, X_new, variable_names=["x"],
+        )
+        assert intervals["lower"][0] == 3.0 * 40.0 + 2.0 - 19.0
+        assert intervals["upper"][0] == 3.0 * 40.0 + 2.0 + 19.0
+        assert intervals["coverage_claim"] == "finite_sample_marginal_coverage_under_exchangeability"
+        assert intervals["extra_domain_or_distribution_shift_guarantee"] is False
+        assert calibration["selection_changed"] is False
+
+    def test_small_calibration_split_does_not_emit_finite_interval(self):
+        final = self._frozen_model()
+        X_cal = np.asarray([[20.0], [21.0], [22.0]])
+        y_cal = 3.0 * X_cal[:, 0] + 2.0
+        calibration = calibrate_frozen_native_v60_model(
+            final, X_cal, y_cal, variable_names=["x"],
+            nominal_coverage=0.95,
+            calibration_provenance={
+                "training_split_id": "train-v1",
+                "calibration_split_id": "cal-v1",
+                "disjoint_from_training": True,
+                "exchangeability_assumed": True,
+            },
+        )
+        assert calibration["calibration_status"] == "insufficient_calibration_size"
+        assert calibration["interval_radius"] is None
+        with self.assertRaisesRegex(ValueError, "finite-radius"):
+            predict_frozen_native_v60_interval(
+                final, calibration, np.asarray([[23.0]]), variable_names=["x"],
+            )
+
+    def test_calibration_requires_disjoint_exchangeable_split_attestation(self):
+        final = self._frozen_model()
+        X_cal = np.asarray([[20.0], [21.0], [22.0]])
+        y_cal = 3.0 * X_cal[:, 0] + 2.0
+        with self.assertRaisesRegex(ValueError, "distinct"):
+            calibrate_frozen_native_v60_model(
+                final, X_cal, y_cal, variable_names=["x"],
+                calibration_provenance={
+                    "training_split_id": "same",
+                    "calibration_split_id": "same",
+                    "disjoint_from_training": True,
+                    "exchangeability_assumed": True,
+                },
+            )

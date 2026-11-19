@@ -87,3 +87,16 @@ No tests or CI were run as part of this source change. After review and merge, t
 4. Known-equation recovery, physical-rejection, LLM-unavailable fallback, and reproducibility evidence.
 
 No experiment, worker, benchmark, smoke workflow, or LLM API call is started by this PR.
+
+
+## V60 physical-gate qualification — finite-grid results
+
+The native candidate gate delegates declared domain constraints to
+CandidateValidator. Deterministic finite-grid screening that finds no
+violations is evidence of sampled behavior only, not proof over a continuous
+domain. Such outcomes are recorded as unknown (with the sampled screen
+marked as passed), so hard constraints remain ineligible until stronger
+proof evidence is available. Soft constraints retain the sampled result and
+do not block eligibility. A sampled violation remains a failure. Unit
+dimensional analysis and symbolic parsing retain their separate evidence
+semantics.

@@ -466,3 +466,22 @@ progress cannot be preempted, but no subsequent group/fold begins after the
 deadline is observed. Regression-test source covers already-expired budgets.
 Tests have not been run; no CI, experiment, worker, benchmark, smoke workflow,
 or provider call was launched.
+
+
+## Stage 60 — optional split-conformal calibration for the frozen V60 model
+
+V60 now exposes a separate post-selection calibration API that consumes a
+caller-supplied calibration split and an already finalized model. It computes
+absolute-residual split-conformal radii without refitting, reranking, or
+changing the selected model, and a paired prediction API returns symmetric
+intervals only when the finite-sample quantile radius is available. Small
+calibration sets that require an infinite conformal quantile are reported as
+insufficient rather than serialized as a usable interval.
+
+The caller must attest that calibration rows are disjoint from training and
+that calibration/future observations are exchangeable. This attestation is
+recorded as caller-declared, not independently verified. The coverage claim is
+finite-sample marginal coverage only under exchangeability; there is no
+extra-domain or distribution-shift guarantee. Far evaluation remains a
+separate API and is not used for calibration or selection. No calibration
+data is created or inferred automatically.
