@@ -101,7 +101,7 @@ def test_v60_template_generation_deduplicates_declared_operator_lists():
         variable_names=("x", "y"),
         allowed_unary_operators=("sin", "sin"),
         allowed_binary_operators=("+", "+"),
-        budget=DiscoveryBudget(max_search_attempts=4, max_candidates=10, seed=17),
+        budget=DiscoveryBudget(max_search_attempts=3, max_candidates=10, seed=17),
     )
     proposals = generate_native_template_candidates(problem)
     assert [item.expression for item in proposals] == [
