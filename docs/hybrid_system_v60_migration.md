@@ -412,3 +412,19 @@ No producer is invoked by this change; externally produced proposals and usage
 counters are still supplied by the caller. Regression-test source covers
 remaining-budget enforcement. Tests have not been run; no CI, experiment,
 worker, benchmark, smoke workflow, or provider call was launched.
+
+
+## Stage 57 — keep candidate and search budgets independent
+
+External proposal ingestion and V60 orchestration now use max_candidates as
+the candidate-pool ceiling, while max_search_attempts governs the combined
+native-template and injected-PySR search work. This preserves the separate
+contract budgets: LLM proposals are constrained by LLM call/token budgets and
+the candidate cap; PySR and native template generation share the search-attempt
+ceiling. Remaining candidate slots and remaining search attempts are both
+calculated before native templates are generated.
+
+Regression-test source verifies that multiple injected LLM proposals are not
+incorrectly truncated by a smaller search-attempt budget. Tests have not been
+run; no CI, experiment, worker, benchmark, smoke workflow, or provider call
+was launched.
