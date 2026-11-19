@@ -364,6 +364,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
                 variable_names=problem.variable_names,
                 max_groups=budget.max_candidates,
                 max_search_attempts=budget.max_search_attempts,
+                max_wall_time_seconds=_remaining_wall_time(),
             )
             multi_selection = select_native_multi_basis_candidates_from_verified_evidence(
                 eligible_candidates, gate, multi_fit, multi_validation, multi_evidence,
@@ -415,6 +416,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
                 variable_names=problem.variable_names,
                 max_candidates=budget.max_candidates,
                 max_search_attempts=budget.max_search_attempts,
+                max_wall_time_seconds=_remaining_wall_time(),
             )
         final_audit = finalize_native_v60_model(
             candidates, single_selection, multi_selection, X, y,
