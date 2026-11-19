@@ -45,6 +45,8 @@ def _audit(model):
         "cv_rmse_std": 0.0,
         "cv_nrmse_std": 0.0,
         "complexity": model["symbolic_complexity"],
+        "training_design_rank": len(expressions) + 1,
+        "training_design_condition_number": model["training_design_condition_number"],
     }
     encoded = json.dumps(model, sort_keys=True, separators=(",", ":"), allow_nan=False)
     return {
@@ -302,6 +304,18 @@ class NativeV60ProductionHandoffTests(unittest.TestCase):
         final["selected_model_sha256"] = hashlib.sha256(encoded.encode()).hexdigest()
         with self.assertRaisesRegex(ValueError, "full column rank"):
             verify_final_model_audit(final)
+
+    def test_final_model_verifier_rejects_rank_deficient_family_option(self):
+        audit = _audit({
+            "basis_candidate_ids": ["c1"],
+            "basis_expressions": ["x"],
+            "variable_names": ["x"],
+            "coefficients": [2.0, 1.0],
+            "fitted_expression": "(2)*(x) + (1)",
+        })
+        audit["candidate_options"][0]["training_design_rank"] = 1
+        with self.assertRaisesRegex(ValueError, "option training design"):
+            verify_final_model_audit(audit)
 
 
 if __name__ == "__main__":
