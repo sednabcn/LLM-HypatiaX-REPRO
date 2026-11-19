@@ -49,6 +49,20 @@ def test_v60_unary_templates_obey_candidate_cap_and_attempt_budget():
     assert [item.expression for item in proposals] == ["x", "y", "exp(x)"]
 
 
+def test_v60_template_generation_emits_square_only_when_power_is_declared():
+    problem = DiscoveryProblem(
+        target_name="target",
+        variable_names=("x", "y"),
+        allowed_binary_operators=("**",),
+        budget=DiscoveryBudget(max_search_attempts=2, max_candidates=10, seed=17),
+    )
+
+    proposals = generate_native_template_candidates(problem)
+    assert [item.expression for item in proposals] == [
+        "x", "y", "(x ** 2)", "(y ** 2)",
+    ]
+
+
 def test_v60_template_generation_respects_zero_candidate_budget():
     problem = _problem(budget=DiscoveryBudget(
         max_search_attempts=10, max_candidates=0, seed=17
@@ -61,7 +75,7 @@ def test_v60_template_generation_does_not_invent_unsupported_operators():
     problem = DiscoveryProblem(
         target_name="target",
         variable_names=("x", "y"),
-        allowed_binary_operators=("**", "unknown"),
+        allowed_binary_operators=("^", "unknown"),
         budget=DiscoveryBudget(max_search_attempts=10, max_candidates=10),
     )
 
