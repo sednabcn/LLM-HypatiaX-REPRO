@@ -111,3 +111,17 @@ and the Exp2 normalized extrapolation score remain compatibility requirements.
   authorized evaluation provides evidence.
 - Do not launch experiments, workers, benchmarks, smoke workflows, or live
   LLM calls as part of architecture implementation.
+
+
+## Stage 30 — strict candidate-fitting input and deadline validation
+
+The bounded affine-fitting stage now rejects malformed candidate identities
+instead of coercing arbitrary values to strings. Candidate IDs and expressions
+must be non-empty strings; malformed candidate entries are recorded as
+rejected without aborting later candidates. Optional wall-time budgets must
+be real, finite, positive numbers, preventing NaN, infinity, booleans, and
+string values from bypassing the configured deadline contract.
+
+Regression-test source covers malformed IDs, non-mapping candidate entries,
+and invalid deadline values. No tests, CI, experiments, workers, benchmarks,
+smoke workflows, or provider calls are run as part of this change.
