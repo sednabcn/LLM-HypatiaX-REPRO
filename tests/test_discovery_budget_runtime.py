@@ -84,6 +84,21 @@ def test_llm_request_audit_separates_reservation_start_and_response():
 
 
 
+
+def test_remaining_wall_time_is_clamped_and_optional():
+    unlimited = DiscoveryBudgetRuntime(
+        DiscoveryBudget(max_search_attempts=1, max_candidates=1)
+    )
+    assert unlimited.remaining_wall_time_seconds is None
+
+    bounded = DiscoveryBudgetRuntime(
+        DiscoveryBudget(max_search_attempts=1, max_candidates=1, max_wall_time_seconds=1.0)
+    )
+    remaining = bounded.remaining_wall_time_seconds
+    assert remaining is not None
+    assert 0.0 <= remaining <= 1.0
+
+
 def test_expired_deadline_is_recorded(monkeypatch):
     import hypatiax.tools.symbolic.discovery_budget_runtime as budget_module
 

@@ -81,7 +81,9 @@ def ingest_external_candidate_proposals(
                     "reason": f"{type(exc).__name__}: {exc}",
                 })
 
-    cap = min(budget.max_candidates, budget.max_search_attempts)
+    # Candidate volume is governed by max_candidates; PySR search work is
+    # accounted independently by max_search_attempts above.
+    cap = budget.max_candidates
     accepted = combined[:cap]
     return {
         "schema": "v60_external_producer_ingestion_v1",
