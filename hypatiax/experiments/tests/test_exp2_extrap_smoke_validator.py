@@ -23,6 +23,21 @@ def _write_fixture(output_dir: Path, *, omit_far_rmse: bool = False) -> None:
             method: {"success": True, "r2": 0.99, "rmse": 0.01}
             for method in METHODS
         }
+        # Method 6 is the native V60 implementation. Keep the fixture aligned
+        # with the provenance contract enforced by the smoke artifact validator.
+        results[METHODS[-1]].update({
+            "implementation_provenance": {
+                "engine_family": "hybrid_discovery",
+                "engine_version": "v60",
+                "native_v60_pipeline": True,
+                "native_v60_production_handoff_enabled": True,
+                "implementation_mode": "native_v60",
+            },
+            "strategy": "native_v60",
+            "native_v60_final_model": {"execution_status": "selected"},
+            "native_v60_production_handoff": {"status": "active"},
+            "v50_2_compatibility_result": {"status": "not_executed"},
+        })
         far_r2 = {method: 0.9 for method in METHODS}
         audit_y_true = [-1.0, 1.0] * 12
         audit_error = 0.1 ** 0.5
