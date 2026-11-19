@@ -3487,6 +3487,10 @@ class HybridSystemV50_2Method(BaseMethod):
             _target_unit = _meta.get("target_unit")
             if _target_unit is not None and not isinstance(_target_unit, str):
                 raise TypeError("target_unit must be a string when declared")
+            _v60_requested = _tc_kwargs.get("hybrid_implementation", "v50_2") in {"v60", "hybrid_system_v60"}
+            _declared_binary_operators = list(_tc_kwargs["binary_operators"])
+            if _v60_requested and "**" not in _declared_binary_operators:
+                _declared_binary_operators.append("**")
             _contract_spec = {
                 "schema_version": "1.0",
                 "target_name": str(
@@ -3499,11 +3503,11 @@ class HybridSystemV50_2Method(BaseMethod):
                 "variable_domains": _declared_domains,
                 "constraints": _declared_constraints,
                 "allowed_unary_operators": list(_tc_kwargs["unary_operators"]),
-                "allowed_binary_operators": list(_tc_kwargs["binary_operators"]),
+                "allowed_binary_operators": _declared_binary_operators,
                 "noise_model": _meta.get("noise_model"),
                 "split_protocol": dict(_tc_kwargs["training_only_search_validation"]),
                 "budget": {
-                    "max_search_attempts": _MAX_RETRIES_V50_2,
+                    "max_search_attempts": 30 if _v60_requested else _MAX_RETRIES_V50_2,
                     "max_candidates": 100,
                     "max_llm_calls": _MAX_RETRIES_V50_2,
                     "seed": int(_meta.get("random_seed") or 42),
@@ -3511,6 +3515,7 @@ class HybridSystemV50_2Method(BaseMethod):
                 "metadata": {
                     "contract_origin": "exp2_protocol_adapter",
                     "physical_declarations_inferred": False,
+                    "v60_search_budget_policy": "dedicated_bounded_30_attempts" if _v60_requested else None,
                 },
             }
         if not isinstance(_contract_spec, dict):
