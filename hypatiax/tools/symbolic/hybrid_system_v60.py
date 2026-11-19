@@ -8,8 +8,10 @@ far-evaluation API. The default path remains V50.2 compatible.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import wraps
 from hashlib import sha256
 import json
+from threading import RLock
 from typing import Any, Mapping
 
 import numpy as np
@@ -34,6 +36,15 @@ from hypatiax.tools.symbolic.v60_native_finalization import finalize_native_v60_
 from hypatiax.tools.symbolic.v60_production_handoff import (
     build_native_v60_result, evaluate_frozen_native_v60_model,
 )
+
+
+def _serialize_v60_state(method):
+    """Serialize entry points that read or mutate per-instance V60 audit state."""
+    @wraps(method)
+    def wrapped(self, *args, **kwargs):
+        with self._v60_state_lock:
+            return method(self, *args, **kwargs)
+    return wrapped
 
 
 @dataclass(frozen=True)
@@ -123,6 +134,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
 
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
+        self._v60_state_lock = RLock()
         self._last_v60_run_context: V60RunContext | None = None
         self._last_v60_candidate_proposals: tuple[dict[str, Any], ...] = ()
         self._last_v60_normalization_audit: dict[str, Any] = {}
@@ -438,6 +450,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             "strategy": "native_v60",
         }
 
+    @_serialize_v60_state
     def evaluate_native_far_set(self, X_far: Any, y_far: Any) -> dict[str, Any]:
         """Evaluate only the frozen finalized model; this method cannot change selection."""
         if self._last_v60_activate_native_result is not True:
@@ -451,6 +464,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_far_evaluation_audit = audit
         return dict(audit)
 
+    @_serialize_v60_state
     def discover(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
         """Run native V60 discovery; preserve V50.2 unless explicit handoff is requested."""
         self._reset_v60_call_state()
@@ -599,6 +613,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             result = super().discover(**call_kwargs)
         return self._annotate_v60_result(result)
 
+    @_serialize_v60_state
     def discover_validate_interpret(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
         """Run the legacy compatibility entry point without leaking V60 call state.
 
