@@ -155,6 +155,8 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
     def _annotate_v60_result(self, result: Any) -> Any:
         if not isinstance(result, dict):
             return result
+        if self._last_v60_budget_runtime is not None:
+            self._last_v60_budget_runtime.expired()
         annotated = dict(result)
         provenance = annotated.get("implementation_provenance")
         provenance = dict(provenance) if isinstance(provenance, dict) else {}
