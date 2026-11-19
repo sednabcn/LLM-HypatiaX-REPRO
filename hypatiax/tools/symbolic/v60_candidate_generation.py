@@ -54,12 +54,35 @@ def generate_native_template_candidates(
         return ()
 
     binary = problem.allowed_binary_operators or ("+", "-", "*", "/")
-    allowed = tuple(op for op in binary if op in {"+", "-", "*", "/"})
+    allowed_binary = tuple(op for op in binary if op in {"+", "-", "*", "/"})
+    # Keep generated calls inside the same explicit function allowlist as the
+    # restricted AST parser. Unknown contract operators are never guessed.
+    parser_unary = {
+        "exp", "log", "ln", "log10", "sqrt", "sin", "cos", "tan",
+        "abs", "Abs", "sign", "safe_asin", "safe_acos", "asin", "acos",
+        "atan", "arcsin", "arccos", "arctan", "asin_of_sin",
+        "acos_of_cos", "atan_of_tan",
+    }
+    allowed_unary = tuple(
+        op for op in problem.allowed_unary_operators if op in parser_unary
+    )
     proposals: list[str] = list(names)
     attempts = 0
+
+    # Unary templates are generated only when explicitly declared by the
+    # scientific contract; the attempt and candidate caps apply to each one.
+    for name in names:
+        for op in allowed_unary:
+            if attempts >= budget.max_search_attempts or len(proposals) >= cap:
+                break
+            attempts += 1
+            proposals.append(f"{op}({name})")
+        if attempts >= budget.max_search_attempts or len(proposals) >= cap:
+            break
+
     for i, left in enumerate(names):
         for right in names[i + 1:]:
-            for op in allowed:
+            for op in allowed_binary:
                 if attempts >= budget.max_search_attempts or len(proposals) >= cap:
                     break
                 attempts += 1
