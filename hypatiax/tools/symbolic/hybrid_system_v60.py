@@ -328,7 +328,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             split_protocol=problem.split_protocol, seed=budget.seed,
             max_candidates=budget.max_candidates,
             max_search_attempts=budget.max_search_attempts,
-            max_wall_time_seconds=budget.max_wall_time_seconds,
+            max_wall_time_seconds=_remaining_wall_time(),
         )
         self._last_v60_training_validation_audit = single_validation
         single_selection = select_native_candidates_from_training_evidence(
@@ -344,7 +344,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             max_candidates=budget.max_candidates,
             max_search_attempts=budget.max_search_attempts,
             max_basis_terms=3,
-            max_wall_time_seconds=budget.max_wall_time_seconds,
+            max_wall_time_seconds=_remaining_wall_time(),
         )
         self._last_v60_multi_basis_fit_audit = multi_fit
         multi_validation = validate_native_multi_basis_candidates(
@@ -353,7 +353,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             split_protocol=problem.split_protocol, seed=budget.seed,
             max_candidates=budget.max_candidates,
             max_search_attempts=budget.max_search_attempts,
-            max_wall_time_seconds=budget.max_wall_time_seconds,
+            max_wall_time_seconds=_remaining_wall_time(),
         )
         self._last_v60_multi_basis_validation_audit = multi_validation
         if multi_validation.get("validation_status") == "completed" and not budget_runtime.expired():
