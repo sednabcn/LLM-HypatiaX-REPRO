@@ -420,6 +420,15 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             candidates, single_selection, multi_selection, X, y,
             variable_names=problem.variable_names,
         )
+        if budget_runtime.expired():
+            final_audit = {
+                "schema": "v60_native_final_model_v1",
+                "execution_status": "stage_failed",
+                "selection_performed": False,
+                "far_or_evaluation_data_used": False,
+                "selected_model": None,
+                "reason": "max_wall_time_seconds",
+            }
         self._last_v60_final_model_audit = final_audit
         return build_native_v60_result(final_audit) if final_audit.get("execution_status") == "selected" else {
             "success": False, "error": "NO_CREDIBLE_CANDIDATE",
