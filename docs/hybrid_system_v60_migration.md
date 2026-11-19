@@ -46,7 +46,8 @@ The normalization stage:
 - Retains original expression, producer-supplied ID, source, strategy, and seed
   for every proposal merged into a deduplicated candidate.
 - Records rejected proposal reasons and input-budget truncation counts.
-- Does not inspect targets, training residuals, validation folds, or far data.
+- The normalization operation itself does not inspect targets, training residuals,
+  validation folds, or far data.
 
 The native fitting stage:
 - Processes at most `min(max_candidates, max_search_attempts)` normalized
@@ -73,6 +74,34 @@ Result `implementation_provenance` records:
 - `native_v60_fitting_audit`: per-candidate training-only fit evidence and
   candidate/time-budget accounting; explicitly not used for selection
 - Candidate count and IDs in implementation provenance
+- `native_v60_gate_audit`: per-candidate declared scientific gate outcomes,
+  including hard/soft severity, unknown-hard counts, and producer lineage;
+  no training or far data is consumed and `selection_performed` is false
+- `native_v60_training_fit_audit`: bounded training-only affine-fit evidence,
+  including coefficients, train metrics, rejection reasons, and budget status;
+  `selection_performed` is always false
+- `native_v60_multi_basis_fit_audit`: bounded joint fits over small groups of
+  normalized basis candidates, with group IDs, term-level coefficients,
+  lineage, training metrics, design diagnostics, and budget/rejection audit;
+  audit-only, with `selection_performed` false and no far/evaluation data
+- `native_v60_multi_basis_evidence_audit`: independently recomputed fold
+  coefficients, metrics, rank/condition diagnostics, verified row indices,
+  producer lineage, and canonical evidence fingerprints; rejected/tampered
+  groups fail closed; audit-only and far-data-free
+- `native_v60_multi_basis_validation_audit`: per-group fold metrics,
+  independent fold-local joint coefficients, row-index evidence, lineage
+  checks, and budget/rejection accounting; audit-only, with
+  `selection_performed` false and no far/evaluation data
+- `native_v60_training_validation_audit`: per-candidate fold metrics and
+  fold-local coefficients, with candidate eligibility inherited from the
+  native hard-gate audit; no far/evaluation data is accepted or consumed and
+  `selection_performed` is always false
+- `native_v60_residual_stability_audit`: per-fold held-out training residual
+  summaries and fold-local coefficient stability; diagnostic only, with no
+  ranking/selection and no far/evaluation data
+- `native_v60_objective_selection_audit`: recomputed fold objectives,
+  symbolic complexity, Pareto candidate IDs, selected candidate ID, and
+  SHA-256 evidence fingerprints; selection cannot receive far/evaluation data
 - `native_v60_contract_preflight` and the data-free `v60_run_context`
 - `compatibility_baseline: hybrid_system_v50_2`
 
@@ -82,7 +111,7 @@ The reproducibility configuration keeps V50.2 as the default. Callers may
 select V60 explicitly with `engine.implementation: "v60"` through the factory
 or the Exp2 benchmark runner selector. Unknown selectors fail closed.
 
-## Remaining native V60 stages
+## Frozen far-set evaluation boundary
 
 1. Bounded LLM/PySR producer adapters, subject to explicit authorization and
    configured call/token budgets.

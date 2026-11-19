@@ -612,6 +612,7 @@ def validate_worker_outputs(
 
     expected_domain_set = set(expected_domains)
     expected_identities: set[tuple[str, str, str]] = set()
+    expected_flat_records: dict[tuple[str, str, str], tuple[bool, Any, Any]] = {}
     methods_reference: list[str] | None = None
     equation_domains: set[str] = set()
     protocol_manifest: list[dict[str, Any]] = []
@@ -673,7 +674,11 @@ def validate_worker_outputs(
                     raise ValueError(
                         f"{protocol_path.name}: {description!r}/{method} missing success boolean"
                     )
-                expected_identities.add((domain, description, method))
+                identity = (domain, description, method)
+                expected_identities.add(identity)
+                expected_flat_records[identity] = (
+                    result["success"], far_r2[method], far_rmse[method],
+                )
                 report = _discovery_report_from_result(result)
                 if method == REQUIRED_DISCOVERY_REPORT_METHOD:
                     identity = (domain, description, method)
@@ -742,26 +747,45 @@ def validate_worker_outputs(
 
     row_counts: Counter[tuple[str, str, str]] = Counter()
     for row in benchmark_rows:
-        identity = (
-            str(row.get("domain") or ""),
-            str(row.get("test") or ""),
-            str(row.get("method") or ""),
-        )
-        if not all(identity):
-            raise ValueError("benchmark row missing domain/test/method identity")
+        if not isinstance(row, dict):
+            raise ValueError("benchmark flat output rows must be JSON objects")
+        identity_values = (row.get("domain"), row.get("test"), row.get("method"))
+        if any(not isinstance(value, str) or not value for value in identity_values):
+            raise ValueError("benchmark row domain/test/method identity must be non-empty strings")
+        identity = identity_values
         row_counts[identity] += 1
-        if identity in expected_identities:
-            if not isinstance(row.get("success"), bool):
-                raise ValueError(f"current-run row {identity} missing success boolean")
-            if "extrap_r2_far" not in row or "extrap_rmse_far" not in row:
-                raise ValueError(f"current-run row {identity} missing far-region metrics")
+        if identity not in expected_identities:
+            raise ValueError(f"benchmark flat output contains unexpected method/equation identity {identity}")
+        if not isinstance(row.get("success"), bool):
+            raise ValueError(f"current-run row {identity} missing success boolean")
+        if "extrap_r2_far" not in row or "extrap_rmse_far" not in row:
+            raise ValueError(f"current-run row {identity} missing far-region metrics")
+        expected_success, expected_r2, expected_rmse = expected_flat_records[identity]
+        if row["success"] is not expected_success:
+            raise ValueError(f"benchmark flat row {identity} success differs from its protocol record")
+        for field, actual, expected in (
+            ("extrap_r2_far", row["extrap_r2_far"], expected_r2),
+            ("extrap_rmse_far", row["extrap_rmse_far"], expected_rmse),
+        ):
+            if actual is None or expected is None:
+                matches = actual is None and expected is None
+            elif (isinstance(actual, bool) or not isinstance(actual, (int, float))
+                  or isinstance(expected, bool) or not isinstance(expected, (int, float))
+                  or not math.isfinite(float(actual)) or not math.isfinite(float(expected))):
+                matches = False
+            else:
+                matches = math.isclose(float(actual), float(expected), rel_tol=1e-9, abs_tol=1e-12)
+            if not matches:
+                raise ValueError(f"benchmark flat row {identity} {field} differs from its protocol record")
 
     missing = sorted(identity for identity in expected_identities if row_counts[identity] == 0)
-    duplicated = sorted(identity for identity in expected_identities if row_counts[identity] != 1 and row_counts[identity] > 1)
+    duplicated = sorted(identity for identity in expected_identities if row_counts[identity] > 1)
     if missing:
         raise ValueError(f"benchmark flat output missing {len(missing)} expected method/equation rows")
     if duplicated:
         raise ValueError(f"benchmark flat output duplicates {len(duplicated)} expected method/equation rows")
+    if len(benchmark_rows) != len(expected_identities):
+        raise ValueError("benchmark flat output row count does not exactly match the protocol method/equation roster")
 
     report_path = output_dir / "discovery_reports_extrap.json"
     report_artifact = {

@@ -123,3 +123,51 @@ def test_worker_rejects_report_that_does_not_seal_far_evaluation(tmp_path):
         assert "far evaluation as unused" in str(exc)
     else:
         raise AssertionError("worker accepted a discovery report with a far-selection flag")
+
+
+def _rewrite_flat(output_dir: Path, mutate):
+    path = output_dir / "benchmark_results_extrap.json"
+    rows = json.loads(path.read_text(encoding="utf-8"))
+    mutate(rows)
+    path.write_text(json.dumps(rows), encoding="utf-8")
+    os.utime(path, None)
+
+
+def test_worker_rejects_unexpected_flat_method_equation_rows(tmp_path):
+    marker = _fixture(tmp_path)
+    _rewrite_flat(tmp_path, lambda rows: rows.append({
+        "domain": "unexpected_domain",
+        "test": "equation_1",
+        "method": METHODS[0],
+        "success": True,
+        "extrap_r2_far": 0.9,
+        "extrap_rmse_far": 0.1,
+    }))
+    try:
+        validator.validate_worker_outputs(tmp_path, marker, ["feynman_mechanics"])
+    except ValueError as exc:
+        assert "unexpected method/equation identity" in str(exc)
+    else:
+        raise AssertionError("worker accepted an unexpected flat benchmark row")
+
+
+def test_worker_rejects_duplicate_expected_flat_rows(tmp_path):
+    marker = _fixture(tmp_path)
+    _rewrite_flat(tmp_path, lambda rows: rows.append(dict(rows[0])))
+    try:
+        validator.validate_worker_outputs(tmp_path, marker, ["feynman_mechanics"])
+    except ValueError as exc:
+        assert "duplicates" in str(exc)
+    else:
+        raise AssertionError("worker accepted a duplicate flat benchmark row")
+
+
+def test_worker_rejects_flat_metrics_that_disagree_with_protocol(tmp_path):
+    marker = _fixture(tmp_path)
+    _rewrite_flat(tmp_path, lambda rows: rows[0].update(extrap_rmse_far=9.9))
+    try:
+        validator.validate_worker_outputs(tmp_path, marker, ["feynman_mechanics"])
+    except ValueError as exc:
+        assert "differs from its protocol record" in str(exc)
+    else:
+        raise AssertionError("worker accepted flat metrics that disagree with protocol output")

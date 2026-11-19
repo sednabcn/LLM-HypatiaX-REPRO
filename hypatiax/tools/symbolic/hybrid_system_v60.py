@@ -15,8 +15,10 @@ from typing import Any, Mapping
 import numpy as np
 
 from hypatiax.tools.symbolic.discovery_contracts import DiscoveryProblem, discovery_problem_from_dict
+from hypatiax.tools.symbolic.discovery_report_integrity import build_native_discovery_report
 from hypatiax.tools.symbolic.hybrid_system_v50_2 import HybridDiscoverySystem
 from hypatiax.tools.symbolic.v60_candidate_generation import generate_native_template_candidates
+from hypatiax.tools.symbolic.v60_external_producers import ingest_external_candidate_proposals
 from hypatiax.tools.symbolic.v60_candidate_normalization import normalize_candidate_proposals
 from hypatiax.tools.symbolic.v60_candidate_fitting import fit_native_candidates
 
@@ -115,7 +117,10 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             "engine_family": "hybrid_discovery",
             "engine_version": self.VERSION,
             "implementation_mode": self.IMPLEMENTATION_MODE,
-            "native_v60_pipeline": False,
+            "native_v60_pipeline": bool(self._last_v60_activate_native_result and self._last_v60_final_model_audit.get("execution_status") == "selected"),
+            "native_v60_production_handoff_enabled": self._last_v60_activate_native_result,
+            "native_v60_far_evaluation_status": self._last_v60_far_evaluation_audit.get("evaluation_status", "not_requested"),
+            "native_v60_far_evaluation_audit": dict(self._last_v60_far_evaluation_audit),
             "native_v60_stages": list(self.NATIVE_STAGES),
             "native_v60_contract_preflight": self._last_v60_run_context is not None,
             "native_v60_candidate_generation": self._last_v60_run_context is not None,
@@ -123,6 +128,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             "native_v60_candidate_fitting": self._last_v60_run_context is not None,
             "native_v60_fitting_audit": dict(self._last_v60_fitting_audit),
             "native_v60_candidate_count": len(self._last_v60_candidate_proposals),
+            "native_v60_external_producer_audit": dict(self._last_v60_external_producer_audit),
             "native_v60_normalization_audit": dict(self._last_v60_normalization_audit),
             "native_v60_candidate_ids": [item["candidate_id"] for item in self._last_v60_candidate_proposals],
             "v60_run_context": self._last_v60_run_context.to_dict() if self._last_v60_run_context else None,
@@ -131,11 +137,55 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         annotated["native_v60_candidate_proposals"] = [
             dict(item) for item in self._last_v60_candidate_proposals
         ]
+        if self._last_v60_run_context is not None:
+            try:
+                annotated["discovery_report_envelope"] = build_native_discovery_report(
+                    list(self._last_v60_candidate_proposals),
+                    self._last_v60_gate_audit,
+                    self._last_v60_training_validation_audit,
+                    self._last_v60_objective_selection_audit,
+                    run_context=self._last_v60_run_context.to_dict(),
+                    multi_basis_selection_audit=self._last_v60_multi_basis_selection_audit,
+                    final_model_audit=self._last_v60_final_model_audit,
+                    far_evaluation_audit=self._last_v60_far_evaluation_audit,
+                    residual_stability_audit=self._last_v60_residual_stability_audit,
+                )
+            except Exception as exc:
+                annotated["discovery_report_error"] = f"{type(exc).__name__}: {exc}"
+        if self._last_v60_final_model_audit:
+            annotated["native_v60_final_model"] = dict(self._last_v60_final_model_audit)
+        if self._last_v60_far_evaluation_audit:
+            annotated["native_v60_far_evaluation"] = dict(self._last_v60_far_evaluation_audit)
+        if self._last_v60_activate_native_result:
+            if self._last_v60_final_model_audit.get("execution_status") == "selected":
+                native = build_native_v60_result(self._last_v60_final_model_audit)
+                annotated.update(native)
+                annotated["v50_2_compatibility_result"] = {
+                    "status": "not_executed",
+                    "reason": "native_v60_production_handoff_enabled",
+                }
+                annotated["native_v60_production_handoff"] = {
+                    "status": "active",
+                    "selection_source": "verified_training_only_single_multi_basis_pareto",
+                    "far_evaluation_attached": self._last_v60_far_evaluation_audit.get("evaluation_status") == "completed",
+                }
+            else:
+                annotated.update({
+                    "success": False,
+                    "error": "NO_CREDIBLE_CANDIDATE",
+                    "formula": "N/A",
+                    "expression": "N/A",
+                    "final_formula": "N/A",
+                    "native_v60_production_handoff": {
+                        "status": "blocked_no_credible_native_model",
+                        "final_model_status": self._last_v60_final_model_audit.get("execution_status", "not_run"),
+                    },
+                })
         annotated["implementation_provenance"] = provenance
         return annotated
 
     def discover(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        """Run native contract preflight, then the V50.2 compatibility pipeline."""
+        """Run native V60 discovery; preserve V50.2 unless explicit handoff is requested."""
         if args:
             if len(args) < 3:
                 raise TypeError("discover requires X, y, and var_names")
@@ -160,9 +210,31 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_fitting_audit = {}
         if self._last_v60_run_context is not None:
             problem = prepared["discovery_problem"]
-            generated = generate_native_template_candidates(problem)
+            generated = list(generate_native_template_candidates(problem))
+            external_spec = prepared.get("v60_external_candidate_proposals", {})
+            if external_spec is None:
+                external_spec = {}
+            if not isinstance(external_spec, Mapping):
+                raise TypeError("v60_external_candidate_proposals must be a mapping")
+            unknown_producer_fields = set(external_spec) - {
+                "llm_proposals", "pysr_proposals", "llm_call_count",
+                "llm_token_count", "pysr_search_attempt_count",
+            }
+            if unknown_producer_fields:
+                raise ValueError(f"unknown external producer fields: {sorted(unknown_producer_fields)}")
+            external_audit = ingest_external_candidate_proposals(
+                problem,
+                llm_proposals=external_spec.get("llm_proposals", ()),
+                pysr_proposals=external_spec.get("pysr_proposals", ()),
+                llm_call_count=external_spec.get("llm_call_count", 0),
+                llm_token_count=external_spec.get("llm_token_count", 0),
+                pysr_search_attempt_count=external_spec.get("pysr_search_attempt_count", 0),
+            )
+            combined = external_audit["proposals"] + [item.to_dict() for item in generated]
+            combined = combined[:min(problem.budget.max_candidates, problem.budget.max_search_attempts)]
+            self._last_v60_external_producer_audit = dict(external_audit)
             normalized = normalize_candidate_proposals(
-                generated,
+                combined,
                 variable_names=problem.variable_names,
                 max_candidates=problem.budget.max_candidates,
             )
@@ -198,5 +270,29 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         return self._annotate_v60_result(result)
 
     def discover_validate_interpret(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        """Preserve the legacy entry point while exposing V60 provenance."""
-        return self._annotate_v60_result(super().discover_validate_interpret(*args, **kwargs))
+        """Run the legacy compatibility entry point without leaking V60 call state.
+
+        This historical signature has no typed DiscoveryProblem/metadata
+        channel, so it cannot activate the native V60 pipeline. Reset every
+        per-call V60 field before delegating; otherwise a prior discover()
+        call could cause stale native audits or even a stale native formula
+        to be attached to this unrelated legacy result.
+        """
+        self._last_v60_run_context = None
+        self._last_v60_candidate_proposals = ()
+        self._last_v60_normalization_audit = {}
+        self._last_v60_training_fit_audit = {}
+        self._last_v60_multi_basis_fit_audit = {}
+        self._last_v60_multi_basis_validation_audit = {}
+        self._last_v60_multi_basis_evidence_audit = {}
+        self._last_v60_multi_basis_selection_audit = {}
+        self._last_v60_gate_audit = {}
+        self._last_v60_training_validation_audit = {}
+        self._last_v60_objective_selection_audit = {}
+        self._last_v60_residual_stability_audit = {}
+        self._last_v60_external_producer_audit = {}
+        self._last_v60_final_model_audit = {}
+        self._last_v60_far_evaluation_audit = {}
+        self._last_v60_activate_native_result = False
+        result = super().discover_validate_interpret(*args, **kwargs)
+        return self._annotate_v60_result(result)
