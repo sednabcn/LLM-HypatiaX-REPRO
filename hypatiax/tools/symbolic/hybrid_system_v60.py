@@ -224,9 +224,18 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             description = kwargs.get("description", "")
             forwarded = None
 
-        prepared, self._last_v60_run_context = _prepare_v60_contract_context(
+        prepared, run_context = _prepare_v60_contract_context(
             X, y, var_names, metadata, self.domain
         )
+        activation_requested = prepared.get("v60_activate_native_model", False)
+        if not isinstance(activation_requested, bool):
+            raise TypeError("v60_activate_native_model must be a boolean")
+        if activation_requested:
+            raise NotImplementedError(
+                "native V60 production activation is not wired into discover(); "
+                "the request is rejected rather than silently falling back to V50.2"
+            )
+        self._last_v60_run_context = run_context
         self._last_v60_candidate_proposals = ()
         self._last_v60_normalization_audit = {}
         self._last_v60_fitting_audit = {}

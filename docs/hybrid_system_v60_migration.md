@@ -176,3 +176,16 @@ raising a runtime NameError when native handoff is activated. Regression-test
 source verifies the binding is exposed by the V60 integration module. This
 does not activate native production handoff or claim that the remaining
 selection and evaluation stages are wired into `discover()`.
+
+
+## Stage 33 — fail closed on unsupported native activation
+
+The v60_activate_native_model metadata flag is now validated as a strict
+boolean. Until the complete native gates, fold evidence, selection,
+finalization, and frozen evaluation sequence is connected to discover(), an
+explicit true request raises NotImplementedError instead of silently
+running the V50.2 compatibility discovery path. The default and explicit
+false behavior remain on the existing compatibility path. Regression-test
+source covers both rejection and flag typing. No tests, CI, experiments,
+workers, benchmarks, smoke workflows, or provider calls are run as part of
+this change.
