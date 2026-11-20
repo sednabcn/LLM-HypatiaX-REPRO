@@ -1,0 +1,107 @@
+{
+  "report_type": "portfolio_variance_pca_seed_aggregate",
+  "generated_at": "2026-11-07T20:27:00Z",
+  "branch": "audit-master",
+  "source_workflow": {
+    "run_id": 42410055833,
+    "run_number": 199,
+    "url": "https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/42410055833",
+    "conclusion": "success",
+    "commit_before_worker_result_commits": "82c30be74e56d387e74639c661a2f1beb102f668"
+  },
+  "case_identity": {
+    "domain": "risk_var",
+    "name": "Portfolio VaR for two correlated assets",
+    "protocol_index": 18,
+    "variables": [
+      "var_asset1",
+      "var_asset2",
+      "correlation"
+    ]
+  },
+  "protocol": {
+    "split_protocol": "pca_40_60_pc1",
+    "split_method": "PCA(n_components=1) on raw, unstandardized features",
+    "feature_scaling": "none",
+    "split_is_transductive": true,
+    "n_samples": 200,
+    "n_train": 80,
+    "n_test": 120,
+    "test_size": 0.6,
+    "split_random_state": 42,
+    "pc1_explained_variance_ratio": 1,
+    "pc1_loadings": {
+      "var_asset1": 0.8574929254074083,
+      "var_asset2": 0.5144957552444459,
+      "correlation": 0.000026677557679341714
+    }
+  },
+  "seed_results": [
+    {
+      "seed": 42,
+      "train_r2": 1,
+      "far_r2": 1,
+      "success": true,
+      "decision": "llm",
+      "time_s": 1.3677639961242676,
+      "source_file": "portfolio_variance_defi_seed_sweep_seed42.json"
+    },
+    {
+      "seed": 99,
+      "train_r2": 1,
+      "far_r2": 1,
+      "success": true,
+      "decision": "llm",
+      "time_s": 1.3596937656402588,
+      "source_file": "portfolio_variance_defi_seed_sweep_seed99.json"
+    },
+    {
+      "seed": 123,
+      "train_r2": 1,
+      "far_r2": 1,
+      "success": true,
+      "decision": "llm",
+      "time_s": 1.8747189044952393,
+      "source_file": "portfolio_variance_defi_seed_sweep_seed123.json"
+    },
+    {
+      "seed": 777,
+      "train_r2": 1,
+      "far_r2": 1,
+      "success": true,
+      "decision": "llm",
+      "time_s": 1.4329190254211426,
+      "source_file": "portfolio_variance_defi_seed_sweep_seed777.json"
+    },
+    {
+      "seed": 2024,
+      "train_r2": 1,
+      "far_r2": 1,
+      "success": true,
+      "decision": "llm",
+      "time_s": 1.3347866535186768,
+      "source_file": "portfolio_variance_defi_seed_sweep_seed2024.json"
+    }
+  ],
+  "aggregate": {
+    "n_seeds": 5,
+    "n_success": 5,
+    "success_rate": 1,
+    "train_r2_mean": 1,
+    "train_r2_sample_std": 0,
+    "far_r2_mean": 1,
+    "far_r2_sample_std": 0,
+    "time_s_mean": 1.473976469039917,
+    "time_s_sample_std": 0.22693371482395508,
+    "time_s_min": 1.3347866535186768,
+    "time_s_max": 1.8747189044952393
+  },
+  "interpretation_and_limits": [
+    "All five configured seeds completed successfully and reported train_r2=1.0 and far_r2=1.0.",
+    "All five files use the same split random_state=42 and identical split metadata; this is a five-model-seed sweep on one fixed split, not five independent train/test partitions.",
+    "The split is transductive because PCA is fitted on all 200 feature rows before partitioning.",
+    "PC1 explains 100% of feature variance in this dataset, but the correlation loading is approximately 2.67e-5; the split direction is dominated by the two asset-variance features.",
+    "These results are specific to the explicitly selected PCA protocol and must not be merged with or presented as results from the historical first-feature split.",
+    "The workflow ran PV_SWEEP_ONLY mode. It did not generate downstream paper tables, LaTeX exports, or figures."
+  ]
+}
