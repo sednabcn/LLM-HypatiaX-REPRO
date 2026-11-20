@@ -1213,15 +1213,18 @@ def selftest() -> int:
         except FormulaError:
             check(f"blocked: {bad[:26]!r}", True)
     # gates
-    good = {"max_calls_per_case": 3, "prompt_inputs": ["description", "domain", "variable_names", "constants"],
-            "selection_among_samples": "train_r2", "max_tokens": 2000, "temperature": None}
+    good = {"max_calls_per_case": 3, "prompt_inputs": ["domain", "variable_names",
+            "training_pattern_statistics", "hds_rounded_constants"],
+            "selection_among_samples": "train_r2", "max_tokens": 2000, "temperature": 0.25}
     check("config gate passes a correct config", all(p for _, p, _ in gate_config(good)))
     old = dict(good, max_calls_per_case=1, prompt_inputs=["description", "data_patterns"])
     check("config gate rejects the A1 defaults", sum(not p for _, p, _ in gate_config(old)) == 2)
     leaky = f"Toy equation. y mean is {float(np.mean(case.y_train)):.3g}"
     check("leak gate catches equation name + a data statistic",
           sum(not p for _, p, _ in gate_leaks(leaky, case)) >= 2 if (gate_leaks := gate_prompt_leaks) else False)
-    check("leak gate passes a clean prompt", all(p for _, p, _ in gate_prompt_leaks("Find a formula for x in physics.", case)))
+    clean_prompt = NEUTRAL_TASK_DESCRIPTION + "\nDomain: physics\nVariables: T"
+    check("leak gate passes neutral prompt wording", all(
+        p for _, p, _ in gate_prompt_leaks(clean_prompt, case)))
     # data normalisation
     ret = {"X_train": Xtr, "y_train": case.y_train, "X_far": case.X_eval["far"], "y_far": case.y_eval["far"],
            "variable_names": ["T"], "description": "d", "domain": "p", "constants": {"k": 1}}
