@@ -1109,9 +1109,33 @@ jobs:
         uses: actions/setup-python@v5.3.0
         with:
           python-version: "3.12"
-          cache: pip
-          # Inline dependency pins live in this workflow; use it as the cache key input.
-          cache-dependency-path: .github/workflows/ci_runner_repro.yml
+
+      # Cache the installed environment itself, not only pip's downloaded wheels.
+      # The key is intentionally experiment-independent so every experiment and shard
+      # on this ref can reuse the same Python 3.12 environment.
+      - name: Restore shared Python environment
+        id: python_env_cache
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: hypatiax-python-venv-${{ runner.os }}-py312-${{ hashFiles('requirements.txt', '.github/workflows/ci_runner_repro.yml') }}
+          restore-keys: |
+            hypatiax-python-venv-${{ runner.os }}-py312-
+
+      - name: Validate and activate shared Python environment
+        id: python_env_check
+        run: |
+          set -euo pipefail
+          if [[ ! -x .venv/bin/python ]] || ! .venv/bin/python -c "import numpy, pandas, torch, anthropic, pysr, psutil, sklearn, yaml, dotenv, matplotlib, seaborn, pmlb, pint, pytest"; then
+            echo "valid=false" >> "$GITHUB_OUTPUT"
+            rm -rf .venv
+            python -m venv .venv
+            echo "Python environment cache miss or invalid cache; created a clean environment."
+          else
+            echo "valid=true" >> "$GITHUB_OUTPUT"
+            echo "Reusing cached Python 3.12 environment."
+          fi
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
 
       - name: Set up Julia 1.11
         if: ${{ needs.plan.outputs.needs_julia == 'true' }}
@@ -1129,11 +1153,13 @@ jobs:
             julia-depot-${{ runner.os }}-
 
       - name: Install Python dependencies
+        if: steps.python_env_cache.outputs.cache-hit != 'true' || steps.python_env_check.outputs.valid != 'true'
         run: |
-          python -m pip install --upgrade pip setuptools wheel
-          pip install torch --index-url https://download.pytorch.org/whl/cpu
-          pip install "pandas==2.2.3"
-          pip install "pysr==2.0.0a1" \
+          set -euo pipefail
+          .venv/bin/python -m pip install --upgrade pip setuptools wheel
+          .venv/bin/python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+          .venv/bin/python -m pip install "pandas==2.2.3"
+          .venv/bin/python -m pip install "pysr==2.0.0a1" \
             numpy scipy sympy \
             "anthropic==0.73.0" \
             scikit-learn \
@@ -1145,6 +1171,15 @@ jobs:
             pint \
             psutil \
             pytest
+          .venv/bin/python -m pip check
+          .venv/bin/python -c "import numpy, pandas, torch, anthropic, pysr, psutil; print('Cached runner environment verified.')"
+
+      - name: Reuse cached Python environment
+        if: steps.python_env_cache.outputs.cache-hit == 'true' && steps.python_env_check.outputs.valid == 'true'
+        run: |
+          set -euo pipefail
+          .venv/bin/python -m pip check
+          echo "Python packages restored from the shared Actions cache; installation skipped."
 
       - name: Run Exp2 offline regression tests
         if: ${{ startsWith(github.event.inputs.experiment, 'exp2') }}
