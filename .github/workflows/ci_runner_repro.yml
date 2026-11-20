@@ -1126,7 +1126,7 @@ jobs:
         id: python_env_check
         run: |
           set -euo pipefail
-          if [[ ! -x .venv/bin/python ]] || ! .venv/bin/python -c "import numpy, pandas, torch, anthropic, pysr, psutil"; then
+          if [[ ! -x .venv/bin/python ]] || ! .venv/bin/python -c "import numpy, pandas, torch, anthropic, pysr, psutil, sklearn, yaml, dotenv, matplotlib, seaborn, pmlb, pint, pytest"; then
             echo "valid=false" >> "$GITHUB_OUTPUT"
             rm -rf .venv
             python -m venv .venv
