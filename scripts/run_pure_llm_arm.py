@@ -937,6 +937,18 @@ def run_cases(args, dry: bool) -> int:
         print(f"No equations: no hds_*.jsonl rows in {p2}; pass --equations.")
         return 1
     adapter = RepoAdapter(args.data_fn, args.equation_resolver, load_meta(args))
+    # Render the actual P request offline before any live run (including --dry-run).
+    preflight_case = adapter.build(equations[0], seeds[0])
+    render_provider = BaselineProvider(args.baseline, render=True)
+    render_provider.generate(preflight_case, 1)
+    if not render_provider.rec.calls:
+        print("Prompt preflight failed: no request was captured; no API call was made.")
+        return 1
+    rendered = render_provider.rec.calls[0]["kwargs"]
+    rendered_text = json.dumps({"system": rendered.get("system"), "messages": rendered.get("messages")})
+    if not print_gates(gate_prompt_leaks(rendered_text, preflight_case)):
+        print("Prompt leak gate failed: no Phase 2 API calls were made.")
+        return 1
     rt = build_runtime(cfg, scorer_sha, cfg_path, tsha)
     print(f"{'DRY RUN' if dry else 'FULL RUN'}: {len(equations)} equations x {len(seeds)} seeds -> {out_dir}")
     rows = []
