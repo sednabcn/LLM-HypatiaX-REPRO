@@ -1,0 +1,108 @@
+{
+  "report_type": "portfolio_variance_random_holdout_partition_validation",
+  "schema_version": 2,
+  "generated_at": "2026-11-07T21:51:42Z",
+  "case_identity": {
+    "domain": "risk_var",
+    "name": "Portfolio VaR for two correlated assets",
+    "protocol_index": 18,
+    "variables": [
+      "var_asset1",
+      "var_asset2",
+      "correlation"
+    ]
+  },
+  "protocol": {
+    "split_protocol": "independent_random_holdout_40_60",
+    "split_method": "sklearn train_test_split on row indices",
+    "test_size": 0.6,
+    "partition_seeds": [
+      11,
+      23,
+      42,
+      77,
+      101
+    ],
+    "model_seed_fixed": 42,
+    "n_samples": 200,
+    "split_is_transductive": false,
+    "interpretation": "Random-holdout interpolation/control; not the PC1-directed far-range extrapolation protocol.",
+    "score_semantics": {
+      "llm_train_r2": "LLM formula training R2 only; NaN means the LLM formula was unavailable or invalid. It is not neural-network training R2.",
+      "test_r2": "Test R2 from the selected route in test_r2_source.",
+      "test_r2_source": "Benchmark decision, e.g. nn, llm, or ensemble.",
+      "success_test_r2_gt_0_99": "Whether test R2 exceeds 0.99."
+    }
+  },
+  "results": [
+    {
+      "partition_seed": 11,
+      "model_seed": 42,
+      "n_train": 80,
+      "n_test": 120,
+      "llm_train_r2": NaN,
+      "llm_formula_train_r2_available": false,
+      "test_r2": 0.999801792332363,
+      "test_r2_source": "nn",
+      "success_test_r2_gt_0_99": true,
+      "time_s": 0.5375957489013672
+    },
+    {
+      "partition_seed": 23,
+      "model_seed": 42,
+      "n_train": 80,
+      "n_test": 120,
+      "llm_train_r2": NaN,
+      "llm_formula_train_r2_available": false,
+      "test_r2": 0.9996363464099083,
+      "test_r2_source": "nn",
+      "success_test_r2_gt_0_99": true,
+      "time_s": 0.4230067729949951
+    },
+    {
+      "partition_seed": 42,
+      "model_seed": 42,
+      "n_train": 80,
+      "n_test": 120,
+      "llm_train_r2": NaN,
+      "llm_formula_train_r2_available": false,
+      "test_r2": 0.9997799689803317,
+      "test_r2_source": "nn",
+      "success_test_r2_gt_0_99": true,
+      "time_s": 0.4146244525909424
+    },
+    {
+      "partition_seed": 77,
+      "model_seed": 42,
+      "n_train": 80,
+      "n_test": 120,
+      "llm_train_r2": NaN,
+      "llm_formula_train_r2_available": false,
+      "test_r2": 0.9995299487207652,
+      "test_r2_source": "nn",
+      "success_test_r2_gt_0_99": true,
+      "time_s": 0.40385913848876953
+    },
+    {
+      "partition_seed": 101,
+      "model_seed": 42,
+      "n_train": 80,
+      "n_test": 120,
+      "llm_train_r2": NaN,
+      "llm_formula_train_r2_available": false,
+      "test_r2": 0.9997947087280322,
+      "test_r2_source": "nn",
+      "success_test_r2_gt_0_99": true,
+      "time_s": 0.47508811950683594
+    }
+  ],
+  "aggregate": {
+    "n_partitions": 5,
+    "n_success_test_r2_gt_0_99": 5,
+    "success_rate_test_r2_gt_0_99": 1.0,
+    "test_r2_mean": 0.9997085530342801,
+    "test_r2_sample_std": 0.00012075792420443894,
+    "test_r2_min": 0.9995299487207652,
+    "test_r2_max": 0.999801792332363
+  }
+}
