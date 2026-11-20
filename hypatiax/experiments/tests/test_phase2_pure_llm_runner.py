@@ -1,5 +1,6 @@
 """Offline regression coverage for the Phase 2 Pure-LLM runner contract."""
 from pathlib import Path
+import json
 import subprocess
 import sys
 
@@ -67,3 +68,31 @@ def test_phase2_runner_checks_exact_hds_pattern_and_constant_payloads():
     assert "exact HDS training-pattern payload present" in runner
     assert "exact HDS rounded constants present" in runner
     assert "no training-data statistic values in prompt" not in runner
+
+
+def test_phase2_rendered_prompt_matches_hds_training_payload_for_fixture():
+    import numpy as np
+    from hypatiax.tools.symbolic.symbolic_engine import DataPatternAnalyzer
+    from hypatiax.core.base_pure_llm.baseline_pure_llm_defi_discovery import PureLLMBaseline
+    from scripts.run_pure_llm_arm import Case, hds_prompt_context, NEUTRAL_TASK_DESCRIPTION
+    from scripts.p2_data import HDS_PROMPT_CONSTANTS
+
+    X = np.column_stack([np.linspace(1.0, 2.0, 40), np.linspace(2.0, 4.0, 40)])
+    y = 3.0 * X[:, 0] + 0.5 * X[:, 1] ** 2
+    case = Case("Fixture Equation", 42, "Fixture Equation description", "physics",
+                ["T", "V"], {}, X, y)
+    patterns, constants = hds_prompt_context(case)
+    expected = DataPatternAnalyzer().analyze(X, y, ["T", "V"])
+    assert patterns == expected
+    assert constants == HDS_PROMPT_CONSTANTS
+
+    baseline = object.__new__(PureLLMBaseline)
+    prompt = baseline._generate_standard_prompt(
+        NEUTRAL_TASK_DESCRIPTION, case.domain, case.variable_names,
+        {"constants": constants, "data_patterns": patterns})
+    assert json.dumps(expected, indent=2) in prompt
+    assert "Fixture Equation" not in prompt
+    assert "Fixture Equation description" not in prompt
+    assert NEUTRAL_TASK_DESCRIPTION in prompt
+    assert "h=6.626e-34 (Planck)" in prompt
+    assert "Do NOT use bare 'e' for elementary charge — use q_e instead." in prompt
