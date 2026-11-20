@@ -65,10 +65,10 @@ llm:
   temperature: 0.25                              # read from code: exp1_ablation.py llm_temperature=0.25 -> LLMConfig.temperature
   max_tokens: 2000                              # read from code: LLMConfig.max_tokens default (HDS does not override it)
   max_calls_per_case: 3                      # A3: 3 independent calls per (equation, seed)
-  prompt_inputs: [description, domain, variable_names, constants]   # A3: arm P, no data statistics
+  prompt_inputs: [domain, variable_names, training_pattern_statistics, hds_rounded_constants]  # matched HDS input classes; patterns use training split only
   n_candidates: 3                               # HDS asks for 3 candidate equations per call (exp1_ablation llm_n_candidates=3); DECIDE how a single-formula Pure LLM arm is matched to this
   prompt_hints: disabled                        # HYPATIAX_DISABLE_PROMPT_HINTS=1
-  prompt_template_sha256: 852d551b69b7fd3cf80d3b2f7e611952f7eb8e4aeb0853e8a59abeea2d3c3e1c                  # fill when the template is frozen; recorded in every row
+  prompt_template_sha256: null                  # pin after offline prompt implementation is verified
   api_has_sampling_seed: false                  # VERIFY against current API docs; if false, 'seed' fixes data only
 
 formula_handling:
