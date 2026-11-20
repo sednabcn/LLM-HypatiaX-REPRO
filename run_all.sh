@@ -610,7 +610,7 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
   echo \"Files produced: \${count}\"
 
   if [[ \"\${count}\" -eq 0 ]]; then
-    echo "::error::exp1b produced no output files"
+    echo '::error::exp1b produced no output files'
     exit 1
   fi
 "
