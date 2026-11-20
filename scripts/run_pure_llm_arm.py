@@ -388,9 +388,10 @@ class RenderStop(Exception):
 
 
 # A3-1: request parameters forced onto arm P so they equal HDS's (symbolic_engine.py
-# lines 701-704: max_tokens=2000, temperature=0.3). The frozen baseline hard-codes
+# LLMConfig defaults: max_tokens=2000; shared llm_call wrapper enforces temperature=0.25.
+# The frozen baseline hard-codes
 # max_tokens=4000 and sends no temperature. Keep in sync with the YAML.
-P_REQUEST_OVERRIDES = {"max_tokens": 2000, "temperature": 0.3}
+P_REQUEST_OVERRIDES = {"max_tokens": 2000, "temperature": 0.25}
 
 
 class Recorder:
