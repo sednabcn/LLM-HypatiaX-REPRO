@@ -623,6 +623,7 @@ def run_case_hard(case: Case, baseline: str, scorer: Callable, rt: Runtime) -> d
                                         bypass_kind="live", llm_called=True, n_api=1))
         if not timed_out and completed is not None and completed.returncode != 0:
             raise RuntimeError("Phase 2 case worker failed: " + completed.stderr[-2000:])
+        generation_elapsed = time.perf_counter() - started
         if timed_out and not progress:
             raise RuntimeError("Phase 2 worker hit its deadline before any LLM request; no valid result row can be written.")
 
@@ -634,7 +635,7 @@ def run_case_hard(case: Case, baseline: str, scorer: Callable, rt: Runtime) -> d
 
         row = run_case(case, RecordedProvider(calls), scorer, rt, clock=lambda: 0.0)
         row["hard_timeout_enforced"] = True
-        row["runtime_s"] = time.perf_counter() - started
+        row["runtime_s"] = generation_elapsed
         row["timeout_s"] = rt.time_cap_s
         row["timed_out"] = timed_out
         row["status"] = "timeout" if timed_out else ("ok" if row.get("selected_index") is not None else "no_formula")
