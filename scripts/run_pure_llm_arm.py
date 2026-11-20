@@ -903,7 +903,9 @@ def cmd_render(args):
     text = json.dumps({"system": entry["kwargs"].get("system"), "messages": entry["kwargs"].get("messages")})
     print(f"Offline gates for {eq} (no API request sent)")
     tsha = template_sha()
-    ok = print_gates(gate_config(cfg, tsha) + gate_prompt_leaks(text, case))
+    expected_patterns, expected_constants = hds_prompt_context(case)
+    ok = print_gates(gate_config(cfg, tsha) + gate_prompt_leaks(
+        text, case, expected_patterns, expected_constants))
     flat = json.dumps(flatten(cfg), default=str)
     ev_ok = scorer_sha in flat
     ok &= print_gates([("evaluator sha256 in config", ev_ok, f"computed {scorer_sha}")])
