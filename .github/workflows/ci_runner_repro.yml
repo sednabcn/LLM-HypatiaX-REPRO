@@ -1031,13 +1031,13 @@ jobs:
   credential_preflight:
     name: "Credential preflight - ${{ needs.plan.outputs.exp_id }}"
     needs: [pca_runner, plan]
-    if: ${{ needs.pca_runner.outputs.skip_plan == 'false' && needs.plan.outputs.shard_matrix != '[]' && needs.plan.outputs.shard_matrix != '' && github.event.inputs.aggregate_run_id == '' }}
+    if: ${{ always() && needs.pca_runner.result == 'success' && github.event.inputs.aggregate_run_id == '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
 
     steps:
       - name: Check required Anthropic credential once per experiment run
-        if: ${{ github.event.inputs.dry_run != 'true' && needs.plan.outputs.exp_id != 'portfolio_feature_ranking' && needs.plan.outputs.exp_id != 'portfolio_pca_tail_error' }}
+        if: ${{ github.event.inputs.dry_run != 'true' && github.event.inputs.experiment != 'portfolio_feature_ranking' && github.event.inputs.experiment != 'portfolio_pca_tail_error' }}
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
@@ -1508,6 +1508,7 @@ jobs:
         if: ${{ steps.resolve_ids.outputs.has_work == 'true' }}
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY:    ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN:      ${{ secrets.GITHUB_TOKEN }}
           PENDING_IDS:       ${{ steps.resolve_ids.outputs.pending_ids }}
           SHARD_CKPT:        checkpoint_worker_shard${{ matrix.shard }}.json
@@ -1523,14 +1524,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ "${EXP}" == "portfolio_feature_ranking" || "${EXP}" == "portfolio_pca_tail_error" ]]; then
-            export ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}"
-            echo "ANTHROPIC_API_KEY: not required for this offline diagnostic"
-          else
-            export ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}"
-            [[ -n "${ANTHROPIC_API_KEY}" ]] || { echo "ERROR: ANTHROPIC_API_KEY secret is empty"; exit 1; }
-            echo "ANTHROPIC_API_KEY: enforced (${#ANTHROPIC_API_KEY} chars)"
-          fi
+          # Presence was checked once by credential_preflight. Each isolated worker
+          # receives its own secret reference; never print key length or prefix.
+          export ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}"
 
           # resume=false must mean a clean run: run_all.sh resumes from any committed checkpoint unless CLEAR_CHECKPOINT is non-empty
           if [[ "${RESUME}" == "false" ]]; then
@@ -4011,7 +4007,7 @@ jobs:
 
   pca_run_exp2_feynman:
     name: "C5c-0 · Run exp2_feynman_pca (Feynman PCA 40/60)"
-    needs: pca_runner
+    needs: [pca_runner, credential_preflight]
     if: needs.pca_runner.outputs.is_pca == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 340
@@ -4057,6 +4053,8 @@ jobs:
         uses: actions/setup-python@v5.3.0
         with:
           python-version: ${{ env.PYTHON_VERSION || '3.12' }}
+          cache: pip
+          cache-dependency-path: .github/workflows/ci_runner_repro.yml
 
       - name: Set up Julia 1.11
         if: steps.check_exp2.outputs.already_done != 'true'
@@ -4199,7 +4197,7 @@ jobs:
 
   pca_run_exp1:
     name: "C5c-1 · Run exp1_pca (DeFi all-74, PCA 40/60)"
-    needs: pca_runner
+    needs: [pca_runner, credential_preflight]
     if: needs.pca_runner.outputs.is_pca == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 340
@@ -4238,6 +4236,8 @@ jobs:
         uses: actions/setup-python@v5.3.0
         with:
           python-version: ${{ env.PYTHON_VERSION || '3.12' }}
+          cache: pip
+          cache-dependency-path: .github/workflows/ci_runner_repro.yml
 
       - name: Set up Julia 1.11
         if: steps.check_exp1.outputs.already_done != 'true'
@@ -4359,7 +4359,7 @@ jobs:
 
   pca_run_exp1b:
     name: "C5c-2 · Run exp1b_pca (DeFi portfolio seed sweep, PCA 40/60)"
-    needs: [pca_runner, pca_run_exp1]
+    needs: [pca_runner, pca_run_exp1, credential_preflight]
     if: needs.pca_runner.outputs.is_pca == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 340
