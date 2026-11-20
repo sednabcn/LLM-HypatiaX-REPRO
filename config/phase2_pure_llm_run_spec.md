@@ -174,6 +174,17 @@ The matrix is 15 equations × 3 seeds = 45 cases. API cost and runtime per case 
 - The existing HDS rows were produced by the `exp1_ablation` experiment and flattened into `p2/`; they were not launched as a dedicated Phase 2 run.
 
 
+
+## 12. Prompt and API parity re-audit (20 November 2026)
+
+The live code supersedes the stale values in the earlier §11 note:
+
+- The shared `hypatiax.core.llm_call.create_message` wrapper overwrites caller temperature with **0.25**. HDS therefore sends 0.25; the Phase 2 recorder override had been forcing Pure LLM to 0.3 after that wrapper. The runner override and YAML are now corrected to 0.25.
+- HDS `IntegratedLLMEngine._build_prompt` (in `hypatiax/tools/symbolic/symbolic_engine.py`) receives domain, variable names, training-data patterns, and its fixed physical-constants block. With `HYPATIAX_DISABLE_PROMPT_HINTS=1`, it withholds the description/equation name.
+- The current PureLLM baseline prompt instead receives the equation-name description (see `config/equations_meta.json`) and does not include HDS data-pattern statistics or the HDS physical-constants block. It also requests a different response format. Therefore the two prompts are **not matched**. The current leak gate should fail on the equation-name description; this must not be bypassed.
+- This PR does not rewrite the frozen baseline or silently add data-derived statistics. Prompt parity remains a hard pre-run gate requiring a declared design amendment and an explicit decision to use HDS's training-pattern inputs, rather than the existing no-statistics PureLLM prompt. No experiment has been run.
+- HDS's actual sampling temperature is 0.25, not 0.3. Its `LLMConfig` uses max_tokens=2000 and n_candidates=3. The PureLLM runner still makes three separate baseline requests; that is three API samples, not an identical HDS request shape. This difference must be described in the Phase 2 amendment before the first run.
+
 ## 11. Values read from the code (added 27 October 2026)
 
 - **LLM settings of the HDS stage:** `temperature = 0.3`, `max_tokens = 2000` (the `LLMConfig` default, not overridden), `n_candidates = 3`, model `claude-sonnet-4-6` (single value in all 90 rows). HDS makes up to `HYPATIA_MAX_RETRIES = 3` PySR attempts per case.
