@@ -13,6 +13,8 @@ def test_v50_2_worker_emits_explicit_non_native_implementation_provenance():
     assert '"implementation_mode": "v50_2"' in source
     assert '"native_v60_pipeline": False' in source
     assert '"provenance_source": "hybrid_factory_selection"' in source
+    assert '_implementation_provenance.update({' in source
+    assert 'result["implementation_provenance"] = _implementation_provenance' in source
 
 
 def test_v50_2_validator_requires_the_explicit_implementation_record():
