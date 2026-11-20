@@ -3330,8 +3330,12 @@ class HybridSystemV50_2Method(BaseMethod):
     Same import used by run_comparative_suite_benchmark.py Method 9.
     """
 
-    def __init__(self, verbose=False):
-        super().__init__("HybridDiscoverySystem v50_2 (tools)", verbose)
+    def __init__(self, verbose=False, implementation="v50_2"):
+        implementation = str(implementation).strip().lower()
+        if implementation not in {"v50_2", "v60"}:
+            raise ValueError(f"Unsupported HybridDiscovery implementation: {implementation!r}")
+        self.implementation = implementation
+        super().__init__(f"HybridDiscoverySystem {implementation} (tools)", verbose)
         # NOTE: do NOT import hybrid_system_v50_2 or symbolic_engine here.
         # Same reason as SymbolicEngineMethod: top-level pysr/juliacall import in the
         # main process (torch already loaded) → juliacall/torch signal collision → segfault.
@@ -3688,8 +3692,12 @@ class ProtocolBenchmarkSuite:
         verbose: bool = False,
         no_llm_cache: bool = False,
         nn_seeds: int = 1,
+        hybrid_implementation: str = "v50_2",
     ):
         self.verbose = verbose
+        self._hybrid_implementation = str(hybrid_implementation).strip().lower()
+        if self._hybrid_implementation not in {"v50_2", "v60"}:
+            raise ValueError(f"Unsupported HybridDiscovery implementation: {self._hybrid_implementation!r}")
         self.results: List[Dict] = []
         self._no_llm_cache = no_llm_cache   # used by _print_comparison for warning text
 
@@ -3705,6 +3713,8 @@ class ProtocolBenchmarkSuite:
                 m = cls(verbose=verbose, no_cache=no_llm_cache)
             elif cls is ImprovedNNMethod:
                 m = cls(verbose=verbose, nn_seeds=nn_seeds)
+            elif cls is HybridSystemV50_2Method:
+                m = cls(verbose=verbose, implementation=self._hybrid_implementation)
             elif cls is HybridAllDomainsMethod:
                 # FIX: pass no_cache so HybridSystemLLMNN makes independent LLM
                 # calls instead of reusing PureLLMBaseline's cached formula,
@@ -3739,6 +3749,8 @@ class ProtocolBenchmarkSuite:
                  if type(m).__name__ == cls.__name__),
                 cls.__name__   # fallback: use class name
             )
+            if cls is HybridSystemV50_2Method:
+                src = f"tools/symbolic/hybrid_system_{self._hybrid_implementation}.py"
             flag = "✅" if method_name in active_names else "❌"
             print(f"  [{idx}] {cls.__name__:<38} ← {src}")
         print(f"{'='*80}\n")
@@ -4320,7 +4332,11 @@ class ProtocolBenchmarkSuite:
                     "duplicates": {}, "y_scale": {}}
 
         # Symbolic method names — complexity penalty only applies to these.
-        _SYMBOLIC_NAMES = {"SymbolicEngineWithLLM (tools)", "HybridDiscoverySystem v50_2 (tools)"}
+        _SYMBOLIC_NAMES = {
+            "SymbolicEngineWithLLM (tools)",
+            "HybridDiscoverySystem v50_2 (tools)",
+            "HybridDiscoverySystem v60 (tools)",
+        }
 
         def _rank_key(name):
             r2   = valid[name]
@@ -4367,7 +4383,11 @@ class ProtocolBenchmarkSuite:
                 or res.metadata.get("nn_applied")
             )
         }
-        _SYMBOLIC_NAMES = {"SymbolicEngineWithLLM (tools)", "HybridDiscoverySystem v50_2 (tools)"}
+        _SYMBOLIC_NAMES = {
+            "SymbolicEngineWithLLM (tools)",
+            "HybridDiscoverySystem v50_2 (tools)",
+            "HybridDiscoverySystem v60 (tools)",
+        }
 
         formula_hashes: Dict[str, List[str]] = {}
         for name, res in results.items():
@@ -5390,6 +5410,7 @@ Examples
         verbose=args.verbose,
         no_llm_cache=_no_llm_cache,
         nn_seeds=_nn_seeds,
+        hybrid_implementation=args.hybrid_implementation,
     )
     suite._noiseless  = _noiseless
     suite._threshold  = _threshold
