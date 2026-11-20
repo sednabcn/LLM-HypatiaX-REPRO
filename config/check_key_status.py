@@ -5,12 +5,10 @@ LOCAL USE:
     Set ANTHROPIC_API_KEY in your shell or hypatiax/.env, then:
         python3 config/check_key_status.py
 
-CI USE (GitHub Actions):
-    The key is injected via the workflow's `env:` block:
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-    load_dotenv() is called first so local runs still work; in CI the
-    secret is already in the environment and load_dotenv() is a no-op.
+CI USE:
+    The main reproduction workflow performs a presence-only credential
+    preflight once per experiment run. This script is a manual live
+    round-trip diagnostic and is not invoked by the CI worker matrix.
 
 Exit codes:
     0  key is active and working
@@ -53,7 +51,7 @@ if not api_key:
     print("   Locally: set it in your shell or in hypatiax/.env")
     sys.exit(1)
 
-print(f"ANTHROPIC_API_KEY present: YES ({len(api_key)} chars)")
+print("ANTHROPIC_API_KEY present: YES")
 
 model_id = os.environ.get("HYPATIAX_LLM_MODEL") or os.environ.get("LLM_MODEL") or "claude-sonnet-4-6"
 from hypatiax.core.llm_call import configured_temperature, create_message

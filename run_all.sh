@@ -346,7 +346,7 @@ SDKCHECK
     python3 -c "import seaborn; print(\"seaborn: installed\", seaborn.__version__)"
   }
   [[ -n "${ANTHROPIC_API_KEY:-}" ]] || { echo "ERROR: ANTHROPIC_API_KEY not set"; exit 1; }
-  echo "ANTHROPIC_API_KEY: set (${#ANTHROPIC_API_KEY} chars)"
+  echo "ANTHROPIC_API_KEY: configured"
   echo "PYSR_POPULATIONS: ${PYSR_POPULATIONS}"
   echo "JULIA_NUM_THREADS: ${JULIA_NUM_THREADS}"
   echo "JULIA_EXCLUSIVE: ${JULIA_EXCLUSIVE}"
