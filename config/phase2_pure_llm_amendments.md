@@ -1,7 +1,7 @@
 # Phase 2 prompt amendment — matched HDS inputs
 
 **Decision date:** 20 November 2026  
-**Status:** Approved design; implementation and offline verification required before any API call.
+**Status:** Approved design; implementation committed on `fix/phase2-matched-hds-prompt-inputs`; offline CI verification still required before any API call.
 
 ## Decision
 
@@ -27,11 +27,18 @@ The Pure-LLM prompt must not receive the equation name, equation description, ta
 1. Use the exact training arrays used by the Phase 2 case generator.
 2. Reuse the HDS pattern-summary implementation, not a newly invented summary. Add a regression test that compares the Pure-LLM pattern payload to the HDS payload for the same arrays.
 3. Reuse the exact rounded constants block from the HDS prompt. Do not substitute the more precise CODATA constants.
-4. Render both prompts offline for a fixed fixture and verify the allowed input values are identical.
+4. Render the Pure-LLM prompt offline for a fixed fixture and verify its embedded pattern JSON and rounded constants against the HDS implementation for identical training arrays.
 5. Verify that the Pure-LLM prompt contains no equation name, description, formula hint, or test/extrapolation-derived value.
 6. Verify the prompt is stable across the three calls for a case and record its hash.
 7. Keep the preflight gate fail-closed. No API request is permitted unless every parity/leak assertion passes.
 8. Do not alter the dataset, equation/seed matrix, scoring, time cap, output schema, or historical result files.
+
+## Implementation record
+
+- `scripts/run_pure_llm_arm.py` now computes the pattern payload with `DataPatternAnalyzer().analyze(X_train, y_train, variable_names)`, supplies neutral task wording, and passes the fixed rounded HDS constants and pattern payload to the baseline.
+- `hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py` now renders the training-only pattern JSON and exact HDS constants block.
+- The preflight gate checks the exact expected pattern JSON, all rounded constants, neutral wording, and absence of equation name/description and evaluation-set leakage markers. It exits before API calls on failure.
+- Offline regression tests cover the matched-input wiring. CI has not yet verified this branch; the live-call gate remains closed.
 
 ## Scope and interpretation
 
