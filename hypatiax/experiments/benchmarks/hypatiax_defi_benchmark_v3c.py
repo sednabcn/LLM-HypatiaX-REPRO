@@ -134,18 +134,23 @@ import re
 import sys
 from pathlib import Path
 
+# ── project root ──────────────────────────────────────────────────────────────
+# Resolve the repository from this file, not the caller's working directory.
+# This must precede every import from the local hypatiax package: CI invokes
+# this benchmark through run_all.sh, and Python otherwise searches only the
+# script directory plus the installed environment.
+_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+sys.path.insert(0, str(_ROOT))
+
 # ── third-party ───────────────────────────────────────────────────────────────
 import numpy as np
-from hypatiax.core.r2_canonical import r2_checked as _r2_checked
 import torch
 import torch.nn as nn
 from dotenv import load_dotenv
 from scipy import stats
 from sklearn.preprocessing import StandardScaler
 
-# ── project root ──────────────────────────────────────────────────────────────
-_ROOT = Path(__file__).resolve().parent.parent.parent.parent
-sys.path.insert(0, str(_ROOT))
+from hypatiax.core.r2_canonical import r2_checked as _r2_checked
 
 from hypatiax.core.routing import (
     kde_ood_probability, route_decision_from_diagnostics, structural_risk_tokens,
