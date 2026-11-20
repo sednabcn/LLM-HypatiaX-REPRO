@@ -1029,9 +1029,9 @@ jobs:
 
 
   credential_preflight:
-    name: "Credential preflight - ${{ needs.plan.outputs.exp_id }}"
+    name: "Credential preflight - ${{ github.event.inputs.experiment }}"
     needs: [pca_runner, plan]
-    if: ${{ always() && needs.pca_runner.result == 'success' && github.event.inputs.aggregate_run_id == '' }}
+    if: ${{ always() && needs.pca_runner.result == 'success' && (needs.plan.result == 'success' || needs.plan.result == 'skipped') && github.event.inputs.aggregate_run_id == '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
 
