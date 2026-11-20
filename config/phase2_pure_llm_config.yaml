@@ -62,7 +62,7 @@ budget:
 
 llm:
   model_id: claude-sonnet-4-6                   # checked: single value in all 90 p2 rows; default of LLMConfig.model
-  temperature: 0.3                              # read from code: exp1_ablation.py llm_temperature=0.3 -> LLMConfig.temperature
+  temperature: 0.25                              # read from code: exp1_ablation.py llm_temperature=0.25 -> LLMConfig.temperature
   max_tokens: 2000                              # read from code: LLMConfig.max_tokens default (HDS does not override it)
   max_calls_per_case: 3                      # A3: 3 independent calls per (equation, seed)
   prompt_inputs: [description, domain, variable_names, constants]   # A3: arm P, no data statistics
