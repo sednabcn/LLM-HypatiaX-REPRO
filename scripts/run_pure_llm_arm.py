@@ -370,7 +370,9 @@ def evaluate_formula(code: str, variable_names: list, X: np.ndarray, constants: 
 # ============================================================================ scoring
 def load_scorer():
     mod = importlib.import_module(SCORER_MODULE)
-    return mod.r2_checked, sha256_file(Path(mod.__file__))
+    # Primary values use the benchmark wrapper; retain the un-floored scorer for r2_raw.
+    mod.r2_scored._raw_scorer = mod.r2_checked
+    return mod.r2_scored, sha256_file(Path(mod.__file__))
 
 
 def score_pair(scorer: Callable, y: np.ndarray, pred: np.ndarray) -> tuple:
@@ -708,6 +710,15 @@ def run_case(case: Case, provider, scorer: Callable, rt: Runtime, clock: Callabl
 
     pick = cands[sel] if sel is not None else None
     far = fv(pick, "far")
+    raw_scorer = getattr(scorer, "_raw_scorer", scorer)
+    far_raw = None
+    if pick is not None and pick["cr"].formula is not None and "far" in case.X_eval:
+        try:
+            raw_pred = evaluate_formula(pick["cr"].formula, case.variable_names, case.X_eval["far"], case.constants)
+            raw_value, _ = raw_scorer(case.y_eval["far"], raw_pred)
+            far_raw = None if math.isnan(float(raw_value)) else float(raw_value)
+        except Exception:
+            far_raw = None
     failed_stages = [c["stage"] for c in cands if c["stage"]]
     row_stage = None if pick is not None else (max(set(failed_stages), key=failed_stages.count)
                                               if failed_stages else ("time_cap" if cap_hit else "no_calls"))
@@ -723,7 +734,7 @@ def run_case(case: Case, provider, scorer: Callable, rt: Runtime, clock: Callabl
         "created_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
         # --- primary result (selected candidate, extrapolation scored AFTER selection)
         "r2": far if far is not None else NEG,
-        "r2_raw": far if far is not None else NEG,
+        "r2_raw": far_raw,
         "r2_status": (pick["scores"]["far"][1] if pick and "far" in pick["scores"] else f"failed:{row_stage}"),
         "extrap_r2_far": far if far is not None else NEG,
         "extrap_r2_medium": fv(pick, "medium") if fv(pick, "medium") is not None else NEG,
@@ -740,7 +751,7 @@ def run_case(case: Case, provider, scorer: Callable, rt: Runtime, clock: Callabl
         "candidate_extrap_r2_near": [fv(c, "near") for c in cands],
         "candidate_extrap_r2_medium": [fv(c, "medium") for c in cands],
         "candidate_extrap_r2_far": [fv(c, "far") for c in cands],
-        "candidate_r2_raw_far": [fv(c, "far") for c in cands],
+        "candidate_r2_raw_far": [score_pair(raw_scorer, case.y_eval["far"], evaluate_formula(c["cr"].formula, case.variable_names, case.X_eval["far"], case.constants))[0] if c["cr"].formula is not None and "far" in case.X_eval else None for c in cands],
         "selected_index": sel,
         "selection_metric": "train_r2",
         "model_id_returned": next((c["cr"].model_id for c in cands if c["cr"].model_id), None),
