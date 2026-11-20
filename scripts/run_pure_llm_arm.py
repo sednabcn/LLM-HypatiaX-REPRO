@@ -384,6 +384,18 @@ def score_pair(scorer: Callable, y: np.ndarray, pred: np.ndarray) -> tuple:
         return None, f"scorer_error:{type(e).__name__}"
 
 
+def safe_raw_far_score(formula: Optional[str], case: Case, raw_scorer: Callable) -> Optional[float]:
+    """Score a candidate's raw far R2 without allowing a bad formula to abort its case."""
+    if formula is None or "far" not in case.X_eval:
+        return None
+    try:
+        pred = evaluate_formula(formula, case.variable_names, case.X_eval["far"], case.constants)
+        value, _ = score_pair(raw_scorer, case.y_eval["far"], pred)
+        return value
+    except Exception:  # noqa: BLE001 - candidate-level failures belong in the row, not the runner
+        return None
+
+
 # ============================================================================ API observation + providers
 class RenderStop(Exception):
     """Raised by the recorder in --render mode so no request leaves the machine."""
@@ -753,7 +765,7 @@ def run_case(case: Case, provider, scorer: Callable, rt: Runtime, clock: Callabl
         "candidate_extrap_r2_near": [fv(c, "near") for c in cands],
         "candidate_extrap_r2_medium": [fv(c, "medium") for c in cands],
         "candidate_extrap_r2_far": [fv(c, "far") for c in cands],
-        "candidate_r2_raw_far": [score_pair(raw_scorer, case.y_eval["far"], evaluate_formula(c["cr"].formula, case.variable_names, case.X_eval["far"], case.constants))[0] if c["cr"].formula is not None and "far" in case.X_eval else None for c in cands],
+        "candidate_r2_raw_far": [safe_raw_far_score(c["cr"].formula, case, raw_scorer) for c in cands],
         "selected_index": sel,
         "selection_metric": "train_r2",
         "model_id_returned": next((c["cr"].model_id for c in cands if c["cr"].model_id), None),
@@ -1144,6 +1156,9 @@ def selftest() -> int:
     # failures are explicit, never dropped
     row = run_case(case, Fake(["3 * T", "x"], errs={1: "boom"}), stub_scorer, rt)
     check("api error on call 1 kept, call 2 still counted", row["n_calls"] == 3 and row["candidate_formulas"][0] is None)
+    check("invalid candidate is isolated in raw far scoring",
+          row["candidate_r2_raw_far"][1] is None and row["candidate_train_r2"][1] is None,
+          row["candidate_r2_raw_far"])
     row = run_case(case, Fake(["zzz_undefined + 1"] * 3), stub_scorer, rt)
     check("all-fail row: r2 = -inf, never 0.0, explicit status/stage",
           row["r2"] == float("-inf") and row["r2_status"].startswith("failed") and row["error_stage"] == "exec"
