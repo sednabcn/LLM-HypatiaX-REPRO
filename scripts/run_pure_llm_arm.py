@@ -881,6 +881,7 @@ def dry_run_checks(rows: list, args) -> list:
 
 def cmd_validate(args) -> int:
     p2 = Path(args.out_dir).expanduser() if args.out_dir else Path(args.p2_dir)
+    reference_dir = Path(args.p2_dir)
     rows = [json.loads(ln) for f in sorted(p2.glob("pure_llm_*.jsonl")) for ln in f.read_text().splitlines() if ln.strip()]
     print(f"{len(rows)} pure_llm rows in {p2}")
     checks = []
@@ -894,7 +895,7 @@ def cmd_validate(args) -> int:
         checks.append(("schema validates every row", not bad, "; ".join(bad[:4])))
     except ImportError:
         checks.append(("schema validates every row (pip install jsonschema)", False, "jsonschema missing"))
-    want = {(e, int(s)) for e in hds_equations(p2) for s in args.seeds.split(",")}
+    want = {(e, int(s)) for e in hds_equations(reference_dir) for s in args.seeds.split(",")}
     latest = {}
     for r in rows:
         latest[(r["equation"], r["seed"])] = r
