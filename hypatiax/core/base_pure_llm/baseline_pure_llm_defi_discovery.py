@@ -510,9 +510,13 @@ class PureLLMBaseline:
 
         constants_info = ""
         if metadata and "constants" in metadata and metadata["constants"]:
-            constants_info = "\n\n⚠️ CRITICAL - Use these EXACT constant values:"
+            constants_info = "\n\nAVAILABLE PHYSICAL CONSTANTS (use these exact Python names):"
             for const_name, const_value in metadata["constants"].items():
-                constants_info += f"\n  • {const_name} = {const_value}"
+                constants_info += f"\n  {const_name} = {const_value}"
+        patterns_info = ""
+        if metadata and metadata.get("data_patterns") is not None:
+            patterns_info = "\n\nDATA PATTERNS (computed from training split only):\n"
+            patterns_info += json.dumps(metadata["data_patterns"], indent=2)
 
         # No equation-specific hints exist in this prompt (deleted, not gated).
         # constants_info above is the protocol's task-spec constants; it must
