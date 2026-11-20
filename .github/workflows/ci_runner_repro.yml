@@ -4055,6 +4055,8 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION || '3.12' }}
           cache: pip
           cache-dependency-path: .github/workflows/ci_runner_repro.yml
+          cache: pip
+          cache-dependency-path: .github/workflows/ci_runner_repro.yml
 
       - name: Set up Julia 1.11
         if: steps.check_exp2.outputs.already_done != 'true'
@@ -4238,6 +4240,8 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION || '3.12' }}
           cache: pip
           cache-dependency-path: .github/workflows/ci_runner_repro.yml
+          cache: pip
+          cache-dependency-path: .github/workflows/ci_runner_repro.yml
 
       - name: Set up Julia 1.11
         if: steps.check_exp1.outputs.already_done != 'true'
@@ -4398,6 +4402,8 @@ jobs:
         uses: actions/setup-python@v5.3.0
         with:
           python-version: ${{ env.PYTHON_VERSION || '3.12' }}
+          cache: pip
+          cache-dependency-path: .github/workflows/ci_runner_repro.yml
 
       - name: Set up Julia 1.11
         if: steps.check_exp1b.outputs.already_done != 'true'
@@ -4536,6 +4542,8 @@ jobs:
         uses: actions/setup-python@v5.3.0
         with:
           python-version: ${{ env.PYTHON_VERSION || '3.12' }}
+          cache: pip
+          cache-dependency-path: .github/workflows/ci_runner_repro.yml
 
       - name: Install dependencies
         run: |
@@ -4729,6 +4737,8 @@ jobs:
         uses: actions/setup-python@v5.3.0
         with:
           python-version: ${{ env.PYTHON_VERSION || '3.12' }}
+          cache: pip
+          cache-dependency-path: .github/workflows/ci_runner_repro.yml
 
       - name: Install dependencies
         run: pip install --upgrade pip numpy scikit-learn
@@ -4881,6 +4891,8 @@ jobs:
         uses: actions/setup-python@v5.3.0
         with:
           python-version: ${{ env.PYTHON_VERSION || '3.12' }}
+          cache: pip
+          cache-dependency-path: .github/workflows/ci_runner_repro.yml
 
       - name: Install dependencies
         run: pip install --upgrade pip
