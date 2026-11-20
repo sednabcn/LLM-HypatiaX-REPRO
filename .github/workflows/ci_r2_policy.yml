@@ -134,6 +134,8 @@ jobs:
         run: bash -n run_all.sh
       - name: Run experiment contract regressions
         run: python -m pytest -q hypatiax/experiments/tests/test_result_subdir_map.py
+      - name: Run Phase 2 Pure-LLM runner offline contract tests
+        run: python -m pytest -q hypatiax/experiments/tests/test_phase2_pure_llm_runner.py
       - name: Run Exp2 PCA smoke workflow contract tests (offline)
         run: python -m pytest -q hypatiax/experiments/tests/test_exp2_pca_smoke_workflow.py hypatiax/experiments/tests/test_pca_holdout_contract.py
       - name: Run LLM provenance and temperature contract regressions

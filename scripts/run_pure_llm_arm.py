@@ -700,7 +700,7 @@ def existing_attempts(path: Path, equation: str, seed: int) -> int:
 def build_runtime(cfg: dict, scorer_sha: str, cfg_path: Path, template_sha: Optional[str]) -> Runtime:
     return Runtime(
         max_calls=int(cfg_get(cfg, "max_calls_per_case", default=3)),
-        time_cap_s=float(cfg_get(cfg, "timeout_s", "per_case_timeout_s", "time_cap_s", default=1400)),
+        time_cap_s=float(cfg_get(cfg, "wall_clock_s", "timeout_s", "per_case_timeout_s", "time_cap_s", default=1400)),
         prompt_inputs=list(cfg_get(cfg, "prompt_inputs", default=[])),
         model_requested=cfg_get(cfg, "model_id", "model"),
         git_commit=git_commit(), evaluator_sha256=scorer_sha,
@@ -801,7 +801,19 @@ def run_cases(args, dry: bool) -> int:
         print("Config gate failed: nothing was run.")
         return 1
     p2 = Path(args.p2_dir)
-    out_dir = Path(args.out_dir or ("p2_dry" if dry else args.p2_dir))
+    if dry:
+        out_dir = Path(args.out_dir or "p2_dry")
+    else:
+        if not args.out_dir:
+            print("Full Phase 2 runs require --out-dir pointing to a fresh external results directory; "
+                  "the historical --p2-dir is read-only.")
+            return 1
+        out_dir = Path(args.out_dir).expanduser().resolve()
+        repo_root = REPO.resolve()
+        if out_dir == repo_root or repo_root in out_dir.parents:
+            print(f"Refusing to write Phase 2 outputs inside the repository: {out_dir}")
+            return 1
+        out_dir.mkdir(parents=True, exist_ok=True)
     status_file = Path("p2_dry") / "dry_run_status.json"
     if not dry and not args.skip_gate_check:
         if not status_file.exists() or not json.loads(status_file.read_text()).get("pass"):
@@ -868,7 +880,8 @@ def dry_run_checks(rows: list, args) -> list:
 
 
 def cmd_validate(args) -> int:
-    p2 = Path(args.p2_dir)
+    p2 = Path(args.out_dir).expanduser() if args.out_dir else Path(args.p2_dir)
+    reference_dir = Path(args.p2_dir)
     rows = [json.loads(ln) for f in sorted(p2.glob("pure_llm_*.jsonl")) for ln in f.read_text().splitlines() if ln.strip()]
     print(f"{len(rows)} pure_llm rows in {p2}")
     checks = []
@@ -882,7 +895,7 @@ def cmd_validate(args) -> int:
         checks.append(("schema validates every row", not bad, "; ".join(bad[:4])))
     except ImportError:
         checks.append(("schema validates every row (pip install jsonschema)", False, "jsonschema missing"))
-    want = {(e, int(s)) for e in hds_equations(p2) for s in args.seeds.split(",")}
+    want = {(e, int(s)) for e in hds_equations(reference_dir) for s in args.seeds.split(",")}
     latest = {}
     for r in rows:
         latest[(r["equation"], r["seed"])] = r
@@ -1065,9 +1078,9 @@ def selftest() -> int:
 # ============================================================================ CLI
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--config", default=str(REPO / "phase2_pure_llm_config.yaml"))
-    ap.add_argument("--schema", default=str(REPO / "phase2_row_schema.json"))
-    ap.add_argument("--p2-dir", default=str(REPO / "p2"))
+    ap.add_argument("--config", default=str(REPO / "config" / "phase2_pure_llm_config.yaml"))
+    ap.add_argument("--schema", default=str(REPO / "config" / "phase2_row_schema.json"))
+    ap.add_argument("--p2-dir", default=str(REPO / "p2"), help="read-only historical HDS reference rows")
     ap.add_argument("--out-dir")
     ap.add_argument("--equations", help="comma list; default = the equations in p2/hds_*.jsonl")
     ap.add_argument("--seeds", default=",".join(map(str, DEFAULT_SEEDS)))
