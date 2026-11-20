@@ -174,10 +174,21 @@ The matrix is 15 equations × 3 seeds = 45 cases. API cost and runtime per case 
 - The existing HDS rows were produced by the `exp1_ablation` experiment and flattened into `p2/`; they were not launched as a dedicated Phase 2 run.
 
 
+
+## 12. Prompt and API parity re-audit (20 November 2026)
+
+The live code supersedes the stale values in the earlier §11 note:
+
+- The shared `hypatiax.core.llm_call.create_message` wrapper overwrites caller temperature with **0.25**. HDS therefore sends 0.25; the Phase 2 recorder override had been forcing Pure LLM to 0.3 after that wrapper. The runner override and YAML are now corrected to 0.25.
+- HDS `IntegratedLLMEngine._build_prompt` (in `hypatiax/tools/symbolic/symbolic_engine.py`) receives domain, variable names, training-data patterns, and its fixed physical-constants block. With `HYPATIAX_DISABLE_PROMPT_HINTS=1`, it withholds the description/equation name.
+- The current PureLLM baseline prompt instead receives the equation-name description (see `config/equations_meta.json`) and does not include HDS data-pattern statistics or the HDS physical-constants block. It also requests a different response format. Therefore the two prompts are **not matched**. The current leak gate should fail on the equation-name description; this must not be bypassed.
+- This PR does not rewrite the frozen baseline or silently add data-derived statistics. Prompt parity remains a hard pre-run gate requiring a declared design amendment and an explicit decision to use HDS's training-pattern inputs, rather than the existing no-statistics PureLLM prompt. No experiment has been run.
+- HDS's actual sampling temperature is 0.25, not 0.3. Its `LLMConfig` uses max_tokens=2000 and n_candidates=3. The PureLLM runner still makes three separate baseline requests; that is three API samples, not an identical HDS request shape. This difference must be described in the Phase 2 amendment before the first run.
+
 ## 11. Values read from the code (added 27 October 2026)
 
-- **LLM settings of the HDS stage:** `temperature = 0.3`, `max_tokens = 2000` (the `LLMConfig` default, not overridden), `n_candidates = 3`, model `claude-sonnet-4-6` (single value in all 90 rows). HDS makes up to `HYPATIA_MAX_RETRIES = 3` PySR attempts per case.
-- **Prompt inputs (D3):** with `HYPATIAX_DISABLE_PROMPT_HINTS=1` the HDS prompt carries the domain, the variable names, data-pattern statistics and a physical-constants block. The equation name and description are withheld, and the worked example is a placeholder. A matched Pure LLM arm must receive the same inputs. Whether `PureLLMBaseline` builds its prompt the same way has **not** been checked.
+- **LLM settings of the HDS stage:** `temperature = 0.25`, `max_tokens = 2000` (the `LLMConfig` default, not overridden), `n_candidates = 3`, model `claude-sonnet-4-6` (single value in all 90 rows). HDS makes up to `HYPATIA_MAX_RETRIES = 3` PySR attempts per case.
+- **Prompt inputs (D3):** with `HYPATIAX_DISABLE_PROMPT_HINTS=1` the HDS prompt carries the domain, the variable names, data-pattern statistics and a physical-constants block. The equation name and description are withheld, and the worked example is a placeholder. A matched Pure LLM arm must receive the same inputs. The re-audit in §12 confirms that the current `PureLLMBaseline` prompt is not matched to HDS.
 - **Sample count (D5):** HDS asks for 3 candidate equations per LLM call and then refines them with PySR. A Pure LLM arm that returns one formula is not given the same number of attempts. Decide whether it also returns 3 candidates and how one is chosen (training R^2 only, never the extrapolation score), or label the difference.
-- **Still undecided:** `max_calls_per_case`, the prompt hash, and the Pure LLM runner itself.
+- **Still open before a run:** the D3 prompt/input amendment and how the three independent PureLLM calls should be described relative to HDS's three candidates in one request. The hard timeout and API temperature are implemented in PR #307.
 - **`split_id` caveat:** in the committed `p2/` rows `split_id` is `derived:` plus the first 12 characters of `sha256("equation|seed")`. It is identical for the two systems by construction, so the closure script's "identical split_id" check does not prove the splits match. They do match in the code: `exp1_ablation.generate_data` draws from `RandomState(seed)` and splits with `random_state=seed`, and every condition calls it with the same `(equation, seed)`. Gate G1 for the Pure LLM arm should therefore compare the data arrays or their hashes, not this label.

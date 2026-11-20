@@ -35,11 +35,13 @@ import inspect
 import json
 import math
 import os
+import pickle
 import re
 import subprocess
 import sys
+import tempfile
 import time
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -368,7 +370,9 @@ def evaluate_formula(code: str, variable_names: list, X: np.ndarray, constants: 
 # ============================================================================ scoring
 def load_scorer():
     mod = importlib.import_module(SCORER_MODULE)
-    return mod.r2_checked, sha256_file(Path(mod.__file__))
+    # Primary values use the benchmark wrapper; retain the un-floored scorer for r2_raw.
+    mod.r2_scored._raw_scorer = mod.r2_checked
+    return mod.r2_scored, sha256_file(Path(mod.__file__))
 
 
 def score_pair(scorer: Callable, y: np.ndarray, pred: np.ndarray) -> tuple:
@@ -380,15 +384,28 @@ def score_pair(scorer: Callable, y: np.ndarray, pred: np.ndarray) -> tuple:
         return None, f"scorer_error:{type(e).__name__}"
 
 
+def safe_raw_far_score(formula: Optional[str], case: Case, raw_scorer: Callable) -> Optional[float]:
+    """Score a candidate's raw far R2 without allowing a bad formula to abort its case."""
+    if formula is None or "far" not in case.X_eval:
+        return None
+    try:
+        pred = evaluate_formula(formula, case.variable_names, case.X_eval["far"], case.constants)
+        value, _ = score_pair(raw_scorer, case.y_eval["far"], pred)
+        return value
+    except Exception:  # noqa: BLE001 - candidate-level failures belong in the row, not the runner
+        return None
+
+
 # ============================================================================ API observation + providers
 class RenderStop(Exception):
     """Raised by the recorder in --render mode so no request leaves the machine."""
 
 
 # A3-1: request parameters forced onto arm P so they equal HDS's (symbolic_engine.py
-# lines 701-704: max_tokens=2000, temperature=0.3). The frozen baseline hard-codes
+# LLMConfig defaults: max_tokens=2000; shared llm_call wrapper enforces temperature=0.25.
+# The frozen baseline hard-codes
 # max_tokens=4000 and sends no temperature. Keep in sync with the YAML.
-P_REQUEST_OVERRIDES = {"max_tokens": 2000, "temperature": 0.3}
+P_REQUEST_OVERRIDES = {"max_tokens": 2000, "temperature": 0.25}
 
 
 class Recorder:
@@ -396,6 +413,7 @@ class Recorder:
         self.calls: list = []
         self.mode = "live"
         self.overrides: dict = {}
+        self.progress_path: Optional[Path] = None
 
     def install(self):
         import anthropic
@@ -409,6 +427,9 @@ class Recorder:
                 k = {**k, **rec.overrides}
             entry = {"kwargs": jsonable(k)}
             rec.calls.append(entry)
+            if rec.progress_path is not None:
+                progress = [{"request": request_params(c), "prompt_sha": prompt_digest(c)} for c in rec.calls]
+                rec.progress_path.write_text(json.dumps(progress), encoding="utf-8")
             if rec.mode == "render":
                 raise RenderStop()
             try:
@@ -530,7 +551,7 @@ class BaselineProvider:
         else:
             err = None
         calls = self.rec.calls[start:]
-        cr = CallResult(n_api=len(calls), llm_called=any("response" in c for c in calls))
+        cr = CallResult(n_api=len(calls), llm_called=bool(calls))
         if calls:
             cr.request = request_params(calls[0])
             cr.prompt_sha = prompt_digest(calls[0])
@@ -552,6 +573,27 @@ class BaselineProvider:
 
 
 # ============================================================================ per-case runner
+def _phase2_case_worker(case_path: str, output_path: str, progress_path: str,
+                        baseline: str, max_calls: int) -> int:
+    with open(case_path, "rb") as fh:
+        case = pickle.load(fh)
+    provider = BaselineProvider(baseline)
+    provider.rec.progress_path = Path(progress_path)
+    results = []
+    for i in range(max_calls):
+        try:
+            cr = provider.generate(case, i + 1)
+        except TypeError:
+            raise
+        except Exception as exc:
+            cr = CallResult(error_stage="api", error=f"{type(exc).__name__}: {exc}")
+        results.append(asdict(cr))
+        tmp = Path(output_path + ".tmp")
+        tmp.write_text(json.dumps(results), encoding="utf-8")
+        os.replace(tmp, output_path)
+    return 0
+
+
 @dataclass
 class Runtime:
     max_calls: int = 3
@@ -562,7 +604,79 @@ class Runtime:
     evaluator_sha256: str = ""
     config_sha256: str = ""
     template_sha256: Optional[str] = None
+    evaluator_version: str = ""
     attempt: int = 1
+
+
+def run_case_hard(case: Case, baseline: str, scorer: Callable, rt: Runtime) -> dict:
+    """Kill the generation child at the case deadline; score returned formulas in parent."""
+    started = time.perf_counter()
+    timed_out = False
+    with tempfile.TemporaryDirectory(prefix="phase2-case-") as td:
+        case_path = str(Path(td) / "case.pkl")
+        output_path = str(Path(td) / "calls.json")
+        progress_path = str(Path(td) / "requests.json")
+        with open(case_path, "wb") as fh:
+            pickle.dump(case, fh, protocol=pickle.HIGHEST_PROTOCOL)
+        command = [sys.executable, str(Path(__file__).resolve()),
+                   "--_case-worker", case_path, "--_case-output", output_path,
+                   "--_case-progress", progress_path, "--_baseline-worker", baseline,
+                   "--_max-calls-worker", str(rt.max_calls)]
+        try:
+            completed = subprocess.run(command, cwd=str(REPO), capture_output=True,
+                                       text=True, timeout=rt.time_cap_s, check=False)
+        except subprocess.TimeoutExpired:
+            timed_out, completed = True, None
+        raw = json.loads(Path(output_path).read_text()) if Path(output_path).exists() else []
+        calls = [CallResult(**item) for item in raw]
+        progress = json.loads(Path(progress_path).read_text()) if Path(progress_path).exists() else []
+        if timed_out and len(progress) > len(calls):
+            for item in progress[len(calls):]:
+                calls.append(CallResult(error_stage="timeout", error="hard per-case timeout",
+                                        request=item.get("request"), prompt_sha=item.get("prompt_sha"),
+                                        bypass_kind="live", llm_called=True, n_api=1))
+        if not timed_out and completed is not None and completed.returncode != 0:
+            raise RuntimeError("Phase 2 case worker failed: " + completed.stderr[-2000:])
+        generation_elapsed = time.perf_counter() - started
+        if timed_out and not progress:
+            raise RuntimeError("Phase 2 worker hit its deadline before any LLM request; no valid result row can be written.")
+
+        class RecordedProvider:
+            def __init__(self, values): self.values = values
+            def generate(self, _case, index):
+                if index <= len(self.values): return self.values[index - 1]
+                return CallResult(error_stage="no_call", error="worker ended before this call", n_api=0)
+
+        row = run_case(case, RecordedProvider(calls), scorer, rt, clock=lambda: 0.0)
+        row["hard_timeout_enforced"] = True
+        row["runtime_s"] = generation_elapsed
+        row["timeout_s"] = rt.time_cap_s
+        row["timed_out"] = timed_out
+        row["status"] = "timeout" if timed_out else ("ok" if row.get("selected_index") is not None else "no_formula")
+        row["r2_field"] = "extrap_r2_far"
+        row["rendered_prompt_sha256"] = row.get("prompt_sha256")
+        row["prompt_sha256"] = rt.template_sha256
+        row["formula"] = row.get("best_expression")
+        row["bypass_used"] = row.get("bypass_kind") not in (None, "live")
+        row["model_id"] = str(rt.model_requested or "")
+        row["model_returned"] = row.get("model_id_returned")
+        params = row.get("effective_request_params", {}).get("params", {})
+        row["temperature"] = params.get("temperature")
+        row["n_llm_calls"] = sum(c.n_api for c in calls)
+        row["input_tokens"] = row["output_tokens"] = None
+        row["code_version"] = rt.git_commit
+        row["code_dirty"] = "+dirty" in rt.git_commit
+        row["config_hash"] = rt.config_sha256
+        row["evaluator_version"] = rt.evaluator_version
+        row["ablated_component"] = None
+        row["config_diff"] = []
+        if timed_out:
+            row.update({"r2": None, "r2_raw": None, "r2_status": "not_scored",
+                        "train_r2": None, "extrap_r2_near": None, "extrap_r2_medium": None,
+                        "extrap_r2_far": None, "formula": None, "best_expression": None,
+                        "selected_index": None, "call_index": None, "status": "timeout",
+                        "error_stage": "timeout", "timed_out": True})
+        return row
 
 
 def run_case(case: Case, provider, scorer: Callable, rt: Runtime, clock: Callable = time.perf_counter) -> dict:
@@ -610,6 +724,15 @@ def run_case(case: Case, provider, scorer: Callable, rt: Runtime, clock: Callabl
 
     pick = cands[sel] if sel is not None else None
     far = fv(pick, "far")
+    raw_scorer = getattr(scorer, "_raw_scorer", scorer)
+    far_raw = None
+    if pick is not None and pick["cr"].formula is not None and "far" in case.X_eval:
+        try:
+            raw_pred = evaluate_formula(pick["cr"].formula, case.variable_names, case.X_eval["far"], case.constants)
+            raw_value, _ = raw_scorer(case.y_eval["far"], raw_pred)
+            far_raw = None if math.isnan(float(raw_value)) else float(raw_value)
+        except Exception:
+            far_raw = None
     failed_stages = [c["stage"] for c in cands if c["stage"]]
     row_stage = None if pick is not None else (max(set(failed_stages), key=failed_stages.count)
                                               if failed_stages else ("time_cap" if cap_hit else "no_calls"))
@@ -625,7 +748,7 @@ def run_case(case: Case, provider, scorer: Callable, rt: Runtime, clock: Callabl
         "created_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
         # --- primary result (selected candidate, extrapolation scored AFTER selection)
         "r2": far if far is not None else NEG,
-        "r2_raw": far if far is not None else NEG,
+        "r2_raw": far_raw,
         "r2_status": (pick["scores"]["far"][1] if pick and "far" in pick["scores"] else f"failed:{row_stage}"),
         "extrap_r2_far": far if far is not None else NEG,
         "extrap_r2_medium": fv(pick, "medium") if fv(pick, "medium") is not None else NEG,
@@ -642,7 +765,7 @@ def run_case(case: Case, provider, scorer: Callable, rt: Runtime, clock: Callabl
         "candidate_extrap_r2_near": [fv(c, "near") for c in cands],
         "candidate_extrap_r2_medium": [fv(c, "medium") for c in cands],
         "candidate_extrap_r2_far": [fv(c, "far") for c in cands],
-        "candidate_r2_raw_far": [fv(c, "far") for c in cands],
+        "candidate_r2_raw_far": [safe_raw_far_score(c["cr"].formula, case, raw_scorer) for c in cands],
         "selected_index": sel,
         "selection_metric": "train_r2",
         "model_id_returned": next((c["cr"].model_id for c in cands if c["cr"].model_id), None),
@@ -704,7 +827,8 @@ def build_runtime(cfg: dict, scorer_sha: str, cfg_path: Path, template_sha: Opti
         prompt_inputs=list(cfg_get(cfg, "prompt_inputs", default=[])),
         model_requested=cfg_get(cfg, "model_id", "model"),
         git_commit=git_commit(), evaluator_sha256=scorer_sha,
-        config_sha256=sha256_file(cfg_path), template_sha256=template_sha)
+        config_sha256=sha256_file(cfg_path), template_sha256=template_sha,
+        evaluator_version=str(cfg_get(cfg, "evaluator_version", default="r2_canonical@unknown")))
 
 
 def template_sha() -> Optional[str]:
@@ -827,7 +951,18 @@ def run_cases(args, dry: bool) -> int:
         print(f"No equations: no hds_*.jsonl rows in {p2}; pass --equations.")
         return 1
     adapter = RepoAdapter(args.data_fn, args.equation_resolver, load_meta(args))
-    prov = BaselineProvider(args.baseline)
+    # Render the actual P request offline before any live run (including --dry-run).
+    preflight_case = adapter.build(equations[0], seeds[0])
+    render_provider = BaselineProvider(args.baseline, render=True)
+    render_provider.generate(preflight_case, 1)
+    if not render_provider.rec.calls:
+        print("Prompt preflight failed: no request was captured; no API call was made.")
+        return 1
+    rendered = render_provider.rec.calls[0]["kwargs"]
+    rendered_text = json.dumps({"system": rendered.get("system"), "messages": rendered.get("messages")})
+    if not print_gates(gate_prompt_leaks(rendered_text, preflight_case)):
+        print("Prompt leak gate failed: no Phase 2 API calls were made.")
+        return 1
     rt = build_runtime(cfg, scorer_sha, cfg_path, tsha)
     print(f"{'DRY RUN' if dry else 'FULL RUN'}: {len(equations)} equations x {len(seeds)} seeds -> {out_dir}")
     rows = []
@@ -840,7 +975,7 @@ def run_cases(args, dry: bool) -> int:
                       "(both attempts are kept; log an amendment)")
                 continue
             rt.attempt = prior + 1
-            row = run_case(adapter.build(eq, seed), prov, scorer, rt)
+            row = run_case_hard(adapter.build(eq, seed), args.baseline, scorer, rt)
             if args.rerun_reason:
                 row["rerun_reason"] = args.rerun_reason
             write_row(path, row)
@@ -1021,6 +1156,9 @@ def selftest() -> int:
     # failures are explicit, never dropped
     row = run_case(case, Fake(["3 * T", "x"], errs={1: "boom"}), stub_scorer, rt)
     check("api error on call 1 kept, call 2 still counted", row["n_calls"] == 3 and row["candidate_formulas"][0] is None)
+    check("invalid candidate is isolated in raw far scoring",
+          row["candidate_r2_raw_far"][1] is None and row["candidate_train_r2"][1] is None,
+          row["candidate_r2_raw_far"])
     row = run_case(case, Fake(["zzz_undefined + 1"] * 3), stub_scorer, rt)
     check("all-fail row: r2 = -inf, never 0.0, explicit status/stage",
           row["r2"] == float("-inf") and row["r2_status"].startswith("failed") and row["error_stage"] == "exec"
@@ -1100,7 +1238,15 @@ def main(argv=None) -> int:
     ap.add_argument("--emit-data-hashes", metavar="FILE")
     ap.add_argument("--check-hds-hashes", metavar="FILE")
     ap.add_argument("--selftest", action="store_true")
+    ap.add_argument("--_case-worker", help=argparse.SUPPRESS)
+    ap.add_argument("--_case-output", help=argparse.SUPPRESS)
+    ap.add_argument("--_case-progress", help=argparse.SUPPRESS)
+    ap.add_argument("--_baseline-worker", help=argparse.SUPPRESS)
+    ap.add_argument("--_max-calls-worker", type=int, default=3, help=argparse.SUPPRESS)
     a = ap.parse_args(argv)
+    if a._case_worker:
+        return _phase2_case_worker(a._case_worker, a._case_output, a._case_progress,
+                                   a._baseline_worker, a._max_calls_worker)
     if a.selftest:
         return selftest()
     if a.probe:
