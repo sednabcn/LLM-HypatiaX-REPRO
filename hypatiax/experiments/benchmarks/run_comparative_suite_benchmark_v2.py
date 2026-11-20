@@ -2849,18 +2849,25 @@ try:
             # protocol artifact can distinguish a real V50.2 execution from
             # a missing/ambiguous implementation handoff.
             _selected_implementation = kwargs.get("hybrid_implementation", "v50_2")
-            if (
-                _selected_implementation == "v50_2"
-                and not _native_v60_selected
-                and not isinstance(result.get("implementation_provenance"), dict)
-            ):
-                result["implementation_provenance"] = {
+            if _selected_implementation == "v50_2" and not _native_v60_selected:
+                # Preserve any detailed engine audit, but make the worker-boundary
+                # identity fields authoritative. A partial or differently named
+                # inner provenance dict must not erase the explicit V50.2 record.
+                _implementation_provenance = result.get("implementation_provenance")
+                if not isinstance(_implementation_provenance, dict):
+                    _implementation_provenance = {}
+                _implementation_provenance.update({
                     "engine_family": "hybrid_discovery",
-                    "engine_version": str(getattr(system, "VERSION", "5.4")),
+                    "engine_version": str(
+                        _implementation_provenance.get(
+                            "engine_version", getattr(system, "VERSION", "5.4")
+                        )
+                    ),
                     "implementation_mode": "v50_2",
                     "native_v60_pipeline": False,
                     "provenance_source": "hybrid_factory_selection",
-                }
+                })
+                result["implementation_provenance"] = _implementation_provenance
     else:
         result = {"success": False, "error": f"Unknown method: {method}"}
 except Exception as exc:
