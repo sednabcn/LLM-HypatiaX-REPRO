@@ -642,6 +642,8 @@ def run_case_hard(case: Case, baseline: str, scorer: Callable, rt: Runtime) -> d
         row["timed_out"] = timed_out
         row["status"] = "timeout" if timed_out else ("ok" if row.get("selected_index") is not None else "no_formula")
         row["r2_field"] = "extrap_r2_far"
+        row["rendered_prompt_sha256"] = row.get("prompt_sha256")
+        row["prompt_sha256"] = rt.template_sha256
         row["formula"] = row.get("best_expression")
         row["bypass_used"] = row.get("bypass_kind") not in (None, "live")
         row["model_id"] = str(rt.model_requested or "")
