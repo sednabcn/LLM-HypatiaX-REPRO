@@ -37,7 +37,7 @@ def test_phase2_production_path_uses_hard_process_deadline():
 def test_phase2_runner_blocks_live_calls_when_prompt_leak_gate_fails():
     source = (REPO / "scripts" / "run_pure_llm_arm.py").read_text()
     assert "render_provider = BaselineProvider(args.baseline, render=True)" in source
-    assert "gate_prompt_leaks(rendered_text, preflight_case)" in source
+    assert "gate_prompt_leaks(rendered_text, preflight_case," in source
     assert "Prompt parity/leak gate failed: no Phase 2 API calls were made." in source
 
 
