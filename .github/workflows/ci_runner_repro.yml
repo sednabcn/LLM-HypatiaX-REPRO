@@ -174,8 +174,9 @@ on:
           - always
         default: "fallback"
 
+# A unique group per workflow run prevents same-experiment dispatches from being serialized.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.inputs.experiment }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.run_id }}-${{ github.run_attempt }}
   cancel-in-progress: false
 
 permissions:
@@ -1027,9 +1028,35 @@ jobs:
           key: checkpoint-plan-${{ github.event.inputs.experiment }}-${{ github.ref_name }}-${{ github.run_id }}
 
 
+  credential_preflight:
+    name: "Credential preflight - ${{ needs.plan.outputs.exp_id }}"
+    needs: [pca_runner, plan]
+    if: ${{ needs.pca_runner.outputs.skip_plan == 'false' && needs.plan.outputs.shard_matrix != '[]' && needs.plan.outputs.shard_matrix != '' && github.event.inputs.aggregate_run_id == '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Check required Anthropic credential once per experiment run
+        if: ${{ github.event.inputs.dry_run != 'true' && needs.plan.outputs.exp_id != 'portfolio_feature_ranking' && needs.plan.outputs.exp_id != 'portfolio_pca_tail_error' }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${ANTHROPIC_API_KEY:-}" ]]; then
+            echo "::error::ANTHROPIC_API_KEY secret is missing. Add it in repository Actions secrets."
+            exit 1
+          fi
+          # Presence-only check: never call the provider or print key metadata.
+          echo "ANTHROPIC_API_KEY: configured (presence check only; no API request sent)"
+
+      - name: Keep OpenAI credential optional
+        run: |
+          echo "OPENAI_API_KEY remains optional and is passed to workers when configured."
+          echo "Anthropic-only experiments do not require an OpenAI credential."
+
   worker:
     name: "Worker - ${{ github.event.inputs.experiment }} shard ${{ matrix.shard }}"
-    needs: [pca_runner, plan]
+    needs: [pca_runner, plan, credential_preflight]
     runs-on: ubuntu-latest
     timeout-minutes: 330
 
@@ -1082,6 +1109,9 @@ jobs:
         uses: actions/setup-python@v5.3.0
         with:
           python-version: "3.12"
+          cache: pip
+          # Inline dependency pins live in this workflow; use it as the cache key input.
+          cache-dependency-path: .github/workflows/ci_runner_repro.yml
 
       - name: Set up Julia 1.11
         if: ${{ needs.plan.outputs.needs_julia == 'true' }}
@@ -1094,7 +1124,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.julia
-          key: julia-depot-${{ runner.os }}-${{ hashFiles('**/Project.toml', '**/Manifest.toml') }}
+          key: julia-depot-${{ runner.os }}-${{ hashFiles('**/Project.toml', '**/Manifest.toml', '.github/workflows/ci_runner_repro.yml') }}
           restore-keys: |
             julia-depot-${{ runner.os }}-
 
@@ -1177,8 +1207,6 @@ jobs:
             checkpoint-worker-${{ github.event.inputs.experiment }}-shard${{ matrix.shard }}-${{ github.ref_name }}-
 
       - name: Environment check and repro.yaml audit
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           echo "Python: $(python3 --version)"
           python3 -c "import pysr;        print('PySR:         ', pysr.__version__)"
@@ -1187,12 +1215,6 @@ jobs:
           python3 -c "import sympy;       print('SymPy:        ', sympy.__version__)"
           python3 -c "import scipy;       print('SciPy:        ', scipy.__version__)"
           python3 -c "import sklearn;     print('scikit-learn: ', sklearn.__version__)"
-          if [[ "${EXP}" == "portfolio_feature_ranking" || "${EXP}" == "portfolio_pca_tail_error" ]]; then
-            echo "ANTHROPIC_API_KEY: not required for this offline diagnostic"
-          else
-            [[ -n "${ANTHROPIC_API_KEY:-}" ]] || { echo "ERROR: ANTHROPIC_API_KEY not set"; exit 1; }
-            echo "ANTHROPIC_API_KEY: set (${#ANTHROPIC_API_KEY} chars)"
-          fi
           echo "JULIA_NUM_THREADS: ${JULIA_NUM_THREADS}"
           echo "FEYNMAN_SAMPLES:   ${FEYNMAN_SAMPLES}"
           echo "FEYNMAN_TIMEOUT:   ${FEYNMAN_TIMEOUT}"
@@ -1205,20 +1227,9 @@ jobs:
             echo "WARNING: repro.yaml not found at ${REPRO_CFG} - using workflow env defaults"
           fi
 
-      - name: Validate ANTHROPIC_API_KEY (live round-trip)
-        if: ${{ needs.plan.outputs.exp_id != 'portfolio_feature_ranking' && needs.plan.outputs.exp_id != 'portfolio_pca_tail_error' }}
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: |
-          KEY_LEN=${#ANTHROPIC_API_KEY}
-          echo "ANTHROPIC_API_KEY present: $([ $KEY_LEN -gt 0 ] && echo YES || echo NO)"
-          echo "ANTHROPIC_API_KEY length : ${KEY_LEN} chars"
-          echo "ANTHROPIC_API_KEY prefix : ${ANTHROPIC_API_KEY:0:7}..."
-          if [[ $KEY_LEN -eq 0 ]]; then
-            echo "::error::ANTHROPIC_API_KEY secret is empty or unset."
-            exit 1
-          fi
-          python3 "${{ github.workspace }}/config/check_key_status.py"
+      # credential_preflight checks secret presence once. Each isolated worker
+      # receives its own secret reference only in the experiment task step; no
+      # shard performs an extra live API validation request.
 
       - name: Create results directory structure
         run: |
@@ -3576,6 +3587,9 @@ jobs:
         uses: actions/setup-python@v5.3.0
         with:
           python-version: "3.12"
+          cache: pip
+          # Inline dependency pins live in this workflow; use it as the cache key input.
+          cache-dependency-path: .github/workflows/ci_runner_repro.yml
 
       - name: Install run_all configuration parser
         run: python -m pip install "pyyaml" "numpy"
@@ -3647,6 +3661,9 @@ jobs:
         uses: actions/setup-python@v5.3.0
         with:
           python-version: "3.12"
+          cache: pip
+          # Inline dependency pins live in this workflow; use it as the cache key input.
+          cache-dependency-path: .github/workflows/ci_runner_repro.yml
 
       - name: Install aggregation dependencies
         run: |
@@ -3736,6 +3753,9 @@ jobs:
         uses: actions/setup-python@v5.3.0
         with:
           python-version: "3.12"
+          cache: pip
+          # Inline dependency pins live in this workflow; use it as the cache key input.
+          cache-dependency-path: .github/workflows/ci_runner_repro.yml
 
       - name: Install Python dependencies
         run: |
@@ -4049,7 +4069,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.julia
-          key: julia-depot-${{ runner.os }}-${{ hashFiles('**/Project.toml', '**/Manifest.toml') }}
+          key: julia-depot-${{ runner.os }}-${{ hashFiles('**/Project.toml', '**/Manifest.toml', '.github/workflows/ci_runner_repro.yml') }}
           restore-keys: |
             julia-depot-${{ runner.os }}-
 
@@ -4230,7 +4250,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.julia
-          key: julia-depot-${{ runner.os }}-${{ hashFiles('**/Project.toml', '**/Manifest.toml') }}
+          key: julia-depot-${{ runner.os }}-${{ hashFiles('**/Project.toml', '**/Manifest.toml', '.github/workflows/ci_runner_repro.yml') }}
           restore-keys: |
             julia-depot-${{ runner.os }}-
 
@@ -4390,7 +4410,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.julia
-          key: julia-depot-${{ runner.os }}-${{ hashFiles('**/Project.toml', '**/Manifest.toml') }}
+          key: julia-depot-${{ runner.os }}-${{ hashFiles('**/Project.toml', '**/Manifest.toml', '.github/workflows/ci_runner_repro.yml') }}
           restore-keys: |
             julia-depot-${{ runner.os }}-
 
