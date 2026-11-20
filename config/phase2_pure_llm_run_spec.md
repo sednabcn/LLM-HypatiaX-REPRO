@@ -169,7 +169,7 @@ The matrix is 15 equations × 3 seeds = 45 cases. API cost and runtime per case 
 ## 10. Limits that stay whatever the result
 
 - 15 equations, and seeds are replicates of the same equations, not new ones.
-- Most of these are textbook formulas. A Pure LLM may recall them from a name or description, so a high recovery rate may measure recall. If the prompt must include the equation name for parity (D3), say so next to the result.
+- Most of these are textbook formulas. Even with equation names and descriptions withheld, a model may recall relationships from pretraining; a high recovery rate can therefore reflect learned recall as well as inference from the supplied data patterns.
 - With one LLM sample per case and no sampling seed, repeating the run will not give the same rows. Any rerun is a new run, not a reproduction.
 - The existing HDS rows were produced by the `exp1_ablation` experiment and flattened into `p2/`; they were not launched as a dedicated Phase 2 run.
 
@@ -190,6 +190,6 @@ The approved amendment is recorded in `phase2_pure_llm_amendments.md`.
 
 - **LLM settings of the HDS stage:** `temperature = 0.25`, `max_tokens = 2000` (the `LLMConfig` default, not overridden), `n_candidates = 3`, model `claude-sonnet-4-6` (single value in all 90 rows). HDS makes up to `HYPATIA_MAX_RETRIES = 3` PySR attempts per case.
 - **Prompt inputs (D3):** the approved amendment in §12 gives Pure-LLM the same HDS input classes: domain, variable names, HDS training-pattern statistics and the rounded physical-constants block, while withholding equation name and description.
-- **Sample count (D5):** HDS asks for 3 candidate equations per LLM call and then refines them with PySR. A Pure LLM arm that returns one formula is not given the same number of attempts. Decide whether it also returns 3 candidates and how one is chosen (training R^2 only, never the extrapolation score), or label the difference.
+- **Sample count (D5):** Pure-LLM makes three independent one-formula calls and selects among them by training R² only. HDS requests three candidates in one response and then refines with PySR. Candidate count is nominally three in both, but request shape and refinement differ; report this as a procedural limitation, not exact algorithmic parity.
 - **Still open before a run:** offline implementation CI for the D3 matched-input amendment. The three independent PureLLM calls remain distinct from HDS's three candidates in one request. The hard timeout and API temperature are implemented in PR #307.
 - **`split_id` caveat:** in the committed `p2/` rows `split_id` is `derived:` plus the first 12 characters of `sha256("equation|seed")`. It is identical for the two systems by construction, so the closure script's "identical split_id" check does not prove the splits match. They do match in the code: `exp1_ablation.generate_data` draws from `RandomState(seed)` and splits with `random_state=seed`, and every condition calls it with the same `(equation, seed)`. Gate G1 for the Pure LLM arm should therefore compare the data arrays or their hashes, not this label.
