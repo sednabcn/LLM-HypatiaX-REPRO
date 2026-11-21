@@ -576,7 +576,9 @@ print('Helper functions defined')
 # ── 3c: Strategy A — single-case rerun at SEED=42 ────────────────────────────
 strategy_a_result = None
 
-if RERUN_STRATEGY == 'A' and HYPATIA_AVAILABLE and PCA_PORTFOLIO_SWEEP:
+if RERUN_STRATEGY == 'A' and HYPATIA_AVAILABLE and PV_SWEEP_ONLY:
+    print('PV_SWEEP_ONLY: skipping the separate seed-42 single-case rerun; the per-seed sweep below is the sole Strategy A evaluation.')
+elif RERUN_STRATEGY == 'A' and HYPATIA_AVAILABLE and PCA_PORTFOLIO_SWEEP:
     print('Strategy A single-case rerun (3c) skipped — _run_case_full uses its own split; '
           'the PCA protocol is applied only to the audited seed sweep (3d).')
 
@@ -624,11 +626,24 @@ if RERUN_STRATEGY == 'A' and HYPATIA_AVAILABLE:
             X_train, y_train, X_test, y_test,
             case_cfg['variables'], case_cfg.get('metadata', {}))
         dt = time.time() - t0
-        row = {'seed': seed, 'train_r2': hybrid['train_r2'],
-               'far_r2': hybrid['test_r2'], 'decision': hybrid['decision'],
-               'success': hybrid['test_r2'] > 0.99,
-               'llm_train_r2': hybrid.get('llm_train_r2', float('nan')),
-               'time_s': dt, 'llm_code': hybrid.get('llm_code')}
+        row = {
+            'seed': int(seed),
+            'train_r2': hybrid['train_r2'],
+            'far_r2': hybrid['test_r2'],
+            'decision': hybrid['decision'],
+            'success': bool(hybrid['test_r2'] > 0.99),
+            'llm_train_r2': hybrid.get('llm_train_r2', float('nan')),
+            'time_s': dt,
+            'llm_code': hybrid.get('llm_code'),
+            # Persist the request and routing provenance needed to interpret
+            # a failed or successful LLM-backed hybrid evaluation.
+            'llm_called': hybrid.get('llm_called'),
+            'bypass_kind': hybrid.get('bypass_kind'),
+            'llm_source': hybrid.get('llm_source'),
+            'llm_timeout_s': hybrid.get('llm_timeout_s'),
+            'llm_temperature_requested': hybrid.get('llm_temperature_requested'),
+            'llm_temperature_sent': hybrid.get('llm_temperature_sent'),
+        }
         defi_sweep_results.append(row)
         mark = 'OK' if row['success'] else 'FAIL'
         print(f'  {mark}  train_r2={row["train_r2"]:.4f}  '
@@ -651,7 +666,21 @@ if RERUN_STRATEGY == 'A' and HYPATIA_AVAILABLE:
             'split_protocol': split_details['split_protocol'],
             'split_is_transductive': bool(split_details['split_is_transductive']),
             'split_details': split_details,
-            'seeds_run': SEEDS,
+            'formula_context': {
+                'variable_names': list(case_cfg.get('variables', [])),
+                'constants': case_cfg.get('metadata', {}).get('constants') or {},
+                'llm_model': getattr(_bench, 'LLM_MODEL', None),
+            },
+            # The split is shared by all model seeds. Persist the exact arrays
+            # once so the stored formulas and reported scores can be rescored
+            # without regenerating the protocol data or repartitioning it.
+            'audit_data': {
+                'X_train': np.asarray(X_train).tolist(),
+                'y_train': np.asarray(y_train).reshape(-1).tolist(),
+                'X_test': np.asarray(X_test).tolist(),
+                'y_test': np.asarray(y_test).reshape(-1).tolist(),
+            },
+            'seeds_run': [int(seed) for seed in SEEDS],
             'results': defi_sweep_results,
             'summary': {'n_seeds': len(SEEDS), 'n_success': n_ok,
                         'success_rate': n_ok/len(SEEDS)}
