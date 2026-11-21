@@ -171,6 +171,7 @@ for _ep in [
 
 # ── reproducibility ───────────────────────────────────────────────────────────
 SEED = 42
+LLM_MODEL = "claude-sonnet-4-6"
 
 import random
 import time
@@ -778,7 +779,7 @@ def formula({var_list}):
         from hypatiax.core.llm_call import create_message  # UNIFIED-TEMPERATURE
         resp = create_message(
         client,
-            model="claude-sonnet-4-6",
+            model=LLM_MODEL,
             max_tokens=1000,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -1589,6 +1590,19 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "split_type": tc["config"].get("split_type", "high"),
                     "train_size": int(len(X_tr)),
                     "test_size": int(len(X_te)),
+                },
+                # Self-contained audit payload: permits independent formula
+                # evaluation against the exact arrays used for this record.
+                "formula_context": {
+                    "variable_names": list(var_names),
+                    "constants": metadata.get("constants") or {},
+                    "llm_model": LLM_MODEL,
+                },
+                "audit_data": {
+                    "X_train": X_tr.tolist(),
+                    "y_train": np.asarray(y_tr).reshape(-1).tolist(),
+                    "X_test": X_te.tolist(),
+                    "y_test": np.asarray(y_te).reshape(-1).tolist(),
                 },
                 "seed":                 SEED,   # [FIX-SEED-HONOURED] proves which seed produced the record
             }
