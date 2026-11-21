@@ -37,7 +37,7 @@ Issue 3 fix  Hybrid timing now includes full NN re-run cost on fallback
              to the wall-clock time recorded for the hybrid method.
 
 Routing policy update  The old high-fit lock and post-hoc overrides are removed.
-             Pure LLM now requires trust-gate pass, no structural-risk flag,
+             Hybrid's LLM-only route requires trust-gate pass, no structural-risk flag,
              train R2 >= 0.95, and a valid training-only degradation probe
              with Delta <= the pre-calibrated tau. Structural risk takes
              precedence and forces ensemble. Missing tau fails closed to
@@ -835,7 +835,7 @@ def _hybrid_predict_and_eval(
     Routing priority:
       1. Trust gate failure -> NN fallback.
       2. Structural-risk function call -> LLM+NN ensemble (always takes precedence).
-      3. Training-only NN edge degradation; pure LLM only if train R² >= 0.95
+      3. Training-only NN edge degradation; LLM-only Hybrid route if train R² >= 0.95
          and Delta <= the pre-calibrated tau. Missing tau -> ensemble.
       4. KDE fitted on training covariates; per-query w_LLM=0.3+0.7*p_OOD.
       5. Held-out labels are used only for final metrics, never routing/blending.
@@ -916,7 +916,7 @@ def _hybrid_predict_and_eval(
             nn_rerun_time_s = time.time() - _t_nn0
             test_r2 = float(nn_m.get("test_r2", float("nan")))
             decision = "nn_fallback" if np.isfinite(test_r2) else "nn_unavailable"
-            route_reason = "pure_llm_evaluation_failed_nn_fallback" if decision == "nn_fallback" else "pure_llm_evaluation_and_nn_fallback_failed"
+            route_reason = "hybrid_llm_evaluation_failed_nn_fallback" if decision == "nn_fallback" else "hybrid_llm_evaluation_and_nn_fallback_failed"
             route_execution_status = decision
 
     elif decision == "ensemble" and has_formula:
@@ -1252,12 +1252,11 @@ def _generate_report(results: list):
     print(f"  Intractable   : {len(intractable)}  (reported separately, excluded from aggregate)")
     print()
     print("NOTE: All percentages use FIXED denominator (standard cases only).")
-    print("      NaN / failure counts as 0 toward the denominator. This makes")
-    print("      LLM, NN, and Hybrid rates directly comparable.\n")
+    print("      NaN / failure counts as 0 toward the denominator.\\n")
 
-    for method in ["pure_llm", "neural_network", "hybrid"]:
+    for method in ["neural_network", "hybrid"]:
         s = _stats(_r2s(standard, method), denom)
-        label = {"pure_llm": "Pure LLM      ", "neural_network": "Neural Network",
+        label = {"neural_network": "Neural Network",
                  "hybrid":   "Hybrid        "}[method]
         print(f"  {label}: median={s['median']:.4f}, "
               f"mean(clip-{abs(CLIP_LO):.0f})={s['mean_clip']:.4f}, "
@@ -1278,7 +1277,7 @@ def _generate_report(results: list):
         subset = [r for r in standard if r.get("difficulty") == diff]
         if not subset:
             continue
-        for method in ["pure_llm", "hybrid"]:
+        for method in ["neural_network", "hybrid"]:
             s = _stats(_r2s(subset, method), max(len(subset), 1))
             print(f"  {diff:6s} | {method:14s}: median={s['median']:.4f}, "
                   f">0.99: {s['pct_099']:.1f}%  (n={len(subset)})")
@@ -1295,7 +1294,7 @@ def _generate_report(results: list):
         print(f"  ⚠️  NN wall-clock limit hit ({_NN_MAX_TIME_S}s) in "
               f"{len(timed_out_cases)} case(s): {', '.join(timed_out_cases)}")
 
-    for method in ["pure_llm", "neural_network", "hybrid"]:
+    for method in ["neural_network", "hybrid"]:
         times = [
             r["results"].get(method, {}).get("time_s", 0.0)
             for r in results
@@ -1303,7 +1302,7 @@ def _generate_report(results: list):
         ]
         times = [t for t in times if t and t > 0]
         if times:
-            label = {"pure_llm": "Pure LLM      ", "neural_network": "Neural Network",
+            label = {"neural_network": "Neural Network",
                      "hybrid":   "Hybrid        "}[method]
             print(f"  {label}: mean={np.mean(times):.1f}s, "
                   f"median={np.median(times):.1f}s  (n={len(times)})")
@@ -1326,7 +1325,7 @@ def _generate_report(results: list):
               f"median-based {reduction_median:.1f}% reduction")
 
         # Issue 3: also report hybrid speedup excluding NN-fallback cases
-        # (these are the only fair comparison — pure LLM call vs NN)
+        # (these are LLM-routed Hybrid cases, compared with standalone NN time)
         llm_only_nn   = [r["results"].get("neural_network", {}).get("time_s", 0.0) or 0.0
                           for r in results
                           if r["results"].get("hybrid", {}).get("decision", "") not in
@@ -1475,34 +1474,9 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
 
             case_results = {}
 
-            # ── Pure LLM ────────────────────────────────────────────────────
-            try:
-                _t0_llm = time.time()
-                from hypatiax.core.base_pure_llm.baseline_pure_llm_defi_discovery import (
-                    PureLLMBaseline,
-                )
-                llm_base  = PureLLMBaseline()
-                llm_res   = llm_base.generate_formula(desc, tc["domain"],
-                                                      var_names, metadata)
-                llm_tr_m  = llm_base.test_formula_accuracy(llm_res, X_tr, y_tr,
-                                                           var_names, verbose=False)
-                llm_te_m  = llm_base.test_formula_accuracy(llm_res, X_te, y_te,
-                                                           var_names, verbose=False)
-                case_results["pure_llm"] = {
-                    "train_r2": float(llm_tr_m["r2"]) if llm_tr_m.get("success") else float("nan"),
-                    "test_r2":  float(llm_te_m["r2"]) if llm_te_m.get("success") else float("nan"),
-                    "success":  llm_te_m.get("success", False),
-                    "llm_called":  llm_res.get("llm_called"),     # B2
-                    "bypass_kind": llm_res.get("bypass_kind"),    # B2
-                    "llm_source":  llm_res.get("llm_source", "pure_llm_baseline"),
-                    "time_s":   round(time.time() - _t0_llm, 3),
-                }
-            except Exception as e:
-                case_results["pure_llm"] = {
-                    "train_r2": None, "test_r2": None,
-                    "llm_called": False, "bypass_kind": "none",
-                    "success": False, "time_s": 0.0, "error": str(e), "reason": "fit_or_metric_failed",
-                }
+            # The comparison contains Neural Network and Hybrid only.
+            # Hybrid retains its internal LLM-generated formula component;
+            # no standalone Pure LLM baseline is evaluated or reported.
 
             # ── Neural Network ───────────────────────────────────────────────
             try:
@@ -1555,6 +1529,10 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "llm_called":      hy_m.get("llm_called"),      # B2
                     "bypass_kind":     hy_m.get("bypass_kind"),     # B2
                     "llm_source":      hy_m.get("llm_source"),
+                    # Retain the exact generated Python formula for audit and
+                    # independent rescoring on the identical protocol split.
+                    "formula":         hy_m.get("llm_code"),
+                    "llm_train_r2":    hy_m.get("llm_train_r2"),
                     "success":         not (_nan(_train_r2) or _nan(_test_r2)),
                     "time_s":          round(hyb_time, 3),
                     "nn_rerun_time_s": hy_m.get("nn_rerun_time_s", 0.0),
@@ -1605,6 +1583,13 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 "formula_type":         tc["formula_type"],
                 "extrapolation_intractable": is_intractable,
                 "results":              case_results,
+                "split_protocol": {
+                    "name": "aggressive_extrapolation_40_60",
+                    "split_var_idx": tc["config"].get("split_var_idx", 0),
+                    "split_type": tc["config"].get("split_type", "high"),
+                    "train_size": int(len(X_tr)),
+                    "test_size": int(len(X_te)),
+                },
                 "seed":                 SEED,   # [FIX-SEED-HONOURED] proves which seed produced the record
             }
             all_results.append(record)
