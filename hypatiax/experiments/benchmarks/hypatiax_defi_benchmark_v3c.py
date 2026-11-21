@@ -1078,24 +1078,25 @@ def _hybrid_predict_and_eval(
                 else "ensemble_metrics_undefined"
             )
     else:
-        t0 = time.time()
         if llm_trustworthy:
             try:
                 llm_train_preds = _execute_formula(llm_code, X_train, constants=constants)
                 llm_test_preds = _execute_formula(llm_code, X_test, constants=constants)
                 if llm_train_preds is not None and llm_test_preds is not None:
+                    t0 = time.time()
                     nn_m = _train_and_eval_nn(
                         np.column_stack([X_train, llm_train_preds]), y_train,
                         np.column_stack([X_test, llm_test_preds]), y_test,
                     )
+                    nn_rerun_time_s += time.time() - t0
+                    if not _valid_nn_result(nn_m):
+                        nn_m = _raw_nn()
                 else:
-                    nn_m = _train_and_eval_nn(X_train, y_train, X_test, y_test)
+                    nn_m = _raw_nn()
             except Exception:
-                nn_m = _train_and_eval_nn(X_train, y_train, X_test, y_test)
+                nn_m = _raw_nn()
         else:
             nn_m = _raw_nn()
-        if llm_trustworthy:
-            nn_rerun_time_s += time.time() - t0
         valid_nn = _valid_nn_result(nn_m)
         selected_train_r2 = _metric(nn_m.get("train_r2")) if valid_nn else float("nan")
         test_r2 = _metric(nn_m.get("test_r2")) if valid_nn else float("nan")
