@@ -54,6 +54,8 @@ def test_exp1_llm_request_honours_timeout_without_hidden_retries():
     assert 'os.environ.get("LLM_METHOD_TIMEOUT", "120")' in source
     assert "timeout=timeout_s" in source
     assert "max_retries=0" in source
+    assert 'LLM_MODEL = "claude-sonnet-4-6"' in source
+    assert "model=LLM_MODEL" in source
     assert 'hy_m.get("llm_timeout_s")' in source
     assert 'temperature_requested": hy_m.get("llm_temperature_requested")' in source
     assert 'temperature_sent": hy_m.get("llm_temperature_sent")' in source
