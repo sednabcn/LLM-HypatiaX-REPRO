@@ -34,7 +34,7 @@ def _aggregate():
             "noise_level": 0.0,
             "n_samples": 200,
         },
-        "methods": METHODS,
+        "methods": list(METHODS),
         "total_tests": 30,
         "protocol30_aggregate": {
             "variant": "pca_4060",
