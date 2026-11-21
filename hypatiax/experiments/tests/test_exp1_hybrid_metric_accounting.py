@@ -1,5 +1,8 @@
 """Focused offline regressions for the Exp1 DeFi hybrid route."""
 
+import sys
+from types import SimpleNamespace
+
 import numpy as np
 
 from hypatiax.experiments.benchmarks import hypatiax_defi_benchmark_v3c as bench
@@ -73,6 +76,10 @@ def test_exp1_ensemble_training_metric_is_for_the_ensemble(monkeypatch):
     assert result["test_r2"] == 0.18
     assert result["route_execution_status"] == "ensemble_executed"
     assert result["success"] is True
+    assert result["ood_covariate_protocol"] == {
+        "density_fit_rows": "X_train", "query_rows": "X_test",
+        "query_labels_used": False, "access_mode": "query_time_covariate_access",
+    }
 
 
 def test_exp1_nn_fallback_reports_nn_training_metric(monkeypatch):
@@ -158,3 +165,52 @@ def test_exp1_option_protocol_exposes_stochastic_inputs_and_constants():
         assert cases[name][4]["constants"] == {
             "strike": 100.0, "risk_free_rate": 0.04
         }
+
+
+
+def test_exp1_provider_failure_after_request_entry_keeps_attempt_provenance(monkeypatch):
+    class FakeAnthropic:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    def fail_request(*args, **kwargs):
+        raise RuntimeError("simulated provider timeout")
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "offline-test-key")
+    monkeypatch.setenv("LLM_METHOD_TIMEOUT", "17")
+    monkeypatch.setitem(sys.modules, "anthropic", SimpleNamespace(Anthropic=FakeAnthropic))
+    monkeypatch.setitem(
+        sys.modules,
+        "hypatiax.core.llm_call",
+        SimpleNamespace(
+            create_message=fail_request,
+            last_call_info=lambda: {
+                "temperature_requested": 0.25, "temperature_sent": False
+            },
+        ),
+    )
+
+    result = bench._generate_llm_formula("fixture", "defi", ["x"], {})
+
+    assert result["llm_called"] is True
+    assert result["bypass_kind"] == "none"
+    assert result["llm_source"] == "v3c_builtin_failed"
+    assert result["timeout_s"] == 17.0
+    assert result["temperature_requested"] == 0.25
+    assert result["temperature_sent"] is False
+    assert "simulated provider timeout" in result["error"]
+
+
+def test_exp1_split_metadata_discloses_row_index_fallback():
+    X = np.ones((100, 1), dtype=float)
+    y = np.arange(100, dtype=float)
+    _, _, _, _, audit = bench._aggressive_split(
+        X, y, {"split_var_idx": 0, "split_type": "high"}, return_metadata=True
+    )
+
+    assert audit["requested_method"] == "primary_feature_percentile"
+    assert audit["realized_method"] == "row_index_fallback"
+    assert audit["fallback_used"] is True
+    assert audit["fallback_reason"] == "percentile_partition_has_fewer_than_20_rows"
+    assert audit["train_size"] == 40
+    assert audit["test_size"] == 60
