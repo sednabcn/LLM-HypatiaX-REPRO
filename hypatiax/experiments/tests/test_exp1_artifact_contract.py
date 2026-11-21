@@ -150,3 +150,27 @@ def test_exp1_case_record_contains_replayable_split_and_array_evidence():
 
     audit_fields = _literal_dict_fields(fields["audit_data"])
     assert {"X_train", "y_train", "X_test", "y_test"} <= audit_fields.keys()
+
+
+
+def test_exp1_hybrid_fallback_train_metric_belongs_to_selected_nn():
+    source = BENCHMARK.read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    hybrid = next(
+        node for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef)
+        and node.name == "_hybrid_predict_and_eval"
+    )
+    unparsed = ast.unparse(hybrid)
+    assert 'selected_train_r2 = float(nn_m.get("train_r2", float("nan")))' in unparsed
+    assert '"train_r2": float(selected_train_r2)' in unparsed
+    assert '"test_r2_status"' in unparsed
+    assert '"nn_fallback_undefined_test_r2_constant_target"' in unparsed
+
+
+def test_exp1_llm_prompt_matches_restricted_formula_interpreter():
+    source = BENCHMARK.read_text(encoding="utf-8")
+    assert "norm_cdf, norm_pdf" in source
+    assert "Use supplied constants exactly as given." in source
+    assert "Do NOT use imports, np.where, np.dot, np.inf, np.nan" in source
+    assert "metadata['ground_truth']" in source
