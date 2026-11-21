@@ -2248,6 +2248,11 @@ run exp2_protocol30_pca_4060_aggregate "Validate and aggregate manuscript Protoc
     --artifacts-dir \"\${PROTOCOL30_ARTIFACTS_DIR}\" \
     --output-dir '${RESULTS_DIR}/comparison_results/protocol30/pca-40-60' \
     --variant pca_4060
+  # exp1c is a deterministic two-method view of this existing Protocol-30 run.
+  # Preserve the six-method aggregate; never execute or rename a new experiment.
+  python3 '${REPO_ROOT}/scripts/ci/project_protocol30_exp1c_view.py' \
+    --input '${RESULTS_DIR}/comparison_results/protocol30/pca-40-60/protocol30_pca_4060_aggregate.json' \
+    --output '${RESULTS_DIR}/comparison_results/protocol30/pca-40-60/protocol30_pca_4060_exp1c_view.json'
 "
 run exp2 "All-domains 30-equation registry proxy -- random 80/20, all six methods (not manuscript Protocol-30)" bash -c "
   _EXP2_RESUME_ARG=--resume
