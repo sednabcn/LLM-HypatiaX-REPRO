@@ -172,7 +172,14 @@ def gate_prompt_leaks(prompt_text: str, case: "Case", expected_patterns: Optiona
     out = []
     low = prompt_text.lower()
     out.append(("A3-2 equation name absent", case.equation.lower() not in low, case.equation))
-    out.append(("A3-2 equation description absent", not case.description or case.description.lower() not in low,
+    # The adapter's description is the neutral task wording in this design,
+    # not an equation-specific benchmark description. Do not flag that
+    # required neutral wording as a leak.
+    has_equation_description = bool(case.description) and (
+        case.description.strip().lower() != NEUTRAL_TASK_DESCRIPTION.lower()
+    )
+    out.append(("A3-2 equation description absent",
+                not has_equation_description or case.description.lower() not in low,
                 "benchmark description must not appear"))
     out.append(("A3-2 neutral task wording present", NEUTRAL_TASK_DESCRIPTION.lower() in low,
                 "neutral wording missing"))
@@ -181,8 +188,18 @@ def gate_prompt_leaks(prompt_text: str, case: "Case", expected_patterns: Optiona
         out.append(("A3-2 exact HDS training-pattern payload present", payload in prompt_text,
                     "pattern payload missing or differs from HDS analyzer"))
     if expected_constants is not None:
-        missing = [f"{k}={v}" for k, v in expected_constants.items()
-                   if str(k) not in prompt_text or str(v) not in prompt_text]
+        # Compare numeric values, not their spelling: e.g. 2.998e8 and
+        # 299800000.0 are the same HDS-rounded constant.
+        missing = []
+        for key, expected in expected_constants.items():
+            match = re.search(
+                rf"(?<![A-Za-z0-9_]){re.escape(str(key))}\s*=\s*"
+                r"([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)",
+                prompt_text,
+            )
+            if match is None or not math.isclose(float(match.group(1)), float(expected),
+                                                 rel_tol=1e-12, abs_tol=0.0):
+                missing.append(f"{key}={expected}")
         out.append(("A3-2 exact HDS rounded constants present", not missing, ", ".join(missing[:5])))
     forbidden = ("ground_truth", "equation_name:", "formula hint", "validation statistics",
                  "extrapolation statistics", "test-set statistics")
@@ -902,7 +919,10 @@ def cmd_render(args):
         print("no request was captured: the baseline did not reach Messages.create (probe it)")
         return 2
     entry = prov.rec.calls[0]
-    text = json.dumps({"system": entry["kwargs"].get("system"), "messages": entry["kwargs"].get("messages")})
+    text = "\\n".join(
+        [str(entry["kwargs"].get("system") or "")]
+        + [str(m.get("content") or "") for m in entry["kwargs"].get("messages", [])]
+    )
     print(f"Offline gates for {eq} (no API request sent)")
     tsha = template_sha()
     expected_patterns, expected_constants = hds_prompt_context(case)
@@ -980,7 +1000,10 @@ def run_cases(args, dry: bool) -> int:
         print("Prompt preflight failed: no request was captured; no API call was made.")
         return 1
     rendered = render_provider.rec.calls[0]["kwargs"]
-    rendered_text = json.dumps({"system": rendered.get("system"), "messages": rendered.get("messages")})
+    rendered_text = "\\n".join(
+        [str(rendered.get("system") or "")]
+        + [str(m.get("content") or "") for m in rendered.get("messages", [])]
+    )
     expected_patterns, expected_constants = hds_prompt_context(preflight_case)
     if not print_gates(gate_prompt_leaks(rendered_text, preflight_case,
                                          expected_patterns, expected_constants)):

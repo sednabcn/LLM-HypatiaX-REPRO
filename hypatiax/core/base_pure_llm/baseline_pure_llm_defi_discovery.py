@@ -512,13 +512,19 @@ class PureLLMBaseline:
 
         constants_info = ""
         if metadata and metadata.get("hds_prompt_context"):
-            # HDS's fixed rounded constants are Phase 2 matched-input context only.
-            constants_info = """\n\nAVAILABLE PHYSICAL CONSTANTS (use these exact Python names):
-  h=6.626e-34 (Planck), hbar=1.055e-34 (reduced Planck), c=2.998e8 (speed of light),
-  k_B=1.381e-23 (Boltzmann), k=1.381e-23, N_A=6.022e23 (Avogadro), g_n=9.807,
-  m_e=9.109e-31 (electron mass), q_e=1.602e-19 (elementary charge),
-  epsilon0=8.854e-12 (vacuum permittivity), mu0=1.257e-6 (vacuum permeability)
-Do NOT use bare 'e' for elementary charge — use q_e instead."""
+            # Use the exact matched constants supplied by the HDS task specification.
+            task_constants = ", ".join(
+                f"{name}={value!r}" for name, value in (metadata.get("constants") or {}).items()
+            )
+            constants_info = (
+                "\\n\\nAVAILABLE TASK-SPEC CONSTANTS (use these exact Python names and numeric values): "
+                + task_constants
+                + "\\nDo not infer, fit, estimate, or optimize any coefficient or parameter from training data. "
+                "If a coefficient is not supplied, express it as a numeric literal."
+                "\\nUse NumPy for element-wise operations on arrays (np.sqrt, np.minimum, np.maximum, etc.). "
+                "Do not import or use SciPy; use NumPy only."
+                "\\nReturn plain Python source only: no Markdown, no code fences."
+            )
         elif metadata and metadata.get("constants"):
             # Preserve the general-purpose baseline's task-specific constants.
             task_constants = ", ".join(

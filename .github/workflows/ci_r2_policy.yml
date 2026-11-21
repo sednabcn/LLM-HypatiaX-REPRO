@@ -237,7 +237,7 @@ jobs:
           HYPATIAX_R2_SIGN_FLIP: "0"
           HYPATIAX_STRICT: "1"
           PYTHONHASHSEED: "0"
-        run: timeout 600s python -m pytest -q -ra --timeout=600 --junitxml=pytest-report.xml
+        run: timeout 600s python -m pytest -q -ra --timeout=600 --junitxml=pytest-report.xml tests hypatiax/experiments/tests
       - name: Run non-finite routing and failure-gate regressions
         run: PYTHONPATH=. python scripts/audit_checks/test_nonfinite_paths.py
       - name: Upload full test report and environment provenance
