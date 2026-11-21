@@ -56,7 +56,16 @@ BASELINE = "hypatiax.core.base_pure_llm.baseline_pure_llm_defi_discovery:PureLLM
 SCORER_MODULE = "hypatiax.core.r2_canonical"
 REGIMES = ("near", "medium", "far")
 DEFAULT_SEEDS = (42, 99, 123)
-STAT_INPUT_MARKERS = ("pattern", "stat", "mean", "std", "range")   # forbidden in prompt_inputs for arm P
+STAT_INPUT_MARKERS = ()  # training-only pattern statistics are required by matched-input amendment
+NEUTRAL_TASK_DESCRIPTION = "Find the formula for the target quantity as a function of the listed variables."
+
+
+def hds_prompt_context(case: "Case") -> tuple[dict, dict]:
+    """Return HDS pattern statistics from training arrays and its rounded constants."""
+    from hypatiax.tools.symbolic.symbolic_engine import DataPatternAnalyzer
+    from scripts.p2_data import HDS_PROMPT_CONSTANTS
+    patterns = DataPatternAnalyzer().analyze(case.X_train, case.y_train, case.variable_names)
+    return patterns, dict(HDS_PROMPT_CONSTANTS)
 SECTION5_FIELDS = (
     "arm", "call_index", "n_calls", "candidate_formulas", "candidate_train_r2", "selected_index",
     "selection_metric", "model_id_returned", "effective_request_params", "stop_reason",
@@ -131,47 +140,54 @@ def load_config(path: Path) -> dict:
 
 
 def gate_config(cfg: dict, template_sha: Optional[str] = None) -> list[tuple[str, bool, str]]:
-    """A3-7 (and the A3-2 hash pin)."""
+    """Validate the approved matched-HDS-input design."""
     out = []
     mc = cfg_get(cfg, "max_calls_per_case")
     out.append(("A3-7 max_calls_per_case == 3", mc == 3, f"got {mc!r}"))
     pi = cfg_get(cfg, "prompt_inputs")
-    bad = [x for x in (pi or []) if any(m in str(x).lower() for m in STAT_INPUT_MARKERS)]
-    out.append(("A3-7 prompt_inputs has no statistics", bool(pi) and not bad, f"got {pi!r}"))
+    required = {"domain", "variable_names", "training_pattern_statistics", "hds_rounded_constants"}
+    out.append(("A3-7 prompt_inputs declares matched HDS inputs", set(pi or []) == required,
+                f"got {pi!r}; expected {sorted(required)!r}"))
     sel = cfg_get(cfg, "selection_among_samples")
     out.append(("A3-7 selection_among_samples == train_r2", sel == "train_r2", f"got {sel!r}"))
     mt = cfg_get(cfg, "max_tokens")
-    out.append(("A3-7 max_tokens set", isinstance(mt, int), f"got {mt!r}"))
-    flat = flatten(cfg)
-    out.append(("A3-7 temperature entry present (value follows A3-1)",
-                any(k.split(".")[-1] == "temperature" for k in flat),
-                "add `temperature:` (null = API default) once A3-1 is decided"))
+    out.append(("A3-7 max_tokens == 2000", mt == 2000, f"got {mt!r}"))
+    temp = cfg_get(cfg, "temperature")
+    out.append(("A3-7 temperature == 0.25", temp == 0.25, f"got {temp!r}"))
     pin = cfg_get(cfg, "prompt_template_sha256")
     if template_sha is not None:
-        out.append(("A3-2 prompt_template_sha256 pinned and matches",
-                    pin == template_sha, f"config={pin!r} computed={template_sha}"))
+        out.append(("A3-2 prompt template hash computed for provenance",
+                    isinstance(template_sha, str) and len(template_sha) == 64,
+                    f"computed={template_sha}"))
+        if pin:
+            out.append(("A3-2 configured prompt hash matches", pin == template_sha,
+                        f"config={pin!r} computed={template_sha}"))
     return out
 
 
-def gate_prompt_leaks(prompt_text: str, case: "Case") -> list[tuple[str, bool, str]]:
-    """A3-2: no statistics, ranges, means, stds or equation name in the rendered P prompt."""
+def gate_prompt_leaks(prompt_text: str, case: "Case", expected_patterns: Optional[dict] = None,
+                      expected_constants: Optional[dict] = None) -> list[tuple[str, bool, str]]:
+    """Require HDS training-only pattern/constants payload; reject label and evaluation leakage."""
     out = []
     low = prompt_text.lower()
     out.append(("A3-2 equation name absent", case.equation.lower() not in low, case.equation))
-    nums = set(re.findall(r"-?\d+\.?\d*(?:[eE][-+]?\d+)?", prompt_text))
-    stats = []
-    for name, arr in [("y", case.y_train)] + [(f"x{i}", case.X_train[:, i]) for i in range(case.X_train.shape[1])]:
-        for fn_name, fn in (("mean", np.mean), ("std", np.std), ("min", np.min), ("max", np.max),
-                            ("median", np.median)):
-            v = float(fn(arr))
-            for fmt in (f"{v:.3g}", f"{v:.4g}", f"{v:.2f}"):
-                if fmt in nums and abs(v) > 1e-9 and fmt not in {str(c) for c in case.constants.values()}:
-                    stats.append(f"{name}.{fn_name}={fmt}")
-    out.append(("A3-2 no training-data statistic values in prompt", not stats, ", ".join(stats[:6])))
-    words = sorted(set(re.findall(r"\b(mean|std|standard deviation|variance|median|data range|statistics)\b", low)))
-    out.append(("A3-2 no statistics wording in prompt", not words, ", ".join(words)))
+    out.append(("A3-2 equation description absent", not case.description or case.description.lower() not in low,
+                "benchmark description must not appear"))
+    out.append(("A3-2 neutral task wording present", NEUTRAL_TASK_DESCRIPTION.lower() in low,
+                "neutral wording missing"))
+    if expected_patterns is not None:
+        payload = json.dumps(expected_patterns, indent=2)
+        out.append(("A3-2 exact HDS training-pattern payload present", payload in prompt_text,
+                    "pattern payload missing or differs from HDS analyzer"))
+    if expected_constants is not None:
+        missing = [f"{k}={v}" for k, v in expected_constants.items()
+                   if str(k) not in prompt_text or str(v) not in prompt_text]
+        out.append(("A3-2 exact HDS rounded constants present", not missing, ", ".join(missing[:5])))
+    forbidden = ("ground_truth", "equation_name:", "formula hint", "validation statistics",
+                 "extrapolation statistics", "test-set statistics")
+    found = [marker for marker in forbidden if marker in low]
+    out.append(("A3-2 no label/evaluation-set leakage markers", not found, ", ".join(found)))
     return out
-
 
 def print_gates(rows: list[tuple[str, bool, str]]) -> bool:
     ok = True
@@ -503,8 +519,9 @@ class BaselineProvider:
         self.fn = getattr(self.obj, "generate_formula")
 
     def _kwargs(self, case: Case) -> dict:
-        have = {"description": case.description, "domain": case.domain,
-                "variable_names": case.variable_names, "constants": case.constants,
+        patterns, prompt_constants = hds_prompt_context(case)
+        have = {"description": NEUTRAL_TASK_DESCRIPTION, "domain": case.domain,
+                "variable_names": case.variable_names, "constants": prompt_constants,
                 "equation_name": None}
         kw = {}
         for p in inspect.signature(self.fn).parameters.values():
@@ -517,8 +534,9 @@ class BaselineProvider:
                     break
             else:
                 if p.name == "metadata":
-                    # The frozen baseline takes constants through metadata["constants"].
-                    kw["metadata"] = {"constants": dict(case.constants)} if case.constants else {}
+                    # Matched HDS inputs: training-only pattern summary and rounded constants.
+                    kw["metadata"] = {"constants": prompt_constants, "data_patterns": patterns,
+                                     "hds_prompt_context": True}
                     continue
                 if p.default is inspect.Parameter.empty and p.kind in (p.POSITIONAL_OR_KEYWORD, p.KEYWORD_ONLY):
                     raise TypeError(f"generate_formula{inspect.signature(self.fn)}: unmapped required "
@@ -598,7 +616,7 @@ def _phase2_case_worker(case_path: str, output_path: str, progress_path: str,
 class Runtime:
     max_calls: int = 3
     time_cap_s: float = 1400.0
-    prompt_inputs: list = field(default_factory=lambda: ["description", "domain", "variable_names", "constants"])
+    prompt_inputs: list = field(default_factory=lambda: ["domain", "variable_names", "training_pattern_statistics", "hds_rounded_constants"])
     model_requested: Optional[str] = None
     git_commit: str = "unknown"
     evaluator_sha256: str = ""
@@ -886,7 +904,9 @@ def cmd_render(args):
     text = json.dumps({"system": entry["kwargs"].get("system"), "messages": entry["kwargs"].get("messages")})
     print(f"Offline gates for {eq} (no API request sent)")
     tsha = template_sha()
-    ok = print_gates(gate_config(cfg, tsha) + gate_prompt_leaks(text, case))
+    expected_patterns, expected_constants = hds_prompt_context(case)
+    ok = print_gates(gate_config(cfg, tsha) + gate_prompt_leaks(
+        text, case, expected_patterns, expected_constants))
     flat = json.dumps(flatten(cfg), default=str)
     ev_ok = scorer_sha in flat
     ok &= print_gates([("evaluator sha256 in config", ev_ok, f"computed {scorer_sha}")])
@@ -960,8 +980,10 @@ def run_cases(args, dry: bool) -> int:
         return 1
     rendered = render_provider.rec.calls[0]["kwargs"]
     rendered_text = json.dumps({"system": rendered.get("system"), "messages": rendered.get("messages")})
-    if not print_gates(gate_prompt_leaks(rendered_text, preflight_case)):
-        print("Prompt leak gate failed: no Phase 2 API calls were made.")
+    expected_patterns, expected_constants = hds_prompt_context(preflight_case)
+    if not print_gates(gate_prompt_leaks(rendered_text, preflight_case,
+                                         expected_patterns, expected_constants)):
+        print("Prompt parity/leak gate failed: no Phase 2 API calls were made.")
         return 1
     rt = build_runtime(cfg, scorer_sha, cfg_path, tsha)
     print(f"{'DRY RUN' if dry else 'FULL RUN'}: {len(equations)} equations x {len(seeds)} seeds -> {out_dir}")
@@ -1194,15 +1216,18 @@ def selftest() -> int:
         except FormulaError:
             check(f"blocked: {bad[:26]!r}", True)
     # gates
-    good = {"max_calls_per_case": 3, "prompt_inputs": ["description", "domain", "variable_names", "constants"],
-            "selection_among_samples": "train_r2", "max_tokens": 2000, "temperature": None}
+    good = {"max_calls_per_case": 3, "prompt_inputs": ["domain", "variable_names",
+            "training_pattern_statistics", "hds_rounded_constants"],
+            "selection_among_samples": "train_r2", "max_tokens": 2000, "temperature": 0.25}
     check("config gate passes a correct config", all(p for _, p, _ in gate_config(good)))
     old = dict(good, max_calls_per_case=1, prompt_inputs=["description", "data_patterns"])
     check("config gate rejects the A1 defaults", sum(not p for _, p, _ in gate_config(old)) == 2)
     leaky = f"Toy equation. y mean is {float(np.mean(case.y_train)):.3g}"
     check("leak gate catches equation name + a data statistic",
           sum(not p for _, p, _ in gate_leaks(leaky, case)) >= 2 if (gate_leaks := gate_prompt_leaks) else False)
-    check("leak gate passes a clean prompt", all(p for _, p, _ in gate_prompt_leaks("Find a formula for x in physics.", case)))
+    clean_prompt = NEUTRAL_TASK_DESCRIPTION + "\nDomain: physics\nVariables: T"
+    check("leak gate passes neutral prompt wording", all(
+        p for _, p, _ in gate_prompt_leaks(clean_prompt, case)))
     # data normalisation
     ret = {"X_train": Xtr, "y_train": case.y_train, "X_far": case.X_eval["far"], "y_far": case.y_eval["far"],
            "variable_names": ["T"], "description": "d", "domain": "p", "constants": {"k": 1}}
