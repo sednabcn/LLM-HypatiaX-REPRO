@@ -1609,6 +1609,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "degradation_probe": hy_m.get("degradation_probe"),
                     "degradation_tau": hy_m.get("degradation_tau"),
                     "ood_diagnostic": hy_m.get("ood_diagnostic"),
+                    "ood_covariate_protocol": hy_m.get("ood_covariate_protocol"),
                     "blend_weights": hy_m.get("blend_weights"),
                     "llm_called":      hy_m.get("llm_called"),      # B2
                     "bypass_kind":     hy_m.get("bypass_kind"),     # B2
