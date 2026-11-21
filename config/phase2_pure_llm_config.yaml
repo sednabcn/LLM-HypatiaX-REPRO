@@ -1,18 +1,16 @@
 # Phase 2 run config: Pure LLM baseline vs HDS v50_2, matched time budget.
 #
-# STATUS: proposal. The Pure LLM runner has not been seen, so these keys are the
-# interface the runner should accept, not an existing CLI. Entries marked
-# "DECIDE" must be filled from the HDS LLM stage before the first run; the run
-# must refuse to start while any DECIDE value is null.
-# Entries marked "VERIFY" were read off existing rows or code but not re-checked
-# against the runner.
+# STATUS: implemented offline runner; no Phase 2 Pure-LLM experiment has been run.
+# Keep this file aligned with scripts/run_pure_llm_arm.py. The runner fails closed
+# unless the offline-rendered prompt template SHA-256 is explicitly pinned below.
+# Live request-parameter parity and the authorized API smoke remain separate gates.
 
 run:
   run_id: phase2_pure_llm_v1
   system: pure_llm
   output_dir: p2
   output_pattern: "pure_llm_seed{seed}.jsonl"   # one file per seed; one row per equation
-  git_branch: audit/step1-cleanup               # VERIFY: Phase 1 closed at tag phase1-closed (9d56d8c)
+  git_branch: master                            # execute only from the reviewed, clean branch head
   require_clean_tree: true                      # code_dirty must be false in every row
 
 design:
@@ -34,7 +32,7 @@ design:
     - Value at Risk
   seeds: [42, 99, 123]
   expected_rows: 45                             # 15 x 3
-  repeats_per_case: 1                           # one LLM sample per (equation, seed) in the primary run
+  repeats_per_case: 1                           # one result row per (equation, seed); each row uses max_calls_per_case=3 independent samples
 
 data:                                           # VERIFY against exp1_ablation.py
   generator: hypatiax.experiments.benchmarks.exp1_ablation.generate_data
@@ -66,9 +64,9 @@ llm:
   max_tokens: 2000                              # read from code: LLMConfig.max_tokens default (HDS does not override it)
   max_calls_per_case: 3                      # A3: 3 independent calls per (equation, seed)
   prompt_inputs: [domain, variable_names, training_pattern_statistics, hds_rounded_constants]  # matched HDS input classes; patterns use training split only
-  n_candidates: 3                               # HDS asks for 3 candidate equations per call (exp1_ablation llm_n_candidates=3); DECIDE how a single-formula Pure LLM arm is matched to this
+  n_candidates: 1                               # one formula per Pure-LLM request; three independent requests are made per case (not HDS's one response with three candidates)
   prompt_hints: disabled                        # HYPATIAX_DISABLE_PROMPT_HINTS=1
-  prompt_template_sha256: null                  # pin after offline prompt implementation is verified
+  prompt_template_sha256: null                  # BLOCKING: set to the exact hash printed by --render after offline review; null intentionally blocks all live runs
   api_has_sampling_seed: false                  # VERIFY against current API docs; if false, 'seed' fixes data only
 
 formula_handling:
