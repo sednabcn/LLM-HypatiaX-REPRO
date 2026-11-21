@@ -1647,12 +1647,18 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
             # no standalone Pure LLM baseline is evaluated or reported.
 
             # ── Neural Network ───────────────────────────────────────────────
+            nn_m = {
+                "train_r2": float("nan"), "test_r2": float("nan"),
+                "success": False, "timed_out": False,
+                "y_pred_train": None, "y_pred_test": None,
+                "failure_reason": "standalone_nn_fit_raised",
+            }
             try:
                 _t0_nn = time.time()
                 nn_m = _train_and_eval_nn(X_tr, y_tr, X_te, y_te)
                 case_results["neural_network"] = {
-                    "train_r2":    nn_m["train_r2"],
-                    "test_r2":     nn_m["test_r2"],
+                    "train_r2":    nn_m["train_r2"] if np.isfinite(nn_m["train_r2"]) else None,
+                    "test_r2":     nn_m["test_r2"] if np.isfinite(nn_m["test_r2"]) else None,
                     "success":     bool(nn_m.get("success", False)),
                     "timed_out":   nn_m.get("timed_out", False),
                     "epochs_completed": nn_m.get("epochs_completed"),
