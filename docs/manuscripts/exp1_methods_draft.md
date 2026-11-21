@@ -8,7 +8,7 @@ Exp1 evaluates formula learning and extrapolative prediction on a collection of 
 
 The principal comparison represented in the runner is between a neural-network predictor and a hybrid method that combines an LLM-generated candidate formula with a neural network. The runner does not include a separate standalone pure-LLM comparison arm in its current result/report path. The LLM is used inside the hybrid pipeline.
 
-**Author verification required:** confirm the final task list, task inclusion/exclusion rules, sample-generation distributions, and the intended denominator from the protocol configuration and the exact experiment artifact set. The source header describes a 74-case suite, while report denominators are computed from the cases present and the intractable-case set. Do not publish a fixed denominator or headline percentage until those counts are reconciled against the intended protocol and saved results.
+**Source-level denominator audit:** the current `_get_test_cases()` catalogue contains 74 entries. None of those entries sets `extrapolation_intractable`, so `_INTRACTABLE_NAMES` is empty and `_STANDARD_TOTAL` resolves to 74 in this source revision. This resolves the code-level catalogue/denominator count; it does not prove that a particular saved run contains all 74 cases. Before publishing any aggregate result, verify that the canonical run artifact contains the intended 74 unique cases, with no omissions or duplicates, and that its recorded protocol/configuration matches this source revision. Task inclusion rules and sample-generation distributions still require protocol-source verification.
 
 ## 2. Extrapolation split
 
@@ -59,7 +59,7 @@ The present method has an explicit transductive/query-time covariate component: 
 
 ## 8. Items to complete before submission
 
-1. Reconcile the authoritative case count, intractable-case count, and aggregate denominator against the protocol configuration and complete result artifacts.
+1. Source-level count is verified as 74 catalogue entries, zero flagged intractable, and `_STANDARD_TOTAL = 74`. Still verify 74 unique case records in the canonical run artifact and confirm that the artifact was generated from this protocol revision.
 2. Confirm the data-generation distributions, units, constants, and feature definitions for every task from the protocol source; add a table of cases and mathematical ground-truth definitions where appropriate.
 3. The source-level neural-network settings are now documented above; extract per-case timeout/failure counts from the canonical run artifacts before submission.
 4. The checked-in fresh-rerun configuration sets `degradation_tau` to null, so the default fresh-rerun policy is ensemble-only. If the reported run used an environment override, its value and training-only calibration provenance must be recovered from that run's manifest; otherwise explicitly report that the calibrated LLM-only route was not evaluated.
