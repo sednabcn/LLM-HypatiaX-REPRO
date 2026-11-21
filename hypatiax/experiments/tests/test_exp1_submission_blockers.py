@@ -44,6 +44,14 @@ def test_hybrid_formula_and_provenance_are_written_to_case_results():
         assert f'"{field}"' in runner
 
 
+def test_exp1_configuration_matches_the_v3c_primary_feature_split():
+    root = Path(__file__).resolve().parents[3]
+    for name in ("repro.yaml", "fresh_rerun.yaml"):
+        config = (root / "config" / name).read_text()
+        assert 'script: "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py"' in config
+        assert 'split: "primary_feature_40_60"' in config
+
+
 def test_case_record_identifies_the_protocol_split_for_rescoring():
     tree = ast.parse(BENCHMARK.read_text())
     runner = _function_source(tree, "run_benchmark")
