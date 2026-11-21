@@ -69,6 +69,16 @@ def test_exp1_configuration_matches_the_v3c_primary_feature_split():
         assert 'split: "primary_feature_40_60"' in config
 
 
+def test_exp1c_is_an_alias_of_the_existing_protocol30_pca_stage():
+    root = Path(__file__).resolve().parents[3]
+    config = (root / "config" / "fresh_rerun.yaml").read_text()
+    assert "    exp1c:" in config
+    assert "      alias_of: exp1" in config
+    assert "      runner_stage: exp2_protocol30_pca_4060" in config
+    assert "      method_ids: [2, 3]" in config
+    assert "      verification_status: not_executed" in config
+
+
 def test_case_record_identifies_the_protocol_split_for_rescoring():
     tree = ast.parse(BENCHMARK.read_text())
     runner = _function_source(tree, "run_benchmark")
