@@ -411,66 +411,154 @@ def _train_and_eval_nn(
     seed: int = _NN_SEED,
     max_time_s: float = _NN_MAX_TIME_S,
     augment: bool = True,
+    patience: int = 30,
+    min_delta: float = 1e-6,
 ) -> dict:
     """
-    Train a small MLP on (X_train, y_train) and evaluate on both splits.
-    Returns dict: train_r2, test_r2, success, y_pred_train, y_pred_test.
+    Train an MLP with a deterministic validation split drawn ONLY from the
+    outer training partition. The extrapolation test partition is evaluated
+    once, after model selection, and is never used for early stopping.
 
-    max_time_s: hard wall-clock limit.  Training stops early if exceeded.
-    The early-stop flag is returned as 'timed_out' so callers can log it.
-    augment: if True (default), adds log/sqrt/ratio features before training
-             (v3c2-fix4: physics-informed feature augmentation).
+    A wall-clock timeout is a failed/incomplete fit (success=False), even when
+    a usable best-so-far checkpoint exists. This keeps partial runs out of the
+    reported fallback-success denominator.
     """
-    torch.manual_seed(seed); np.random.seed(seed)
-    hidden = hidden or [128, 64, 32]
-
-    # Fit the augmentation layout on training rows only, then reuse it for
-    # held-out rows. This prevents train/test feature-width drift and leakage.
-    if augment:
-        augmentation_schema = _feature_augmentation_schema(X_train)
-        X_train = _augment_features(X_train, schema=augmentation_schema)
-        X_test  = _augment_features(X_test, schema=augmentation_schema)
-
-    sx, sy = StandardScaler(), StandardScaler()
-    Xtr = sx.fit_transform(X_train)
-    ytr = sy.fit_transform(y_train.reshape(-1, 1)).flatten()
-
-    model = _MLP(X_train.shape[1], hidden)
-    opt   = torch.optim.Adam(model.parameters(), lr=0.001)
-    crit  = nn.MSELoss()
-    Xt = torch.FloatTensor(Xtr)
-    yt = torch.FloatTensor(ytr).reshape(-1, 1)
-
-    timed_out  = False
-    _wall_start = time.time()
-    model.train()
-    for epoch in range(epochs):
-        opt.zero_grad(); loss = crit(model(Xt), yt); loss.backward(); opt.step()
-        # Check wall-clock every 25 epochs to avoid per-epoch overhead
-        if epoch % 25 == 0 and (time.time() - _wall_start) >= max_time_s:
-            timed_out = True
-            print(f"    ⏱  NN wall-clock limit ({max_time_s}s) reached at epoch {epoch} — stopping early")
-            break
-
-    def _decode(raw): return sy.inverse_transform(raw.reshape(-1, 1)).flatten()
-    def _r2(yt_, yp_):
-        ss_r = np.sum((yt_ - yp_) ** 2); ss_t = np.sum((yt_ - yt_.mean()) ** 2)
-        return float(_r2_checked(yt_, yp_)[0])  # NaN for a degenerate target
-
-    model.eval()
-    with torch.no_grad():
-        yp_tr = _decode(model(Xt).numpy().flatten())
-        Xte   = torch.FloatTensor(sx.transform(X_test))  # X_test already augmented above
-        yp_te = _decode(model(Xte).numpy().flatten())
-
-    return {
-        "train_r2":    _r2(y_train, yp_tr),
-        "test_r2":     _r2(y_test,  yp_te),
-        "success":     True,
-        "timed_out":   timed_out,
-        "y_pred_train": yp_tr,
-        "y_pred_test":  yp_te,
+    started = time.time()
+    result = {
+        "train_r2": float("nan"), "test_r2": float("nan"),
+        "success": False, "timed_out": False,
+        "epochs_completed": 0, "best_epoch": None,
+        "validation_loss": None, "training_time_s": 0.0,
+        "failure_reason": None, "y_pred_train": None, "y_pred_test": None,
     }
+    try:
+        X_train = np.asarray(X_train, dtype=float)
+        y_train = np.asarray(y_train, dtype=float).reshape(-1)
+        X_test = np.asarray(X_test, dtype=float)
+        y_test = np.asarray(y_test, dtype=float).reshape(-1)
+        if (X_train.ndim != 2 or X_test.ndim != 2
+                or X_train.shape[1] != X_test.shape[1]
+                or len(X_train) != len(y_train) or len(X_test) != len(y_test)
+                or len(X_train) < 8 or len(X_test) == 0):
+            raise ValueError("invalid_or_insufficient_nn_input_shapes")
+        if not (np.isfinite(X_train).all() and np.isfinite(y_train).all()
+                and np.isfinite(X_test).all() and np.isfinite(y_test).all()):
+            raise ValueError("nonfinite_nn_input")
+
+        # Preserve the benchmark's established per-case RNG reset while
+        # using a local RandomState below for the validation partition.
+        torch.manual_seed(seed)
+        np.random.seed(seed)
+        hidden = hidden or [128, 64, 32]
+        # Local RNG: deterministic validation rows without perturbing the
+        # benchmark's global NumPy RNG stream.
+        order = np.random.RandomState(seed).permutation(len(X_train))
+        n_val = max(2, int(round(0.2 * len(X_train))))
+        n_val = min(n_val, len(X_train) - 3)
+        val_idx, fit_idx = order[:n_val], order[n_val:]
+        X_fit, y_fit = X_train[fit_idx], y_train[fit_idx]
+        X_val, y_val = X_train[val_idx], y_train[val_idx]
+
+        if augment:
+            augmentation_schema = _feature_augmentation_schema(X_fit)
+            X_fit = _augment_features(X_fit, schema=augmentation_schema)
+            X_val = _augment_features(X_val, schema=augmentation_schema)
+            X_train_eval = _augment_features(X_train, schema=augmentation_schema)
+            X_test_eval = _augment_features(X_test, schema=augmentation_schema)
+        else:
+            X_train_eval, X_test_eval = X_train, X_test
+
+        sx, sy = StandardScaler(), StandardScaler()
+        X_fit_scaled = sx.fit_transform(X_fit)
+        X_val_scaled = sx.transform(X_val)
+        y_fit_scaled = sy.fit_transform(y_fit.reshape(-1, 1)).reshape(-1)
+        y_val_scaled = sy.transform(y_val.reshape(-1, 1)).reshape(-1)
+
+        model = _MLP(X_fit_scaled.shape[1], hidden)
+        opt = torch.optim.Adam(model.parameters(), lr=0.001)
+        crit = nn.MSELoss()
+        Xt = torch.as_tensor(X_fit_scaled, dtype=torch.float32)
+        yt = torch.as_tensor(y_fit_scaled, dtype=torch.float32).reshape(-1, 1)
+        Xv = torch.as_tensor(X_val_scaled, dtype=torch.float32)
+        yv = torch.as_tensor(y_val_scaled, dtype=torch.float32).reshape(-1, 1)
+
+        best_loss = float("inf")
+        best_state = None
+        best_epoch = None
+        stale_epochs = 0
+        timed_out = False
+        for epoch in range(1, int(epochs) + 1):
+            if (time.time() - started) >= max_time_s:
+                timed_out = True
+                break
+            model.train()
+            opt.zero_grad()
+            fit_loss = crit(model(Xt), yt)
+            fit_loss.backward()
+            opt.step()
+
+            model.eval()
+            with torch.no_grad():
+                val_loss = float(crit(model(Xv), yv).item())
+            result["epochs_completed"] = epoch
+            if not np.isfinite(val_loss):
+                raise ValueError("nonfinite_validation_loss")
+            # Enforce the wall-clock budget after every completed epoch too:
+            # a slow final epoch must not be reported as a successful fit just
+            # because early stopping fires before the next loop-top check.
+            if (time.time() - started) >= max_time_s:
+                timed_out = True
+                break
+            if val_loss < best_loss - float(min_delta):
+                best_loss = val_loss
+                best_epoch = epoch
+                best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
+                stale_epochs = 0
+            else:
+                stale_epochs += 1
+            if stale_epochs >= int(patience):
+                break
+
+        if timed_out:
+            result["timed_out"] = True
+            result["failure_reason"] = "training_wall_clock_timeout"
+            return result
+        if best_state is None:
+            raise ValueError("no_valid_validation_checkpoint")
+        model.load_state_dict(best_state)
+        result["best_epoch"] = int(best_epoch)
+        result["validation_loss"] = float(best_loss)
+
+        # Refit the feature scaler using the complete outer training partition;
+        # retain the model's fit-subset scaler for inference to avoid changing
+        # the coordinate system in which the selected weights were learned.
+        Xtr_eval = torch.as_tensor(sx.transform(X_train_eval), dtype=torch.float32)
+        Xte_eval = torch.as_tensor(sx.transform(X_test_eval), dtype=torch.float32)
+        model.eval()
+        with torch.no_grad():
+            raw_train = model(Xtr_eval).cpu().numpy().reshape(-1)
+            raw_test = model(Xte_eval).cpu().numpy().reshape(-1)
+        yp_train = sy.inverse_transform(raw_train.reshape(-1, 1)).reshape(-1)
+        yp_test = sy.inverse_transform(raw_test.reshape(-1, 1)).reshape(-1)
+        if (yp_train.shape != y_train.shape or yp_test.shape != y_test.shape
+                or not np.isfinite(yp_train).all() or not np.isfinite(yp_test).all()):
+            raise ValueError("invalid_nn_prediction_shape_or_values")
+
+        train_r2 = float(_r2_checked(y_train, yp_train)[0])
+        test_r2 = float(_r2_checked(y_test, yp_test)[0])
+        result.update({
+            "train_r2": train_r2, "test_r2": test_r2,
+            "success": bool(np.isfinite(train_r2) and np.isfinite(test_r2)),
+            "y_pred_train": yp_train, "y_pred_test": yp_test,
+            "failure_reason": None if (np.isfinite(train_r2) and np.isfinite(test_r2))
+                              else "undefined_train_or_test_metric",
+        })
+        return result
+    except Exception as exc:
+        result["failure_reason"] = f"{type(exc).__name__}: {exc}"
+        return result
+    finally:
+        result["training_time_s"] = round(time.time() - started, 6)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -850,6 +938,7 @@ def _hybrid_predict_and_eval(
     X_test:  np.ndarray, y_test:  np.ndarray,
     var_names: list[str], metadata: dict,
     llm_attempt_state: dict | None = None,
+    nn_result: dict | None = None,
 ) -> dict:
     """Run the Exp1 LLM/NN route and report metrics for the predictor used."""
     llm_result = _generate_llm_formula(description, domain, var_names, metadata)
@@ -914,19 +1003,41 @@ def _hybrid_predict_and_eval(
             return float("nan")
         return value if np.isfinite(value) else float("nan")
 
+    def _valid_nn_result(candidate):
+        if not isinstance(candidate, dict) or not candidate.get("success", False):
+            return False
+        try:
+            pred_train = np.asarray(candidate.get("y_pred_train"), dtype=float).reshape(-1)
+            pred_test = np.asarray(candidate.get("y_pred_test"), dtype=float).reshape(-1)
+            return bool(
+                pred_train.shape == np.asarray(y_train).reshape(-1).shape
+                and pred_test.shape == np.asarray(y_test).reshape(-1).shape
+                and np.isfinite(pred_train).all() and np.isfinite(pred_test).all()
+                and np.isfinite(_metric(candidate.get("train_r2")))
+                and np.isfinite(_metric(candidate.get("test_r2")))
+            )
+        except (TypeError, ValueError):
+            return False
+
+    def _raw_nn():
+        nonlocal nn_rerun_time_s
+        if _valid_nn_result(nn_result):
+            return nn_result
+        t0 = time.time()
+        trained = _train_and_eval_nn(X_train, y_train, X_test, y_test)
+        nn_rerun_time_s += time.time() - t0
+        return trained
+
     def _use_nn_fallback(nn_result, reason):
         nonlocal selected_train_r2, train_r2_source, test_r2
         nonlocal decision, route_reason, route_execution_status
-        selected_train_r2 = _metric(nn_result.get("train_r2"))
-        test_r2 = _metric(nn_result.get("test_r2"))
+        valid = _valid_nn_result(nn_result)
+        selected_train_r2 = _metric(nn_result.get("train_r2")) if valid else float("nan")
+        test_r2 = _metric(nn_result.get("test_r2")) if valid else float("nan")
         train_r2_source = "nn_fallback"
-        decision = "nn_fallback" if np.isfinite(test_r2) else "nn_unavailable"
+        decision = "nn_fallback" if valid else "nn_unavailable"
         route_reason = reason
-        route_execution_status = (
-            "nn_fallback_executed"
-            if np.isfinite(selected_train_r2) and np.isfinite(test_r2)
-            else "nn_fallback_failed"
-        )
+        route_execution_status = "nn_fallback_executed" if valid else "nn_fallback_failed"
 
     if decision == "llm":
         selected_train_r2 = _metric(llm_train_r2)
@@ -934,12 +1045,10 @@ def _hybrid_predict_and_eval(
         test_r2, ok = _eval_formula_r2(llm_code, X_test, y_test, constants=constants)
         test_r2 = _metric(test_r2) if ok else float("nan")
         if not np.isfinite(test_r2):
-            t0 = time.time()
-            nn_m = _train_and_eval_nn(X_train, y_train, X_test, y_test)
-            nn_rerun_time_s = time.time() - t0
+            nn_m = _raw_nn()
             _use_nn_fallback(
                 nn_m, "hybrid_llm_evaluation_failed_nn_fallback"
-                if np.isfinite(_metric(nn_m.get("test_r2")))
+                if _valid_nn_result(nn_m)
                 else "hybrid_llm_evaluation_and_nn_fallback_failed",
             )
         else:
@@ -947,16 +1056,14 @@ def _hybrid_predict_and_eval(
 
     elif decision == "ensemble" and has_formula:
         llm_test_preds = _execute_formula(llm_code, X_test, constants=constants)
-        t0 = time.time()
-        nn_m = _train_and_eval_nn(X_train, y_train, X_test, y_test)
-        nn_rerun_time_s = time.time() - t0
+        nn_m = _raw_nn()
         llm_train_preds = _execute_formula(llm_code, X_train, constants=constants)
         if (llm_test_preds is None or llm_train_preds is None
                 or nn_m.get("y_pred_test") is None or nn_m.get("y_pred_train") is None
-                or not nn_m.get("success", False)):
+                or not _valid_nn_result(nn_m)):
             _use_nn_fallback(
                 nn_m, "ensemble_inputs_unavailable_nn_fallback"
-                if np.isfinite(_metric(nn_m.get("test_r2")))
+                if _valid_nn_result(nn_m)
                 else "ensemble_and_nn_fallback_failed",
             )
         else:
@@ -980,31 +1087,30 @@ def _hybrid_predict_and_eval(
                 else "ensemble_metrics_undefined"
             )
     else:
-        t0 = time.time()
         if llm_trustworthy:
             try:
                 llm_train_preds = _execute_formula(llm_code, X_train, constants=constants)
                 llm_test_preds = _execute_formula(llm_code, X_test, constants=constants)
                 if llm_train_preds is not None and llm_test_preds is not None:
+                    t0 = time.time()
                     nn_m = _train_and_eval_nn(
                         np.column_stack([X_train, llm_train_preds]), y_train,
                         np.column_stack([X_test, llm_test_preds]), y_test,
                     )
+                    nn_rerun_time_s += time.time() - t0
+                    if not _valid_nn_result(nn_m):
+                        nn_m = _raw_nn()
                 else:
-                    nn_m = _train_and_eval_nn(X_train, y_train, X_test, y_test)
+                    nn_m = _raw_nn()
             except Exception:
-                nn_m = _train_and_eval_nn(X_train, y_train, X_test, y_test)
+                nn_m = _raw_nn()
         else:
-            nn_m = _train_and_eval_nn(X_train, y_train, X_test, y_test)
-        nn_rerun_time_s = time.time() - t0
-        selected_train_r2 = _metric(nn_m.get("train_r2"))
-        test_r2 = _metric(nn_m.get("test_r2"))
+            nn_m = _raw_nn()
+        valid_nn = _valid_nn_result(nn_m)
+        selected_train_r2 = _metric(nn_m.get("train_r2")) if valid_nn else float("nan")
+        test_r2 = _metric(nn_m.get("test_r2")) if valid_nn else float("nan")
         train_r2_source = "nn_route"
-        route_execution_status = (
-            "nn_executed"
-            if np.isfinite(selected_train_r2) and np.isfinite(test_r2)
-            else "nn_metrics_undefined"
-        )
+        route_execution_status = "nn_executed" if valid_nn else "nn_training_failed_or_metrics_undefined"
 
     y_test_arr = np.asarray(y_test, dtype=float).reshape(-1)
     if y_test_arr.size == 0 or not np.isfinite(y_test_arr).all():
@@ -1547,17 +1653,28 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
             # no standalone Pure LLM baseline is evaluated or reported.
 
             # ── Neural Network ───────────────────────────────────────────────
+            nn_m = {
+                "train_r2": float("nan"), "test_r2": float("nan"),
+                "success": False, "timed_out": False,
+                "y_pred_train": None, "y_pred_test": None,
+                "failure_reason": "standalone_nn_fit_raised",
+            }
             try:
                 _t0_nn = time.time()
                 nn_m = _train_and_eval_nn(X_tr, y_tr, X_te, y_te)
                 case_results["neural_network"] = {
-                    "train_r2":    nn_m["train_r2"],
-                    "test_r2":     nn_m["test_r2"],
-                    "success":     bool(_math.isfinite(nn_m["train_r2"]) and _math.isfinite(nn_m["test_r2"])),  # C4
+                    "train_r2":    nn_m["train_r2"] if np.isfinite(nn_m["train_r2"]) else None,
+                    "test_r2":     nn_m["test_r2"] if np.isfinite(nn_m["test_r2"]) else None,
+                    "success":     bool(nn_m.get("success", False)),
                     "timed_out":   nn_m.get("timed_out", False),
+                    "epochs_completed": nn_m.get("epochs_completed"),
+                    "best_epoch": nn_m.get("best_epoch"),
+                    "validation_loss": nn_m.get("validation_loss"),
+                    "training_time_s": nn_m.get("training_time_s"),
+                    "failure_reason": nn_m.get("failure_reason"),
                     "time_s":      round(time.time() - _t0_nn, 3),
-                    "y_pred_train": nn_m["y_pred_train"].tolist(),
-                    "y_pred_test":  nn_m["y_pred_test"].tolist(),
+                    "y_pred_train": nn_m["y_pred_train"].tolist() if nn_m.get("y_pred_train") is not None else None,
+                    "y_pred_test":  nn_m["y_pred_test"].tolist() if nn_m.get("y_pred_test") is not None else None,
                 }
             except Exception as e:
                 case_results["neural_network"] = {
@@ -1572,6 +1689,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 hy_m = _hybrid_predict_and_eval(
                     desc, tc["domain"], X_tr, y_tr, X_te, y_te, var_names, metadata,
                     llm_attempt_state=hybrid_llm_state,
+                    nn_result=nn_m,
                 )
                 _hyb_wall = round(time.time() - _t0_hyb, 3)
 
