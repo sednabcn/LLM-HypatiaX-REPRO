@@ -22,7 +22,7 @@ The case artifact records the split protocol and explicit train/test sizes. This
 
 The benchmark's self-contained neural network is a multilayer perceptron with hidden widths 128, 64, and 32, using linear layers, layer normalization, and SiLU activations, followed by a scalar output layer. The implementation also includes optional physics-informed feature augmentation (logarithmic, square-root, and, for two-feature inputs, ratio features). The transform-eligibility schema is fitted from training rows and then applied consistently to the test rows; held-out rows do not determine which transforms are included.
 
-Training uses deterministic seed configuration and a per-run neural-network wall-clock limit in the implementation. Exact optimizer, learning-rate, epoch, early-stopping, and timeout reporting details should be transcribed from the final runner/configuration and actual artifacts before submission rather than inferred from defaults.
+Training uses an Adam optimizer (learning rate 0.001) and mean-squared-error loss for up to 300 epochs, with hidden widths [128, 64, 32]. Inputs and targets are standardized using scalers fitted on the training partition. The default neural-network seed is derived from the experiment seed (seed 42 gives NN seed 2024); NumPy and PyTorch are re-seeded for each fit. The implementation applies a 120-second wall-clock cap, checked every 25 epochs, and records whether the cap was reached. Physics-informed log, square-root, and (for two-feature inputs) ratio features are enabled by default; transform eligibility is determined from training rows only. The routing edge probe is a separate fit with 200 epochs and hidden widths [64, 32], using the outer training partition only. Actual per-case timeout counts still require the canonical run artifacts.
 
 ## 4. LLM formula generation and trust assessment
 
@@ -30,7 +30,7 @@ Within the hybrid method, the LLM receives the task description, domain, variabl
 
 A generated formula is evaluated on training data before it can be trusted. The current trust gate requires a valid evaluated formula, training (R^2 \geq 0.5), and absence of the implementation's specified pathological code patterns. Structural-risk detection has priority and sends flagged formulas to the ensemble path. When the formula is not trusted, the neural-network fallback path is used.
 
-The routing policy also uses a training-only neural-network edge-degradation probe. This probe partitions only the outer training data into a central fit subset and two edge subsets, fits the probe model on the central subset, and compares its training-region and edge-region (R^2). The hybrid's LLM-only route additionally depends on a pre-calibrated degradation threshold (`HYPATIAX_ROUTING_DELTA_TAU`); if that threshold is absent or invalid, the policy fails closed to the ensemble rather than selecting the LLM-only route.
+The routing policy also computes a training-only neural-network edge-degradation probe. This probe partitions only the outer training data into a central fit subset and two edge subsets, fits the probe model on the central subset, and compares its training-region and edge-region (R^2). The canonical `config/fresh_rerun.yaml` currently sets `routing_policy.degradation_tau: null` and marks it as requiring separate training-only calibration. In that configuration the LLM-only route fails closed and the ensemble route is used; the manuscript must not imply that a calibrated LLM-only route was evaluated. A non-null environment override would need to be evidenced by the specific run manifest before describing a different routing policy.
 
 ## 5. OOD diagnostics and held-out covariate access
 
@@ -61,8 +61,8 @@ The present method has an explicit transductive/query-time covariate component: 
 
 1. Reconcile the authoritative case count, intractable-case count, and aggregate denominator against the protocol configuration and complete result artifacts.
 2. Confirm the data-generation distributions, units, constants, and feature definitions for every task from the protocol source; add a table of cases and mathematical ground-truth definitions where appropriate.
-3. Extract exact neural-network training hyperparameters and any per-case timeout/failure counts from the final configuration and artifacts.
-4. Confirm the calibrated value and provenance of `HYPATIAX_ROUTING_DELTA_TAU` used for the reported run. The source code reads this value from the environment; the manuscript must report the actual run value, not assume one.
+3. The source-level neural-network settings are now documented above; extract per-case timeout/failure counts from the canonical run artifacts before submission.
+4. The checked-in fresh-rerun configuration sets `degradation_tau` to null, so the default fresh-rerun policy is ensemble-only. If the reported run used an environment override, its value and training-only calibration provenance must be recovered from that run's manifest; otherwise explicitly report that the calibrated LLM-only route was not evaluated.
 5. Verify the exact software versions, hardware, seed(s), and environment variables from the run manifest/logs.
 6. Add results only from the canonical, verified experiment artifacts. The offline CI tests are protocol/software checks, not experimental results.
 7. Ensure the manuscript consistently describes KDE as fitted on (X_{train}) and queried with (X_{test}) covariates, without claiming that all held-out information is inaccessible.
