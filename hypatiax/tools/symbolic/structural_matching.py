@@ -31,6 +31,11 @@ def canonicalize_symbolic_structure(expression: str, variable_names: Iterable[st
         raise ValueError("expression must be a non-empty string")
     parsed = parse_sympy_expression(expression.replace("^", "**"), list(names))
     normalized = sp.cancel(sp.together(parsed))
+    # Remove an overall scalar multiplier before abstracting fitted numeric
+    # coefficients, so x and 2*x share the same structural signature.
+    scalar, core = normalized.as_coeff_Mul(rational=True)
+    if scalar not in (0, 1):
+        normalized = core
     exponent_literals = {
         power.exp for power in normalized.atoms(sp.Pow)
         if power.exp.is_number
