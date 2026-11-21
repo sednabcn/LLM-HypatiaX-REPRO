@@ -1039,7 +1039,7 @@ def _hybrid_predict_and_eval(
             nn_m = _raw_nn()
             _use_nn_fallback(
                 nn_m, "hybrid_llm_evaluation_failed_nn_fallback"
-                if np.isfinite(_metric(nn_m.get("test_r2")))
+                if _valid_nn_result(nn_m)
                 else "hybrid_llm_evaluation_and_nn_fallback_failed",
             )
         else:
@@ -1054,7 +1054,7 @@ def _hybrid_predict_and_eval(
                 or not _valid_nn_result(nn_m)):
             _use_nn_fallback(
                 nn_m, "ensemble_inputs_unavailable_nn_fallback"
-                if np.isfinite(_metric(nn_m.get("test_r2")))
+                if _valid_nn_result(nn_m)
                 else "ensemble_and_nn_fallback_failed",
             )
         else:
