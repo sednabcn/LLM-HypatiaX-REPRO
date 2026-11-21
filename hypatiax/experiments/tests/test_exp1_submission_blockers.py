@@ -55,6 +55,8 @@ def test_exp1_llm_request_honours_timeout_without_hidden_retries():
     assert "timeout=timeout_s" in source
     assert "max_retries=0" in source
     assert 'hy_m.get("llm_timeout_s")' in source
+    assert 'temperature_requested": hy_m.get("llm_temperature_requested")' in source
+    assert 'temperature_sent": hy_m.get("llm_temperature_sent")' in source
 
 
 def test_exp1_configuration_matches_the_v3c_primary_feature_split():
