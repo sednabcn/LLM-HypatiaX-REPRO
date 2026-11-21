@@ -1277,7 +1277,7 @@ def _generate_report(results: list):
         subset = [r for r in standard if r.get("difficulty") == diff]
         if not subset:
             continue
-        for method in ["hybrid"]:
+        for method in ["neural_network", "hybrid"]:
             s = _stats(_r2s(subset, method), max(len(subset), 1))
             print(f"  {diff:6s} | {method:14s}: median={s['median']:.4f}, "
                   f">0.99: {s['pct_099']:.1f}%  (n={len(subset)})")
