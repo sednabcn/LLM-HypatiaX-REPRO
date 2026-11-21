@@ -193,8 +193,8 @@ def gate_prompt_leaks(prompt_text: str, case: "Case", expected_patterns: Optiona
         missing = []
         for key, expected in expected_constants.items():
             match = re.search(
-                rf"(?<![A-Za-z0-9_]){re.escape(str(key))}\\s*=\\s*"
-                r"([-+]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?)",
+                rf"(?<![A-Za-z0-9_]){re.escape(str(key))}\s*=\s*"
+                r"([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)",
                 prompt_text,
             )
             if match is None or not math.isclose(float(match.group(1)), float(expected),
