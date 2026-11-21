@@ -1051,31 +1051,61 @@ def _hybrid_predict_and_eval(
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _aggressive_split(
-    X: np.ndarray, y: np.ndarray, config: dict
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    X: np.ndarray, y: np.ndarray, config: dict, return_metadata: bool = False
+):
     """
-    Train on lower 40% of primary variable; test on upper 60%.
-    Falls back to index-based split when array is too small.
+    Train on the configured primary-feature 40/60 extrapolation split.
+
+    The historical index-based fallback is preserved exactly, but when used it
+    is identified in optional metadata so result artifacts never mislabel it as
+    a percentile split.
     """
     var_idx    = config.get("split_var_idx", 0)
     split_type = config.get("split_type", "high")
     vals       = X[:, var_idx] if (X.ndim >= 2 and X.shape[1] > var_idx) else X.flatten()
 
     if split_type == "high":
-        thresh      = np.percentile(vals, 40)
-        train_mask  = vals <= thresh
-        test_mask   = vals >  thresh
+        quantile = 40
+        thresh = np.percentile(vals, quantile)
+        train_mask = vals <= thresh
+        test_mask = vals > thresh
+        selection_rule = "feature_value <= threshold"
     else:
-        thresh      = np.percentile(vals, 60)
-        train_mask  = vals >= thresh
-        test_mask   = vals <  thresh
+        quantile = 60
+        thresh = np.percentile(vals, quantile)
+        train_mask = vals >= thresh
+        test_mask = vals < thresh
+        selection_rule = "feature_value >= threshold"
 
-    if train_mask.sum() < 20 or test_mask.sum() < 20:
-        idx        = np.arange(len(X))
+    fallback_used = bool(train_mask.sum() < 20 or test_mask.sum() < 20)
+    fallback_reason = None
+    realized_method = "primary_feature_percentile"
+    if fallback_used:
+        idx = np.arange(len(X))
         train_mask = idx < int(0.4 * len(X))
-        test_mask  = ~train_mask
+        test_mask = ~train_mask
+        realized_method = "row_index_fallback"
+        fallback_reason = "percentile_partition_has_fewer_than_20_rows"
+        selection_rule = "row_index < int(0.4 * n_rows)"
 
-    return X[train_mask], y[train_mask], X[test_mask], y[test_mask]
+    result = (X[train_mask], y[train_mask], X[test_mask], y[test_mask])
+    if not return_metadata:
+        return result
+
+    metadata = {
+        "requested_method": "primary_feature_percentile",
+        "realized_method": realized_method,
+        "split_var_idx": int(var_idx),
+        "split_type": split_type,
+        "quantile_percent": int(quantile),
+        "threshold": float(thresh),
+        "selection_rule": selection_rule,
+        "fallback_used": fallback_used,
+        "fallback_reason": fallback_reason,
+        "train_size": int(train_mask.sum()),
+        "test_size": int(test_mask.sum()),
+    }
+    return (*result, metadata)
 
 
 # FIX-C3/DISCLOSURE: Gate B requires every DeFi benchmark to expose either
@@ -1502,7 +1532,14 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
             })
             tc.setdefault("description", desc)
 
-            X_tr, y_tr, X_te, y_te = _aggressive_split(X_full, y_full, tc["config"])
+            X_tr, y_tr, X_te, y_te, split_details = _aggressive_split(
+                X_full, y_full, tc["config"], return_metadata=True
+            )
+            split_var_idx = tc["config"].get("split_var_idx", 0)
+            split_details["split_var_name"] = (
+                var_names[split_var_idx]
+                if 0 <= split_var_idx < len(var_names) else None
+            )
             print(f"  Split → train={len(X_tr)}, test={len(X_te)}")
 
             case_results = {}
@@ -1621,10 +1658,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 "results":              case_results,
                 "split_protocol": {
                     "name": "aggressive_extrapolation_40_60",
-                    "split_var_idx": tc["config"].get("split_var_idx", 0),
-                    "split_type": tc["config"].get("split_type", "high"),
-                    "train_size": int(len(X_tr)),
-                    "test_size": int(len(X_te)),
+                    **split_details,
                 },
                 # Self-contained audit payload: permits independent formula
                 # evaluation against the exact arrays used for this record.
