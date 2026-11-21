@@ -1097,6 +1097,11 @@ class HybridDiscoverySystem:
                                 _inner_candidate.get("search_strategy")
                                 or "inner_candidate_validation_error"
                             ).strip() or "inner_candidate_validation_error"
+                            if _inner_item_malformed:
+                                # CandidateRecord IDs are derived from record
+                                # content; identical malformed placeholders must
+                                # remain distinct audit entries.
+                                _audit_strategy = f"{_audit_strategy}_{_inner_index}"
                             try:
                                 _audit_seed = int(_inner_candidate.get("seed", seed))
                             except (TypeError, ValueError, OverflowError):
