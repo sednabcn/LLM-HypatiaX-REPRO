@@ -859,8 +859,10 @@ def _hybrid_predict_and_eval(
       2. Structural-risk function call -> LLM+NN ensemble (always takes precedence).
       3. Training-only NN edge degradation; LLM-only Hybrid route if train R² >= 0.95
          and Delta <= the pre-calibrated tau. Missing tau -> ensemble.
-      4. KDE fitted on training covariates; per-query w_LLM=0.3+0.7*p_OOD.
-      5. Held-out labels are used only for final metrics, never routing/blending.
+      4. KDE is fitted only on X_train; X_test covariates are queried at
+         prediction time to obtain per-query w_LLM=0.3+0.7*p_OOD. This is
+         query-time covariate access, not label access.
+      5. Held-out y_test is used only for final metrics, never routing/blending.
     """
 
     # Step 1: Generate LLM formula
@@ -1026,6 +1028,12 @@ def _hybrid_predict_and_eval(
         "degradation_probe": degradation_probe,
         "degradation_tau": degradation_tau,
         "ood_diagnostic": ood_diagnostic,
+        "ood_covariate_protocol": {
+            "density_fit_rows": "X_train",
+            "query_rows": "X_test",
+            "query_labels_used": False,
+            "access_mode": "query_time_covariate_access",
+        },
         "blend_weights": query_blend_weights,
         "nn_rerun_time_s": round(nn_rerun_time_s, 3),  # Issue 3: NN cost paid by hybrid
         "llm_called":     bool(llm_result.get("llm_called", False)),   # B2
