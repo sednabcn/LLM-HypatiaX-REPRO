@@ -980,6 +980,7 @@ def _hybrid_predict_and_eval(
                 else "ensemble_metrics_undefined"
             )
     else:
+        t0 = time.time()
         if llm_trustworthy:
             try:
                 llm_train_preds = _execute_formula(llm_code, X_train, constants=constants)
@@ -995,6 +996,7 @@ def _hybrid_predict_and_eval(
                 nn_m = _train_and_eval_nn(X_train, y_train, X_test, y_test)
         else:
             nn_m = _train_and_eval_nn(X_train, y_train, X_test, y_test)
+        nn_rerun_time_s = time.time() - t0
         selected_train_r2 = _metric(nn_m.get("train_r2"))
         test_r2 = _metric(nn_m.get("test_r2"))
         train_r2_source = "nn_route"
@@ -1597,7 +1599,6 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "degradation_tau": hy_m.get("degradation_tau"),
                     "ood_diagnostic": hy_m.get("ood_diagnostic"),
                     "ood_covariate_protocol": hy_m.get("ood_covariate_protocol"),
-                    "ood_covariate_protocol": hy_m.get("ood_covariate_protocol"),
                     "blend_weights": hy_m.get("blend_weights"),
                     "llm_called":      hy_m.get("llm_called"),      # B2
                     "bypass_kind":     hy_m.get("bypass_kind"),     # B2
@@ -1609,7 +1610,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     # independent rescoring on the identical protocol split.
                     "formula":         hy_m.get("llm_code"),
                     "llm_train_r2":    hy_m.get("llm_train_r2"),
-                    "success":         not (_nan(_train_r2) or _nan(_test_r2)),
+                    "success":         bool(hy_m.get("success", not (_nan(_train_r2) or _nan(_test_r2)))),
                     "time_s":          round(hyb_time, 3),
                     "nn_rerun_time_s": hy_m.get("nn_rerun_time_s", 0.0),
                 }
