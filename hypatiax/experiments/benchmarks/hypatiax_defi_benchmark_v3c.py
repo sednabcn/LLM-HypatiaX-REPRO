@@ -1659,6 +1659,10 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 "split_protocol": {
                     "name": "aggressive_extrapolation_40_60",
                     **split_details,
+                    # Keep the canonical sizes explicit for source-level
+                    # protocol/rescoring contracts; values match split_details.
+                    "train_size": int(len(X_tr)),
+                    "test_size": int(len(X_te)),
                 },
                 # Self-contained audit payload: permits independent formula
                 # evaluation against the exact arrays used for this record.
