@@ -522,10 +522,10 @@ Do NOT use bare 'e' for elementary charge — use q_e instead."""
             task_constants = ", ".join(
                 f"{name}={value}" for name, value in metadata["constants"].items()
             )
-            constants_info = f"\\n\\nTASK-SPEC CONSTANTS (use these exact values): {task_constants}"
+            constants_info = f"\n\nTASK-SPEC CONSTANTS (use these exact values): {task_constants}"
         patterns_info = ""
         if metadata and metadata.get("hds_prompt_context") and metadata.get("data_patterns") is not None:
-            patterns_info = "\\n\\nDATA PATTERNS (computed from training split only):\\n"
+            patterns_info = "\n\nDATA PATTERNS (computed from training split only):\n"
             patterns_info += json.dumps(metadata["data_patterns"], indent=2)
 
         # No equation-specific hints exist in this prompt (deleted, not gated).
