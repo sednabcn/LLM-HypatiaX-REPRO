@@ -31,13 +31,30 @@ def canonicalize_symbolic_structure(expression: str, variable_names: Iterable[st
         raise ValueError("expression must be a non-empty string")
     parsed = parse_sympy_expression(expression.replace("^", "**"), list(names))
     normalized = sp.cancel(sp.together(parsed))
-    exponent_literals = {
-        power.exp for power in normalized.atoms(sp.Pow)
-        if power.exp.is_number
-    }
-    numeric_literals = normalized.atoms(sp.Number) - exponent_literals
     coefficient = sp.Symbol("__coefficient__")
-    abstracted = normalized.xreplace({value: coefficient for value in numeric_literals})
+    symbols = [sp.Symbol(name, real=True) for name in names]
+    try:
+        # Polynomial terms are represented by their monomial support, not by
+        # whether a coefficient happened to be written explicitly. In
+        # particular, x and 2*x must have the same structural signature.
+        polynomial = sp.Poly(normalized, *symbols)
+        abstracted = sp.Add(*(
+            coefficient * sp.Mul(*(
+                symbol ** power for symbol, power in zip(symbols, monomial)
+            ))
+            for monomial in polynomial.monoms()
+        ))
+    except (sp.PolynomialError, TypeError, ValueError):
+        # Preserve the conservative fallback for supported non-polynomial
+        # forms while retaining numeric exponents as structural information.
+        exponent_literals = {
+            power.exp for power in normalized.atoms(sp.Pow)
+            if power.exp.is_number
+        }
+        numeric_literals = normalized.atoms(sp.Number) - exponent_literals
+        abstracted = normalized.xreplace({
+            value: coefficient for value in numeric_literals
+        })
     return sp.srepr(abstracted)
 
 
