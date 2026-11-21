@@ -191,6 +191,16 @@ def generate_native_template_candidates_with_audit(
             if attempts >= search_cap or len(proposals) >= cap:
                 break
 
+    # Unary templates are admitted before optional compound compositions so
+    # a small attempt budget does not starve explicitly declared unary forms.
+    # Unary templates follow the higher-value power/product/quotient family.
+    for name in names:
+        for op in allowed_unary:
+            if not add_template(f"{op}({name})"):
+                break
+        if attempts >= search_cap or len(proposals) >= cap:
+            break
+
     # Reduced-mass-like rational structures are generated only when all
     # required operators are explicitly declared.
     if "*" in binary and "/" in binary and "+" in binary:
@@ -207,14 +217,6 @@ def generate_native_template_candidates_with_audit(
         for name in names:
             if not add_template(f"({name} * {name})"):
                 break
-
-    # Unary templates follow the higher-value power/product/quotient family.
-    for name in names:
-        for op in allowed_unary:
-            if not add_template(f"{op}({name})"):
-                break
-        if attempts >= search_cap or len(proposals) >= cap:
-            break
 
     # Compose pairwise operators over the admitted one-level basis terms,
     # not just raw variables. This remains the final, lower-priority family.

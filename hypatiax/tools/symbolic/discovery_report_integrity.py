@@ -21,6 +21,8 @@ def _json_value(value: Any, path: str = "report") -> None:
         return
     if isinstance(value, float):
         if not math.isfinite(value):
+            if path.endswith(".rmse"):
+                raise ValueError(f"{path} must be finite (contains a non-finite number)")
             raise ValueError(f"{path} contains a non-finite number")
         return
     if isinstance(value, Mapping):

@@ -11,6 +11,10 @@ from typing import Any, Callable
 import numpy as np
 
 
+class FoldPredictorContractError(ValueError):
+    """A predictor violated a fold-evaluation factory contract."""
+
+
 @dataclass(frozen=True)
 class TrainingFold:
     """One internal split, indexed relative to the supplied training arrays."""
@@ -222,7 +226,7 @@ def evaluate_candidate_on_training_folds(
                 str(fitted_expression) if fitted_expression is not None else None,
                 residual_bias, residual_std, max_abs_residual,
             ))
-        except TimeoutError:
+        except (TimeoutError, FoldPredictorContractError):
             raise
         except Exception:
             failures += 1

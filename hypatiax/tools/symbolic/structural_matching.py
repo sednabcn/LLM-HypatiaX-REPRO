@@ -30,7 +30,13 @@ def canonicalize_symbolic_structure(expression: str, variable_names: Iterable[st
     if not isinstance(expression, str) or not expression.strip():
         raise ValueError("expression must be a non-empty string")
     parsed = parse_sympy_expression(expression.replace("^", "**"), list(names))
-    normalized = sp.cancel(sp.together(parsed))
+    normalized = sp.factor_terms(sp.cancel(sp.together(parsed)))
+    # Remove a common scalar multiplier before abstracting fitted numeric
+    # coefficients. factor_terms also extracts common factors from affine
+    # forms such as 2*x + 1 and 8*x + 4.
+    scalar, core = normalized.as_coeff_Mul()
+    if scalar not in (0, 1):
+        normalized = core
     exponent_literals = {
         power.exp for power in normalized.atoms(sp.Pow)
         if power.exp.is_number

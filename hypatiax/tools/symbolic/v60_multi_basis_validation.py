@@ -169,6 +169,8 @@ def validate_native_multi_basis_candidates(
                 coefficients, _, rank, singular_values = np.linalg.lstsq(
                     train_design, targets[train_idx], rcond=None
                 )
+                if rank != len(ids) + 1:
+                    raise ValueError("fold joint basis design must have full column rank")
                 if not np.all(np.isfinite(coefficients)):
                     raise ValueError("fold joint fit produced non-finite coefficients")
                 predictions = validation_design @ coefficients
