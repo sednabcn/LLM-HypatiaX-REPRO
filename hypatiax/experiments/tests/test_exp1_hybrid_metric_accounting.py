@@ -214,3 +214,110 @@ def test_exp1_split_metadata_discloses_row_index_fallback():
     assert audit["fallback_reason"] == "percentile_partition_has_fewer_than_20_rows"
     assert audit["train_size"] == 40
     assert audit["test_size"] == 60
+
+
+
+def test_exp1_nn_validation_is_training_only_and_deterministic():
+    rng = np.random.RandomState(19)
+    X_train = np.linspace(-2.0, 2.0, 48).reshape(-1, 1)
+    y_train = np.sin(X_train[:, 0]) + 0.05 * rng.normal(size=len(X_train))
+    X_test_a = np.linspace(3.0, 4.0, 12).reshape(-1, 1)
+    X_test_b = np.linspace(30.0, 40.0, 12).reshape(-1, 1)
+    y_test = np.linspace(-1.0, 1.0, 12)
+
+    first = bench._train_and_eval_nn(
+        X_train, y_train, X_test_a, y_test,
+        epochs=80, hidden=[16, 8], seed=123, max_time_s=30,
+        augment=False, patience=8,
+    )
+    second = bench._train_and_eval_nn(
+        X_train, y_train, X_test_b, y_test,
+        epochs=80, hidden=[16, 8], seed=123, max_time_s=30,
+        augment=False, patience=8,
+    )
+
+    assert first["success"] is True
+    assert first["best_epoch"] is not None
+    assert first["epochs_completed"] >= first["best_epoch"]
+    assert first["validation_loss"] >= 0.0
+    assert first["y_pred_train"].shape == y_train.shape
+    assert first["y_pred_test"].shape == y_test.shape
+    # Changing only the held-out extrapolation partition cannot change
+    # validation-driven model selection or training predictions.
+    assert first["best_epoch"] == second["best_epoch"]
+    assert first["validation_loss"] == second["validation_loss"]
+    np.testing.assert_allclose(first["y_pred_train"], second["y_pred_train"])
+
+
+def test_exp1_nn_timeout_is_not_reported_as_success():
+    X_train = np.linspace(0.0, 1.0, 24).reshape(-1, 1)
+    y_train = X_train[:, 0] ** 2
+    X_test = np.linspace(2.0, 3.0, 8).reshape(-1, 1)
+    y_test = X_test[:, 0] ** 2
+
+    result = bench._train_and_eval_nn(
+        X_train, y_train, X_test, y_test,
+        epochs=20, hidden=[8], seed=7, max_time_s=-1,
+        augment=False,
+    )
+
+    assert result["timed_out"] is True
+    assert result["success"] is False
+    assert result["failure_reason"] == "training_wall_clock_timeout"
+    assert result["y_pred_train"] is None
+    assert result["y_pred_test"] is None
+
+
+def test_exp1_hybrid_reuses_valid_standalone_nn_for_fallback(monkeypatch):
+    _common(monkeypatch, "fitted_llm")
+    Xtr, ytr, Xte, yte = _inputs()
+
+    def eval_formula(code, X, y, constants=None):
+        return (0.8, True) if len(y) == len(ytr) else (float("nan"), False)
+
+    nn_result = {
+        "train_r2": 0.65, "test_r2": 0.25, "success": True,
+        "y_pred_train": np.full(len(ytr), 0.4),
+        "y_pred_test": np.full(len(yte), 0.4),
+    }
+    monkeypatch.setattr(bench, "_eval_formula_r2", eval_formula)
+    monkeypatch.setattr(
+        bench, "_train_and_eval_nn",
+        lambda *a, **k: (_ for _ in ()).throw(AssertionError("unexpected NN retraining")),
+    )
+
+    result = bench._hybrid_predict_and_eval(
+        "fixture", "defi", Xtr, ytr, Xte, yte, ["x"], {},
+        nn_result=nn_result,
+    )
+
+    assert result["train_r2"] == 0.65
+    assert result["test_r2"] == 0.25
+    assert result["route_execution_status"] == "nn_fallback_executed"
+    assert result["nn_rerun_time_s"] == 0.0
+
+
+def test_exp1_hybrid_rejects_invalid_nn_fallback_predictions(monkeypatch):
+    _common(monkeypatch, "fitted_llm")
+    Xtr, ytr, Xte, yte = _inputs()
+
+    def eval_formula(code, X, y, constants=None):
+        return (0.8, True) if len(y) == len(ytr) else (float("nan"), False)
+
+    invalid_nn = {
+        "train_r2": 0.65, "test_r2": 0.25, "success": True,
+        "y_pred_train": np.full(len(ytr) - 1, 0.4),
+        "y_pred_test": np.full(len(yte), 0.4),
+    }
+    monkeypatch.setattr(bench, "_eval_formula_r2", eval_formula)
+    monkeypatch.setattr(bench, "_train_and_eval_nn", lambda *a, **k: invalid_nn)
+
+    result = bench._hybrid_predict_and_eval(
+        "fixture", "defi", Xtr, ytr, Xte, yte, ["x"], {},
+        nn_result=invalid_nn,
+    )
+
+    assert result["route_execution_status"] == "nn_fallback_failed"
+    assert result["success"] is False
+    assert np.isnan(result["train_r2"])
+    assert np.isnan(result["test_r2"])
