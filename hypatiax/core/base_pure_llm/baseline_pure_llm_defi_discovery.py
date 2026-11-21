@@ -509,17 +509,23 @@ class PureLLMBaseline:
         var_info = f"\nVariables: {', '.join(variable_names)}" if variable_names else ""
 
         constants_info = ""
-        if metadata and "constants" in metadata and metadata["constants"]:
-            # Exact rounded constants block used by IntegratedLLMEngine._build_prompt.
+        if metadata and metadata.get("hds_prompt_context"):
+            # HDS's fixed rounded constants are Phase 2 matched-input context only.
             constants_info = """\n\nAVAILABLE PHYSICAL CONSTANTS (use these exact Python names):
   h=6.626e-34 (Planck), hbar=1.055e-34 (reduced Planck), c=2.998e8 (speed of light),
   k_B=1.381e-23 (Boltzmann), k=1.381e-23, N_A=6.022e23 (Avogadro), g_n=9.807,
   m_e=9.109e-31 (electron mass), q_e=1.602e-19 (elementary charge),
   epsilon0=8.854e-12 (vacuum permittivity), mu0=1.257e-6 (vacuum permeability)
 Do NOT use bare 'e' for elementary charge — use q_e instead."""
+        elif metadata and metadata.get("constants"):
+            # Preserve the general-purpose baseline's task-specific constants.
+            task_constants = ", ".join(
+                f"{name}={value}" for name, value in metadata["constants"].items()
+            )
+            constants_info = f"\\n\\nTASK-SPEC CONSTANTS (use these exact values): {task_constants}"
         patterns_info = ""
-        if metadata and metadata.get("data_patterns") is not None:
-            patterns_info = "\n\nDATA PATTERNS (computed from training split only):\n"
+        if metadata and metadata.get("hds_prompt_context") and metadata.get("data_patterns") is not None:
+            patterns_info = "\\n\\nDATA PATTERNS (computed from training split only):\\n"
             patterns_info += json.dumps(metadata["data_patterns"], indent=2)
 
         # No equation-specific hints exist in this prompt (deleted, not gated).
@@ -530,7 +536,7 @@ Do NOT use bare 'e' for elementary charge — use q_e instead."""
         return f"""You are a mathematical formula expert in DeFi and quantitative finance.
 
 Task: {description}
-Domain: {domain}{var_info}{constants_info}
+Domain: {domain}{var_info}{constants_info}{patterns_info}
 
 The only input variables available to the formula are exactly: {", ".join(variable_names or [])}.
 Provide your response in this EXACT format:
