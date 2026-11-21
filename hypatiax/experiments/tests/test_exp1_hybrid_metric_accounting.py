@@ -19,6 +19,11 @@ def _inputs():
 
 
 def _common(monkeypatch, route):
+    # Existing route-accounting tests isolate routing from calibration policy.
+    monkeypatch.setattr(
+        bench, "_nn_quality_gate",
+        lambda candidate: {"passed": True, "reason": "test_fixture_pass"},
+    )
     monkeypatch.setattr(
         bench, "_generate_llm_formula",
         lambda *a, **k: {
@@ -321,3 +326,42 @@ def test_exp1_hybrid_rejects_invalid_nn_fallback_predictions(monkeypatch):
     assert result["success"] is False
     assert np.isnan(result["train_r2"])
     assert np.isnan(result["test_r2"])
+
+
+def test_directional_nn_validation_split_matches_outer_split_direction():
+    X = np.arange(100, dtype=float).reshape(-1, 1)
+    fit_hi, edge_hi = bench._directional_edge_split_indices(
+        X, feature_idx=0, direction="high", edge_fraction=0.2
+    )
+    fit_lo, edge_lo = bench._directional_edge_split_indices(
+        X, feature_idx=0, direction="low", edge_fraction=0.2
+    )
+    assert X[edge_hi, 0].min() > X[fit_hi, 0].max()
+    assert X[edge_lo, 0].max() < X[fit_lo, 0].min()
+
+
+def test_nn_quality_gate_fails_closed_without_calibrated_threshold(monkeypatch):
+    monkeypatch.delenv("HYPATIAX_NN_EDGE_MIN_R2", raising=False)
+    result = bench._nn_quality_gate({
+        "validation_r2": 0.9,
+        "baseline_mean_validation_r2": 0.1,
+        "baseline_linear_validation_r2": 0.2,
+    })
+    assert result["passed"] is False
+    assert result["reason"] == "nn_edge_threshold_not_configured"
+
+
+def test_nn_quality_gate_requires_beating_training_baselines(monkeypatch):
+    monkeypatch.setenv("HYPATIAX_NN_EDGE_MIN_R2", "0.5")
+    good = bench._nn_quality_gate({
+        "validation_r2": 0.7,
+        "baseline_mean_validation_r2": 0.1,
+        "baseline_linear_validation_r2": 0.6,
+    })
+    bad = bench._nn_quality_gate({
+        "validation_r2": 0.55,
+        "baseline_mean_validation_r2": 0.1,
+        "baseline_linear_validation_r2": 0.6,
+    })
+    assert good["passed"] is True
+    assert bad["passed"] is False
