@@ -119,3 +119,35 @@ def test_phase2_rendered_prompt_matches_hds_training_payload_for_fixture():
     assert NEUTRAL_TASK_DESCRIPTION in prompt
     assert "h=6.626e-34 (Planck)" in prompt
     assert "Do NOT use bare 'e' for elementary charge — use q_e instead." in prompt
+
+
+def test_phase2_render_gate_checks_prompt_text_not_json_escaped_wrapper():
+    import numpy as np
+    from hypatiax.core.base_pure_llm.baseline_pure_llm_defi_discovery import PureLLMBaseline
+    from scripts.run_pure_llm_arm import (
+        Case, NEUTRAL_TASK_DESCRIPTION, gate_prompt_leaks, hds_prompt_context,
+    )
+
+    X = np.column_stack([np.linspace(1.0, 2.0, 40)])
+    y = 3.0 * X[:, 0]
+    case = Case("Fixture", 42, NEUTRAL_TASK_DESCRIPTION, "physics", ["T"], {},
+                X, y)
+    patterns, constants = hds_prompt_context(case)
+    baseline = object.__new__(PureLLMBaseline)
+    prompt = baseline._generate_standard_prompt(
+        NEUTRAL_TASK_DESCRIPTION, "physics", ["T"],
+        {"constants": constants, "data_patterns": patterns, "hds_prompt_context": True},
+    )
+    rows = gate_prompt_leaks(prompt, case, patterns, constants)
+    assert all(passed for _, passed, _ in rows), rows
+
+def test_phase2_prompt_gate_does_not_confuse_neutral_wording_with_equation_leak():
+    from scripts.run_pure_llm_arm import Case, NEUTRAL_TASK_DESCRIPTION, gate_prompt_leaks
+    import numpy as np
+
+    case = Case("Fixture", 42, NEUTRAL_TASK_DESCRIPTION, "physics", ["T"], {},
+                np.ones((4, 1)), np.ones(4))
+    prompt = f"Task: {NEUTRAL_TASK_DESCRIPTION}\\nDomain: physics\\nVariables: T"
+    rows = gate_prompt_leaks(prompt, case)
+    description = next(row for row in rows if row[0] == "A3-2 equation description absent")
+    assert description[1], description
