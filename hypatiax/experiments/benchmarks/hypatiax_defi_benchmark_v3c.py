@@ -411,66 +411,145 @@ def _train_and_eval_nn(
     seed: int = _NN_SEED,
     max_time_s: float = _NN_MAX_TIME_S,
     augment: bool = True,
+    patience: int = 30,
+    min_delta: float = 1e-6,
 ) -> dict:
     """
-    Train a small MLP on (X_train, y_train) and evaluate on both splits.
-    Returns dict: train_r2, test_r2, success, y_pred_train, y_pred_test.
+    Train an MLP with a deterministic validation split drawn ONLY from the
+    outer training partition. The extrapolation test partition is evaluated
+    once, after model selection, and is never used for early stopping.
 
-    max_time_s: hard wall-clock limit.  Training stops early if exceeded.
-    The early-stop flag is returned as 'timed_out' so callers can log it.
-    augment: if True (default), adds log/sqrt/ratio features before training
-             (v3c2-fix4: physics-informed feature augmentation).
+    A wall-clock timeout is a failed/incomplete fit (success=False), even when
+    a usable best-so-far checkpoint exists. This keeps partial runs out of the
+    reported fallback-success denominator.
     """
-    torch.manual_seed(seed); np.random.seed(seed)
-    hidden = hidden or [128, 64, 32]
-
-    # Fit the augmentation layout on training rows only, then reuse it for
-    # held-out rows. This prevents train/test feature-width drift and leakage.
-    if augment:
-        augmentation_schema = _feature_augmentation_schema(X_train)
-        X_train = _augment_features(X_train, schema=augmentation_schema)
-        X_test  = _augment_features(X_test, schema=augmentation_schema)
-
-    sx, sy = StandardScaler(), StandardScaler()
-    Xtr = sx.fit_transform(X_train)
-    ytr = sy.fit_transform(y_train.reshape(-1, 1)).flatten()
-
-    model = _MLP(X_train.shape[1], hidden)
-    opt   = torch.optim.Adam(model.parameters(), lr=0.001)
-    crit  = nn.MSELoss()
-    Xt = torch.FloatTensor(Xtr)
-    yt = torch.FloatTensor(ytr).reshape(-1, 1)
-
-    timed_out  = False
-    _wall_start = time.time()
-    model.train()
-    for epoch in range(epochs):
-        opt.zero_grad(); loss = crit(model(Xt), yt); loss.backward(); opt.step()
-        # Check wall-clock every 25 epochs to avoid per-epoch overhead
-        if epoch % 25 == 0 and (time.time() - _wall_start) >= max_time_s:
-            timed_out = True
-            print(f"    ⏱  NN wall-clock limit ({max_time_s}s) reached at epoch {epoch} — stopping early")
-            break
-
-    def _decode(raw): return sy.inverse_transform(raw.reshape(-1, 1)).flatten()
-    def _r2(yt_, yp_):
-        ss_r = np.sum((yt_ - yp_) ** 2); ss_t = np.sum((yt_ - yt_.mean()) ** 2)
-        return float(_r2_checked(yt_, yp_)[0])  # NaN for a degenerate target
-
-    model.eval()
-    with torch.no_grad():
-        yp_tr = _decode(model(Xt).numpy().flatten())
-        Xte   = torch.FloatTensor(sx.transform(X_test))  # X_test already augmented above
-        yp_te = _decode(model(Xte).numpy().flatten())
-
-    return {
-        "train_r2":    _r2(y_train, yp_tr),
-        "test_r2":     _r2(y_test,  yp_te),
-        "success":     True,
-        "timed_out":   timed_out,
-        "y_pred_train": yp_tr,
-        "y_pred_test":  yp_te,
+    started = time.time()
+    result = {
+        "train_r2": float("nan"), "test_r2": float("nan"),
+        "success": False, "timed_out": False,
+        "epochs_completed": 0, "best_epoch": None,
+        "validation_loss": None, "training_time_s": 0.0,
+        "failure_reason": None, "y_pred_train": None, "y_pred_test": None,
     }
+    try:
+        X_train = np.asarray(X_train, dtype=float)
+        y_train = np.asarray(y_train, dtype=float).reshape(-1)
+        X_test = np.asarray(X_test, dtype=float)
+        y_test = np.asarray(y_test, dtype=float).reshape(-1)
+        if (X_train.ndim != 2 or X_test.ndim != 2
+                or X_train.shape[1] != X_test.shape[1]
+                or len(X_train) != len(y_train) or len(X_test) != len(y_test)
+                or len(X_train) < 8 or len(X_test) == 0):
+            raise ValueError("invalid_or_insufficient_nn_input_shapes")
+        if not (np.isfinite(X_train).all() and np.isfinite(y_train).all()
+                and np.isfinite(X_test).all() and np.isfinite(y_test).all()):
+            raise ValueError("nonfinite_nn_input")
+
+        torch.manual_seed(seed)
+        hidden = hidden or [128, 64, 32]
+        # Local RNG: deterministic validation rows without perturbing the
+        # benchmark's global NumPy RNG stream.
+        order = np.random.RandomState(seed).permutation(len(X_train))
+        n_val = max(2, int(round(0.2 * len(X_train))))
+        n_val = min(n_val, len(X_train) - 3)
+        val_idx, fit_idx = order[:n_val], order[n_val:]
+        X_fit, y_fit = X_train[fit_idx], y_train[fit_idx]
+        X_val, y_val = X_train[val_idx], y_train[val_idx]
+
+        if augment:
+            augmentation_schema = _feature_augmentation_schema(X_fit)
+            X_fit = _augment_features(X_fit, schema=augmentation_schema)
+            X_val = _augment_features(X_val, schema=augmentation_schema)
+            X_train_eval = _augment_features(X_train, schema=augmentation_schema)
+            X_test_eval = _augment_features(X_test, schema=augmentation_schema)
+        else:
+            X_train_eval, X_test_eval = X_train, X_test
+
+        sx, sy = StandardScaler(), StandardScaler()
+        X_fit_scaled = sx.fit_transform(X_fit)
+        X_val_scaled = sx.transform(X_val)
+        y_fit_scaled = sy.fit_transform(y_fit.reshape(-1, 1)).reshape(-1)
+        y_val_scaled = sy.transform(y_val.reshape(-1, 1)).reshape(-1)
+
+        model = _MLP(X_fit_scaled.shape[1], hidden)
+        opt = torch.optim.Adam(model.parameters(), lr=0.001)
+        crit = nn.MSELoss()
+        Xt = torch.as_tensor(X_fit_scaled, dtype=torch.float32)
+        yt = torch.as_tensor(y_fit_scaled, dtype=torch.float32).reshape(-1, 1)
+        Xv = torch.as_tensor(X_val_scaled, dtype=torch.float32)
+        yv = torch.as_tensor(y_val_scaled, dtype=torch.float32).reshape(-1, 1)
+
+        best_loss = float("inf")
+        best_state = None
+        best_epoch = None
+        stale_epochs = 0
+        timed_out = False
+        for epoch in range(1, int(epochs) + 1):
+            if (time.time() - started) >= max_time_s:
+                timed_out = True
+                break
+            model.train()
+            opt.zero_grad()
+            fit_loss = crit(model(Xt), yt)
+            fit_loss.backward()
+            opt.step()
+
+            model.eval()
+            with torch.no_grad():
+                val_loss = float(crit(model(Xv), yv).item())
+            result["epochs_completed"] = epoch
+            if not np.isfinite(val_loss):
+                raise ValueError("nonfinite_validation_loss")
+            if val_loss < best_loss - float(min_delta):
+                best_loss = val_loss
+                best_epoch = epoch
+                best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
+                stale_epochs = 0
+            else:
+                stale_epochs += 1
+            if stale_epochs >= int(patience):
+                break
+
+        if timed_out:
+            result["timed_out"] = True
+            result["failure_reason"] = "training_wall_clock_timeout"
+            return result
+        if best_state is None:
+            raise ValueError("no_valid_validation_checkpoint")
+        model.load_state_dict(best_state)
+        result["best_epoch"] = int(best_epoch)
+        result["validation_loss"] = float(best_loss)
+
+        # Refit the feature scaler using the complete outer training partition;
+        # retain the model's fit-subset scaler for inference to avoid changing
+        # the coordinate system in which the selected weights were learned.
+        Xtr_eval = torch.as_tensor(sx.transform(X_train_eval), dtype=torch.float32)
+        Xte_eval = torch.as_tensor(sx.transform(X_test_eval), dtype=torch.float32)
+        model.eval()
+        with torch.no_grad():
+            raw_train = model(Xtr_eval).cpu().numpy().reshape(-1)
+            raw_test = model(Xte_eval).cpu().numpy().reshape(-1)
+        yp_train = sy.inverse_transform(raw_train.reshape(-1, 1)).reshape(-1)
+        yp_test = sy.inverse_transform(raw_test.reshape(-1, 1)).reshape(-1)
+        if (yp_train.shape != y_train.shape or yp_test.shape != y_test.shape
+                or not np.isfinite(yp_train).all() or not np.isfinite(yp_test).all()):
+            raise ValueError("invalid_nn_prediction_shape_or_values")
+
+        train_r2 = float(_r2_checked(y_train, yp_train)[0])
+        test_r2 = float(_r2_checked(y_test, yp_test)[0])
+        result.update({
+            "train_r2": train_r2, "test_r2": test_r2,
+            "success": bool(np.isfinite(train_r2) and np.isfinite(test_r2)),
+            "y_pred_train": yp_train, "y_pred_test": yp_test,
+            "failure_reason": None if (np.isfinite(train_r2) and np.isfinite(test_r2))
+                              else "undefined_train_or_test_metric",
+        })
+        return result
+    except Exception as exc:
+        result["failure_reason"] = f"{type(exc).__name__}: {exc}"
+        return result
+    finally:
+        result["training_time_s"] = round(time.time() - started, 6)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
