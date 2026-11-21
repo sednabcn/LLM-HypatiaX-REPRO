@@ -568,7 +568,9 @@ class DeFiExperimentProtocol:
         )
         np.random.shuffle(expected_apy)
 
-        il_risk = np.linspace(0.05, 0.25, n)
+        # Avoid a saturated all-ones held-out target (undefined test R²) while
+        # retaining the capped Kelly objective and the same 40/60 APY split.
+        il_risk = np.linspace(0.20, 0.50, n)
 
         # CORRECT Kelly formula: f* = min(μ / (λ * σ²), 1.0)
         # where λ = 2.0 (risk aversion)
@@ -1693,9 +1695,9 @@ class DeFiExperimentProtocol:
         tests.append(
             (
                 "Options Delta rate of change of option price relative to underlying",
-                np.column_stack([moneyness, implied_vol]),
+                np.column_stack([moneyness, implied_vol, time_to_expiry]),
                 delta,
-                ["moneyness", "implied_volatility"],
+                ["moneyness", "implied_volatility", "time_to_expiry"],
                 {
                     "domain": "derivatives",
                     "ground_truth": "clip(0.5 + m/(2*vol*sqrt(T)), 0, 1)",
@@ -1726,11 +1728,12 @@ class DeFiExperimentProtocol:
         tests.append(
             (
                 "Black-Scholes Call Price for European call option",
-                np.column_stack([S, sigma]),
+                np.column_stack([S, sigma, T]),
                 call_price,
-                ["spot_price", "implied_volatility"],
+                ["spot_price", "implied_volatility", "time_to_expiry"],
                 {
                     "domain": "derivatives",
+                    "constants": {"strike": 100.0, "risk_free_rate": 0.04},
                     "ground_truth": "S*norm_cdf(d1) - K*exp(-rT)*norm_cdf(d2)",
                     "extrapolation_test": True,
                     "train_range": "sigma 0.10-0.25",
@@ -1876,10 +1879,11 @@ class DeFiExperimentProtocol:
 
         tests.append((
             "Black-Scholes Put Price for European put option",
-            np.column_stack([S_put, sigma_put]),
+            np.column_stack([S_put, sigma_put, T_put]),
             put_price,
-            ["spot_price", "implied_volatility"],
+            ["spot_price", "implied_volatility", "time_to_expiry"],
             {"domain": "derivatives",
+             "constants": {"strike": 100.0, "risk_free_rate": 0.04},
              "ground_truth": "K*exp(-rT)*norm_cdf(-d2) - S*norm_cdf(-d1)",
              "extrapolation_test": True,
              "train_range": "sigma 0.10-0.25",
@@ -1905,6 +1909,7 @@ class DeFiExperimentProtocol:
             gamma,
             ["spot_price", "implied_volatility", "time_to_expiry"],
             {"domain": "derivatives",
+             "constants": {"strike": 100.0, "risk_free_rate": 0.04},
              "ground_truth": "norm_pdf(d1) / (S * sigma * sqrt(T))",
              "extrapolation_test": False},
         ))
@@ -1928,6 +1933,7 @@ class DeFiExperimentProtocol:
             vega,
             ["spot_price", "implied_volatility", "time_to_expiry"],
             {"domain": "derivatives",
+             "constants": {"strike": 100.0, "risk_free_rate": 0.04},
              "ground_truth": "S * norm_pdf(d1) * sqrt(T)",
              "extrapolation_test": False},
         ))
