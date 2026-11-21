@@ -1,11 +1,13 @@
 """
 Pure LLM baseline for the DeFi / Feynman formula-discovery benchmark.
 
-INPUT-PARITY POLICY (release version)
-  The prompt contains only: the task description, domain, variable names and
-  the protocol's physical constants (task spec). It contains NO target
-  formula, NO code template, NO per-equation sign/form corrections and NO
-  statistics derived from the data. All former equation-specific hint blocks
+INPUT-PARITY POLICY
+  The general-purpose baseline contains task wording, domain, variable names,
+  and task-specific constants when supplied. Phase 2's explicit
+  hds_prompt_context adds only the HDS-matched rounded constants and the
+  DataPatternAnalyzer summary computed from the training split. No target
+  formula, equation name/description, evaluation-set statistics, or equation-
+  specific hints are included. All former equation-specific hint blocks
   (Nernst, Clausius-Mossotti, Fourier, Gaussian, the specialized
   liquidation/Kelly/leverage/collateral/ES/logistic/Michaelis-Menten/
   allometric/Arrhenius prompts, and the generic normalisation hint) were
