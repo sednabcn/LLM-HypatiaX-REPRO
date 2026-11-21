@@ -77,6 +77,14 @@ def test_exp1c_is_an_alias_of_the_existing_protocol30_pca_stage():
     assert "      runner_stage: exp2_protocol30_pca_4060" in config
     assert "      method_ids: [2, 3]" in config
     assert "      verification_status: not_executed" in config
+    launcher = (root / "run_all.sh").read_text()
+    assert 'run exp2_protocol30_pca_4060' in launcher
+    runner = (
+        root / "hypatiax" / "experiments" / "benchmarks"
+        / "run_comparative_suite_benchmark_pca.py"
+    ).read_text()
+    assert "2  ImprovedNN" in runner
+    assert "3  EnhancedHybridDeFi" in runner
 
 
 def test_case_record_identifies_the_protocol_split_for_rescoring():
