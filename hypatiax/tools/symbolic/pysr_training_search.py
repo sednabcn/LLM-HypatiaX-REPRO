@@ -8,6 +8,7 @@ import numpy as np
 
 from .training_validation import (
     CandidateValidationSummary,
+    FoldPredictorContractError,
     TrainingFold,
     evaluate_candidate_on_training_folds,
 )
@@ -88,7 +89,7 @@ def evaluate_pysr_search_on_training_folds(
         if model is None:
             raise ValueError("searcher_factory returned None")
         if any(model is previous for previous in retained_models):
-            raise ValueError("searcher_factory must return a fresh PySR model for every fold")
+            raise FoldPredictorContractError("searcher_factory must return a fresh PySR model for every fold")
         retained_models.append(model)
         if not callable(getattr(model, "fit", None)) or not callable(
             getattr(model, "predict", None)
