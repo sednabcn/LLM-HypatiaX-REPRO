@@ -1005,19 +1005,20 @@ def _hybrid_predict_and_eval(
         )
 
     y_test_arr = np.asarray(y_test, dtype=float).reshape(-1)
-    test_target_constant = (
-        y_test_arr.size == 0 or not np.isfinite(y_test_arr).all()
-        or float(np.ptp(y_test_arr)) <= 1e-12
-    )
-    test_r2_status = (
-        "constant_target" if test_target_constant
-        else "defined" if np.isfinite(test_r2)
-        else "nonfinite_metric_or_prediction"
-    )
-    success = bool(np.isfinite(selected_train_r2) and np.isfinite(test_r2))
+    if y_test_arr.size == 0 or not np.isfinite(y_test_arr).all():
+        test_r2_status = "invalid_target"
+    elif float(np.ptp(y_test_arr)) <= 1e-12:
+        test_r2_status = "constant_target"
+    elif np.isfinite(test_r2):
+        test_r2_status = "defined"
+    else:
+        test_r2_status = "nonfinite_metric_or_prediction"
+    train_r2_status = "defined" if np.isfinite(selected_train_r2) else "nonfinite_metric"
+    success = bool(train_r2_status == "defined" and test_r2_status == "defined")
     return {
         "train_r2": float(selected_train_r2), "test_r2": float(test_r2),
-        "train_r2_source": train_r2_source, "test_r2_status": test_r2_status,
+        "train_r2_source": train_r2_source, "train_r2_status": train_r2_status,
+        "test_r2_status": test_r2_status,
         "decision": decision, "llm_code": llm_code if has_formula else None,
         "llm_train_r2": _metric(llm_train_r2), "route_reason": route_reason,
         "route_execution_status": route_execution_status,
