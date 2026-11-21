@@ -1,4 +1,4 @@
-name: Delete failed workflow runs
+name: Delete failed and cancelled workflow runs
 
 on:
   workflow_dispatch:
@@ -19,7 +19,7 @@ jobs:
   cleanup:
     runs-on: ubuntu-latest
     steps:
-      - name: Delete failed runs
+      - name: Delete failed and cancelled runs
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -27,8 +27,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Statuses to clean up. Add "cancelled" or "timed_out" if you want those gone too.
-          for status in failure; do
+          # Conclusions to clean up. Add "timed_out" if you want those gone too.
+          for status in failure cancelled; do
             echo "Collecting runs with conclusion: $status"
             gh api --paginate \
               "repos/$REPO/actions/runs?status=$status&per_page=100" \
