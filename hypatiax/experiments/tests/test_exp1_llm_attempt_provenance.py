@@ -122,7 +122,7 @@ def test_exp1_split_audit_records_primary_feature_percentile():
     assert audit["realized_method"] == "primary_feature_percentile"
     assert audit["fallback_used"] is False
     assert audit["quantile_percent"] == 40
-    assert audit["threshold"] == 39.6
+    assert abs(audit["threshold"] - 39.6) < 1e-9
     assert audit["selection_rule"] == "feature_value <= threshold"
     assert audit["train_size"] == 40
     assert audit["test_size"] == 60
