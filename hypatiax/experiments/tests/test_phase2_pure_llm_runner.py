@@ -122,8 +122,8 @@ def test_phase2_rendered_prompt_matches_hds_training_payload_for_fixture():
 
 
 def test_phase2_render_gate_checks_prompt_text_not_json_escaped_wrapper():
-    from hypatiax.experiments.benchmarks.exp1_ablation import CORE_15
     import numpy as np
+    from hypatiax.core.base_pure_llm.baseline_pure_llm_defi_discovery import PureLLMBaseline
     from scripts.run_pure_llm_arm import (
         Case, NEUTRAL_TASK_DESCRIPTION, gate_prompt_leaks, hds_prompt_context,
     )
@@ -133,16 +133,13 @@ def test_phase2_render_gate_checks_prompt_text_not_json_escaped_wrapper():
     case = Case("Fixture", 42, NEUTRAL_TASK_DESCRIPTION, "physics", ["T"], {},
                 X, y)
     patterns, constants = hds_prompt_context(case)
-    prompt = (
-        f"Task: {NEUTRAL_TASK_DESCRIPTION}\\nDomain: physics\\nVariables: T\\n"
-        "AVAILABLE PHYSICAL CONSTANTS: h=6.626e-34, c=2.998e8, "
-        "N_A=6.022e23, mu0=1.257e-6\\n"
-        "DATA PATTERNS (computed from training split only):\\n"
-        + json.dumps(patterns, indent=2)
+    baseline = object.__new__(PureLLMBaseline)
+    prompt = baseline._generate_standard_prompt(
+        NEUTRAL_TASK_DESCRIPTION, "physics", ["T"],
+        {"constants": constants, "data_patterns": patterns, "hds_prompt_context": True},
     )
     rows = gate_prompt_leaks(prompt, case, patterns, constants)
     assert all(passed for _, passed, _ in rows), rows
-
 
 def test_phase2_prompt_gate_does_not_confuse_neutral_wording_with_equation_leak():
     from scripts.run_pure_llm_arm import Case, NEUTRAL_TASK_DESCRIPTION, gate_prompt_leaks
