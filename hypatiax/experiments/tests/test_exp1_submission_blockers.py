@@ -40,6 +40,11 @@ def test_hybrid_formula_and_provenance_are_written_to_case_results():
 
     assert '"formula":         hy_m.get("llm_code")' in runner
     assert '"llm_train_r2":    hy_m.get("llm_train_r2")' in runner
+    assert '"formula_context": {' in runner
+    assert '"llm_model": LLM_MODEL' in runner
+    assert '"audit_data": {' in runner
+    for field in ("X_train", "y_train", "X_test", "y_test"):
+        assert f'"{field}"' in runner
     for field in ("llm_called", "bypass_kind", "llm_source"):
         assert f'"{field}"' in runner
 
