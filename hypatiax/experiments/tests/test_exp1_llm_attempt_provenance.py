@@ -65,3 +65,19 @@ def test_exp1_client_construction_failure_is_not_recorded_as_request(monkeypatch
     assert result["bypass_kind"] == "none"
     assert result["llm_source"] == "v3c_builtin_failed"
     assert "simulated client configuration failure" in result["error"]
+
+
+def test_exp1_artifact_declares_query_time_ood_covariate_scope():
+    from pathlib import Path
+
+    source_path = (
+        Path(__file__).resolve().parents[1]
+        / "benchmarks"
+        / "hypatiax_defi_benchmark_v3c.py"
+    )
+    source = source_path.read_text(encoding="utf-8")
+
+    assert '"density_fit_rows": "X_train"' in source
+    assert '"query_rows": "X_test"' in source
+    assert '"query_labels_used": False' in source
+    assert '"access_mode": "query_time_covariate_access"' in source
