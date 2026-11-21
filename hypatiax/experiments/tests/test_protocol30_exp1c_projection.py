@@ -134,3 +134,9 @@ def test_protocol30_aggregate_stage_emits_the_exp1c_view():
     assert "project_protocol30_exp1c_view.py" in block
     assert "protocol30_pca_4060_aggregate.json" in block
     assert "protocol30_pca_4060_exp1c_view.json" in block
+
+
+def test_exp1c_config_names_the_source_and_derived_view():
+    config = (ROOT / "config/fresh_rerun.yaml").read_text()
+    assert "source_artifact: protocol30_pca_4060_aggregate.json" in config
+    assert "projection_artifact: protocol30_pca_4060_exp1c_view.json" in config
