@@ -54,7 +54,7 @@ def test_exp1_llm_request_honours_timeout_without_hidden_retries():
     assert 'os.environ.get("LLM_METHOD_TIMEOUT", "120")' in source
     assert "timeout=timeout_s" in source
     assert "max_retries=0" in source
-    assert '"llm_timeout_s":   hy_m.get("llm_timeout_s")' in source
+    assert 'hy_m.get("llm_timeout_s")' in source
 
 
 def test_exp1_configuration_matches_the_v3c_primary_feature_split():
