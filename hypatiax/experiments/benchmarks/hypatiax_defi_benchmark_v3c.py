@@ -784,14 +784,16 @@ Example output:
 def formula({var_list}):
     return <expression>
 """
+    call_info = {}
     try:
-        from hypatiax.core.llm_call import create_message  # UNIFIED-TEMPERATURE
+        from hypatiax.core.llm_call import create_message, last_call_info  # UNIFIED-TEMPERATURE
         resp = create_message(
         client,
             model=LLM_MODEL,
             max_tokens=1000,
             messages=[{"role": "user", "content": prompt}],
         )
+        call_info = last_call_info()
         code = resp.content[0].text.strip()
         # Strip markdown fences if present
         if "```" in code:
@@ -801,12 +803,18 @@ def formula({var_list}):
         return {"python_code": code, "formula": code,
                 "success": "def formula" in code, "error": None,
                 "llm_called": True, "bypass_kind": "live",
-                "llm_source": "v3c_builtin", "timeout_s": timeout_s}
+                "llm_source": "v3c_builtin", "timeout_s": timeout_s,
+                "temperature_requested": call_info.get("temperature_requested"),
+                "temperature_sent": call_info.get("temperature_sent", False)}
     except Exception as e:
+        if "last_call_info" in locals():
+            call_info = last_call_info()
         return {"python_code": None, "formula": None,
                 "success": False, "error": str(e),
                 "llm_called": False, "bypass_kind": "none",
-                "llm_source": "v3c_builtin_failed", "timeout_s": timeout_s}
+                "llm_source": "v3c_builtin_failed", "timeout_s": timeout_s,
+                "temperature_requested": call_info.get("temperature_requested"),
+                "temperature_sent": call_info.get("temperature_sent", False)}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1020,6 +1028,8 @@ def _hybrid_predict_and_eval(
         "bypass_kind":    llm_result.get("bypass_kind", "none"),       # B2
         "llm_source":     llm_result.get("llm_source", "unknown"),
         "llm_timeout_s":  llm_result.get("timeout_s"),
+        "llm_temperature_requested": llm_result.get("temperature_requested"),
+        "llm_temperature_sent": llm_result.get("temperature_sent", False),
         "success":        True,
     }
 
@@ -1541,6 +1551,8 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "bypass_kind":     hy_m.get("bypass_kind"),     # B2
                     "llm_source":      hy_m.get("llm_source"),
                     "llm_timeout_s":   hy_m.get("llm_timeout_s"),
+                    "llm_temperature_requested": hy_m.get("llm_temperature_requested"),
+                    "llm_temperature_sent": hy_m.get("llm_temperature_sent"),
                     # Retain the exact generated Python formula for audit and
                     # independent rescoring on the identical protocol split.
                     "formula":         hy_m.get("llm_code"),
