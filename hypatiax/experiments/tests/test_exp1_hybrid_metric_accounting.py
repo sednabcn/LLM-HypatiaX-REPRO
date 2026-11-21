@@ -322,7 +322,8 @@ def test_exp1_hybrid_rejects_invalid_nn_fallback_predictions(monkeypatch):
         nn_result=invalid_nn,
     )
 
-    assert result["route_execution_status"] == "nn_fallback_failed"
+    assert result["route_execution_status"] == "nn_quality_gate_failed"
+    assert result["decision"] == "nn_unavailable"
     assert result["success"] is False
     assert np.isnan(result["train_r2"])
     assert np.isnan(result["test_r2"])
@@ -365,3 +366,37 @@ def test_nn_quality_gate_requires_beating_training_baselines(monkeypatch):
     })
     assert good["passed"] is True
     assert bad["passed"] is False
+
+
+
+def test_hybrid_nn_fallback_fails_closed_when_quality_gate_rejects(monkeypatch):
+    _common(monkeypatch, "fitted_llm")
+    Xtr, ytr, Xte, yte = _inputs()
+
+    def eval_formula(code, X, y, constants=None):
+        return (0.8, True) if len(y) == len(ytr) else (float("nan"), False)
+
+    nn_result = {
+        "train_r2": 0.8, "test_r2": -2.0, "success": True,
+        "validation_r2": 0.1,
+        "baseline_mean_validation_r2": -0.1,
+        "baseline_linear_validation_r2": 0.2,
+        "y_pred_train": np.full(len(ytr), 0.4),
+        "y_pred_test": np.full(len(yte), 0.4),
+    }
+    monkeypatch.setattr(bench, "_eval_formula_r2", eval_formula)
+    monkeypatch.setattr(
+        bench, "_nn_quality_gate",
+        lambda candidate: {"passed": False, "reason": "edge_quality_below_gate"},
+    )
+
+    result = bench._hybrid_predict_and_eval(
+        "fixture", "defi", Xtr, ytr, Xte, yte, ["x"], {},
+        nn_result=nn_result,
+    )
+
+    assert result["decision"] == "nn_unavailable"
+    assert result["route_execution_status"] == "nn_quality_gate_failed"
+    assert result["success"] is False
+    assert np.isnan(result["test_r2"])
+    assert result["nn_quality_gate"]["passed"] is False
