@@ -25,7 +25,7 @@ def _runner():
     return node
 
 
-def _dict_assignment(function, target_name, key):
+def _dict_assignment(function, target_name, key, *, containing_name=None):
     for node in ast.walk(function):
         if not isinstance(node, (ast.Assign, ast.AnnAssign)):
             continue
@@ -40,7 +40,8 @@ def _dict_assignment(function, target_name, key):
                 continue
             slice_node = target.slice
             if isinstance(slice_node, ast.Constant) and slice_node.value == key:
-                return value
+                if containing_name is None or _contains_name(value, containing_name):
+                    return value
     raise AssertionError(f"missing {target_name}[{key!r}] dictionary assignment")
 
 
@@ -76,7 +77,7 @@ def test_exp1_runner_passes_attempt_state_into_hybrid_and_persists_failure_prove
     assert state_arg.id == "hybrid_llm_state"
 
     failure_fields = _literal_dict_fields(
-        _dict_assignment(runner, "case_results", "hybrid")
+        _dict_assignment(runner, "case_results", "hybrid", containing_name="hybrid_llm_state")
     )
     expected_state_fields = {
         "llm_called": "llm_called",
