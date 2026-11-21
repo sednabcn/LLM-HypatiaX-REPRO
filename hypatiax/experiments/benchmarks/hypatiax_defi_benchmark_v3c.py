@@ -503,6 +503,12 @@ def _train_and_eval_nn(
             result["epochs_completed"] = epoch
             if not np.isfinite(val_loss):
                 raise ValueError("nonfinite_validation_loss")
+            # Enforce the wall-clock budget after every completed epoch too:
+            # a slow final epoch must not be reported as a successful fit just
+            # because early stopping fires before the next loop-top check.
+            if (time.time() - started) >= max_time_s:
+                timed_out = True
+                break
             if val_loss < best_loss - float(min_delta):
                 best_loss = val_loss
                 best_epoch = epoch
