@@ -785,10 +785,14 @@ def formula({var_list}):
     return <expression>
 """
     call_info = {}
+    api_attempted = False
     try:
         from hypatiax.core.llm_call import create_message, last_call_info  # UNIFIED-TEMPERATURE
+        # Set immediately before entering the single-attempt API wrapper. A
+        # timeout/provider error is still an attempted live request.
+        api_attempted = True
         resp = create_message(
-        client,
+            client,
             model=LLM_MODEL,
             max_tokens=1000,
             messages=[{"role": "user", "content": prompt}],
@@ -811,7 +815,7 @@ def formula({var_list}):
             call_info = last_call_info()
         return {"python_code": None, "formula": None,
                 "success": False, "error": str(e),
-                "llm_called": False, "bypass_kind": "none",
+                "llm_called": api_attempted, "bypass_kind": "none",
                 "llm_source": "v3c_builtin_failed", "timeout_s": timeout_s,
                 "temperature_requested": call_info.get("temperature_requested"),
                 "temperature_sent": call_info.get("temperature_sent", False)}
@@ -845,192 +849,195 @@ def _hybrid_predict_and_eval(
     X_train: np.ndarray, y_train: np.ndarray,
     X_test:  np.ndarray, y_test:  np.ndarray,
     var_names: list[str], metadata: dict,
+    llm_attempt_state: dict | None = None,
 ) -> dict:
-    """
-    Full hybrid pipeline for one test case.
-    Returns dict: train_r2, test_r2, decision, success.
-
-    Routing priority:
-      1. Trust gate failure -> NN fallback.
-      2. Structural-risk function call -> LLM+NN ensemble (always takes precedence).
-      3. Training-only NN edge degradation; LLM-only Hybrid route if train R² >= 0.95
-         and Delta <= the pre-calibrated tau. Missing tau -> ensemble.
-      4. KDE fitted on training covariates; per-query w_LLM=0.3+0.7*p_OOD.
-      5. Held-out labels are used only for final metrics, never routing/blending.
-    """
-
-    # Step 1: Generate LLM formula
+    """Run the Exp1 LLM/NN route and report metrics for the predictor used."""
     llm_result = _generate_llm_formula(description, domain, var_names, metadata)
-    llm_code   = llm_result.get("python_code") or ""
+    llm_code = llm_result.get("python_code") or ""
     has_formula = bool(llm_code and "def formula" in llm_code)
-
-    # Extract constants from metadata — injected into exec globals so formulas
-    # that reference protocol constants (e.g. K=100) don't NameError at eval time.
+    if llm_attempt_state is not None:
+        llm_attempt_state.update({
+            "llm_called": bool(llm_result.get("llm_called", False)),
+            "bypass_kind": llm_result.get("bypass_kind", "none"),
+            "llm_source": llm_result.get("llm_source", "unknown"),
+            "llm_timeout_s": llm_result.get("timeout_s"),
+            "llm_temperature_requested": llm_result.get("temperature_requested"),
+            "llm_temperature_sent": llm_result.get("temperature_sent", False),
+            "llm_code": llm_code if has_formula else None,
+        })
     constants = metadata.get("constants") or {}
-
-    # Step 2: Evaluate LLM on training data (Fix 5 — unified evaluator)
     llm_train_r2, llm_train_ok = (
         _eval_formula_r2(llm_code, X_train, y_train, constants=constants)
         if has_formula else (float("nan"), False)
     )
-
-    # Fix 5b + FIX 10: formula is trustworthy only if it fits training data well
-    # AND does not exhibit any known pathological patterns.
-    # FIX 10: raised threshold from > 0.0 to > 0.5 for stronger trust gate.
     llm_trustworthy = (
-        has_formula
-        and llm_train_ok
+        has_formula and llm_train_ok and np.isfinite(llm_train_r2)
         and llm_train_r2 >= 0.5
         and not _formula_has_pathological_behavior(llm_code)
     )
-
-    # Stages 2–4: structural risk, training-only NN edge probe, query-only KDE.
     structural_tokens = structural_risk_tokens(llm_code)
     structural_risk_flag = bool(structural_tokens)
     degradation_probe = (
         _extrapolation_probe(X_train, y_train)
         if llm_trustworthy else
-        {"status": "trust_gate_failed", "delta": None,
-         "r2_train": None, "r2_edge": None}
+        {"status": "trust_gate_failed", "delta": None, "r2_train": None, "r2_edge": None}
     )
     degradation_tau = _routing_delta_tau()
     try:
         ood_diagnostic = kde_ood_probability(X_train, X_test)
-    except Exception as _ood_exc:
-        _m5_record_failure("kde_ood_probability", _ood_exc)
+    except Exception as exc:
+        _m5_record_failure("kde_ood_probability", exc)
         ood_diagnostic = {"status": "error", "p_ood": None, "p_ood_per_query": []}
-
-    # Per-query manuscript weights: w_LLM = 0.3 + 0.7*p_OOD.
-    _p_query = np.asarray(ood_diagnostic.get("p_ood_per_query") or [], dtype=float)
-    if (
-        _p_query.size != len(X_test)
-        or not np.isfinite(_p_query).all()
-        or np.any((_p_query < 0.0) | (_p_query > 1.0))
-    ):
-        _p_query = np.zeros(len(X_test), dtype=float)  # fail to in-distribution alpha floor
-    _llm_w = 0.3 + 0.7 * _p_query
-    _nn_w = 1.0 - _llm_w
-    query_blend_weights = {
-        "llm": _llm_w.astype(float).tolist(),
-        "nn": _nn_w.astype(float).tolist(),
-    }
-
-    _policy = route_decision_from_diagnostics(
+    p_query = np.asarray(ood_diagnostic.get("p_ood_per_query") or [], dtype=float)
+    if (p_query.size != len(X_test) or not np.isfinite(p_query).all()
+            or np.any((p_query < 0.0) | (p_query > 1.0))):
+        p_query = np.zeros(len(X_test), dtype=float)
+    llm_w = 0.3 + 0.7 * p_query
+    query_blend_weights = {"llm": llm_w.astype(float).tolist(),
+                           "nn": (1.0 - llm_w).astype(float).tolist()}
+    policy = route_decision_from_diagnostics(
         bool(llm_trustworthy), llm_train_r2, structural_tokens,
         degradation_probe.get("delta"), degradation_tau,
     )
-    decision = "llm" if _policy["decision"] == "fitted_llm" else _policy["decision"]
-    route_reason = _policy["route_reason"]
-
-    # Step 5: Evaluate on TEST set using Fix 5 unified evaluator
-    nn_rerun_time_s = 0.0   # Issue 3: track NN cost paid by hybrid on fallback
+    decision = "llm" if policy["decision"] == "fitted_llm" else policy["decision"]
+    route_reason = policy["route_reason"]
+    nn_rerun_time_s = 0.0
     route_execution_status = "selected_route_executed"
+    selected_train_r2 = float("nan")
+    train_r2_source = "unavailable"
+    test_r2 = float("nan")
+
+    def _metric(value):
+        try:
+            value = float(value)
+        except (TypeError, ValueError, OverflowError):
+            return float("nan")
+        return value if np.isfinite(value) else float("nan")
+
+    def _use_nn_fallback(nn_result, reason):
+        nonlocal selected_train_r2, train_r2_source, test_r2
+        nonlocal decision, route_reason, route_execution_status
+        selected_train_r2 = _metric(nn_result.get("train_r2"))
+        test_r2 = _metric(nn_result.get("test_r2"))
+        train_r2_source = "nn_fallback"
+        decision = "nn_fallback" if np.isfinite(test_r2) else "nn_unavailable"
+        route_reason = reason
+        route_execution_status = (
+            "nn_fallback_executed"
+            if np.isfinite(selected_train_r2) and np.isfinite(test_r2)
+            else "nn_fallback_failed"
+        )
 
     if decision == "llm":
+        selected_train_r2 = _metric(llm_train_r2)
+        train_r2_source = "llm_formula"
         test_r2, ok = _eval_formula_r2(llm_code, X_test, y_test, constants=constants)
-        if not ok or not np.isfinite(test_r2):
-            _t_nn0 = time.time()
-            nn_m    = _train_and_eval_nn(X_train, y_train, X_test, y_test)
-            nn_rerun_time_s = time.time() - _t_nn0
-            test_r2 = float(nn_m.get("test_r2", float("nan")))
-            decision = "nn_fallback" if np.isfinite(test_r2) else "nn_unavailable"
-            route_reason = "hybrid_llm_evaluation_failed_nn_fallback" if decision == "nn_fallback" else "hybrid_llm_evaluation_and_nn_fallback_failed"
-            route_execution_status = decision
+        test_r2 = _metric(test_r2) if ok else float("nan")
+        if not np.isfinite(test_r2):
+            t0 = time.time()
+            nn_m = _train_and_eval_nn(X_train, y_train, X_test, y_test)
+            nn_rerun_time_s = time.time() - t0
+            _use_nn_fallback(
+                nn_m, "hybrid_llm_evaluation_failed_nn_fallback"
+                if np.isfinite(_metric(nn_m.get("test_r2")))
+                else "hybrid_llm_evaluation_and_nn_fallback_failed",
+            )
+        else:
+            route_execution_status = "llm_executed"
 
     elif decision == "ensemble" and has_formula:
-        # Fix 5: LLM test predictions via unified evaluator
         llm_test_preds = _execute_formula(llm_code, X_test, constants=constants)
-        _t_nn0         = time.time()
-        nn_m           = _train_and_eval_nn(X_train, y_train, X_test, y_test)
-        nn_rerun_time_s = time.time() - _t_nn0
-
-        if llm_test_preds is not None:
-            # FIX 7: also get LLM train predictions for uncertainty estimation
-            llm_train_preds = _execute_formula(llm_code, X_train, constants=constants)
-            if (
-                llm_train_preds is None
-                or nn_m.get("y_pred_test") is None
-                or nn_m.get("y_pred_train") is None
-                or not nn_m.get("success", False)
-            ):
-                test_r2 = float(nn_m.get("test_r2", float("nan")))
-                decision = "nn_fallback" if np.isfinite(test_r2) else "nn_unavailable"
-                route_reason = "ensemble_inputs_unavailable_nn_fallback" if decision == "nn_fallback" else "ensemble_and_nn_fallback_failed"
-                route_execution_status = decision
-            else:
-                # Per-query KDE weights use X_test covariates only; y_test is not consulted.
-                ensemble_pred = _ensemble_llm_nn(
-                    llm_pred_test=llm_test_preds,
-                    nn_pred_test=nn_m["y_pred_test"],
-                    llm_pred_train=llm_train_preds,
-                    nn_pred_train=nn_m["y_pred_train"],
-                    y_train=y_train,
-                    llm_r2=llm_train_r2,
-                    nn_r2=nn_m["train_r2"],
-                    blend_weights=query_blend_weights,
-                )
-                m = _compute_metrics(y_test, ensemble_pred)
-                test_r2 = float(m.get("r2", float("nan")))
-                if not np.isfinite(test_r2):
-                    route_execution_status = "ensemble_metrics_undefined"
-                else:
-                    route_execution_status = "ensemble_executed"
+        t0 = time.time()
+        nn_m = _train_and_eval_nn(X_train, y_train, X_test, y_test)
+        nn_rerun_time_s = time.time() - t0
+        llm_train_preds = _execute_formula(llm_code, X_train, constants=constants)
+        if (llm_test_preds is None or llm_train_preds is None
+                or nn_m.get("y_pred_test") is None or nn_m.get("y_pred_train") is None
+                or not nn_m.get("success", False)):
+            _use_nn_fallback(
+                nn_m, "ensemble_inputs_unavailable_nn_fallback"
+                if np.isfinite(_metric(nn_m.get("test_r2")))
+                else "ensemble_and_nn_fallback_failed",
+            )
         else:
-            test_r2 = float(nn_m.get("test_r2", float("nan")))
-            decision = "nn_fallback" if np.isfinite(test_r2) else "nn_unavailable"
-            route_reason = "llm_test_prediction_unavailable_nn_fallback" if decision == "nn_fallback" else "llm_and_nn_predictions_unavailable"
-            route_execution_status = decision
-
+            ensemble_test = _ensemble_llm_nn(
+                llm_pred_test=llm_test_preds, nn_pred_test=nn_m["y_pred_test"],
+                llm_pred_train=llm_train_preds, nn_pred_train=nn_m["y_pred_train"],
+                y_train=y_train, llm_r2=llm_train_r2, nn_r2=nn_m.get("train_r2"),
+                blend_weights=query_blend_weights,
+            )
+            ensemble_train = _ensemble_llm_nn(
+                llm_pred_test=llm_train_preds, nn_pred_test=nn_m["y_pred_train"],
+                llm_pred_train=llm_train_preds, nn_pred_train=nn_m["y_pred_train"],
+                y_train=y_train, llm_r2=llm_train_r2, nn_r2=nn_m.get("train_r2"),
+            )
+            selected_train_r2 = _metric(_compute_metrics(y_train, ensemble_train).get("r2"))
+            train_r2_source = "ensemble_training_residual_blend"
+            test_r2 = _metric(_compute_metrics(y_test, ensemble_test).get("r2"))
+            route_execution_status = (
+                "ensemble_executed"
+                if np.isfinite(selected_train_r2) and np.isfinite(test_r2)
+                else "ensemble_metrics_undefined"
+            )
     else:
-        # decision == "nn"
-        # Fix 3: if formula trustworthy, augment X with LLM predictions
         if llm_trustworthy:
             try:
-                llm_tr_preds = _execute_formula(llm_code, X_train, constants=constants)
-                llm_te_preds = _execute_formula(llm_code, X_test,  constants=constants)
-                if (llm_tr_preds is not None and llm_te_preds is not None):
-                    X_tr_aug = np.column_stack([X_train, llm_tr_preds])
-                    X_te_aug = np.column_stack([X_test,  llm_te_preds])
-                    _t_nn0 = time.time()
-                    nn_m     = _train_and_eval_nn(X_tr_aug, y_train, X_te_aug, y_test)
-                    nn_rerun_time_s = time.time() - _t_nn0
+                llm_train_preds = _execute_formula(llm_code, X_train, constants=constants)
+                llm_test_preds = _execute_formula(llm_code, X_test, constants=constants)
+                if llm_train_preds is not None and llm_test_preds is not None:
+                    nn_m = _train_and_eval_nn(
+                        np.column_stack([X_train, llm_train_preds]), y_train,
+                        np.column_stack([X_test, llm_test_preds]), y_test,
+                    )
                 else:
-                    _t_nn0 = time.time()
-                    nn_m     = _train_and_eval_nn(X_train, y_train, X_test, y_test)
-                    nn_rerun_time_s = time.time() - _t_nn0
+                    nn_m = _train_and_eval_nn(X_train, y_train, X_test, y_test)
             except Exception:
-                _t_nn0 = time.time()
-                nn_m         = _train_and_eval_nn(X_train, y_train, X_test, y_test)
-                nn_rerun_time_s = time.time() - _t_nn0
+                nn_m = _train_and_eval_nn(X_train, y_train, X_test, y_test)
         else:
-            _t_nn0 = time.time()
-            nn_m             = _train_and_eval_nn(X_train, y_train, X_test, y_test)
-            nn_rerun_time_s = time.time() - _t_nn0
-        test_r2 = float(nn_m.get("test_r2", float("nan")))
-        route_execution_status = "nn_fallback_executed" if np.isfinite(test_r2) else "nn_fallback_failed"
+            nn_m = _train_and_eval_nn(X_train, y_train, X_test, y_test)
+        selected_train_r2 = _metric(nn_m.get("train_r2"))
+        test_r2 = _metric(nn_m.get("test_r2"))
+        train_r2_source = "nn_route"
+        route_execution_status = (
+            "nn_executed"
+            if np.isfinite(selected_train_r2) and np.isfinite(test_r2)
+            else "nn_metrics_undefined"
+        )
 
+    y_test_arr = np.asarray(y_test, dtype=float).reshape(-1)
+    test_target_constant = (
+        y_test_arr.size == 0 or not np.isfinite(y_test_arr).all()
+        or float(np.ptp(y_test_arr)) <= 1e-12
+    )
+    test_r2_status = (
+        "constant_target" if test_target_constant
+        else "defined" if np.isfinite(test_r2)
+        else "nonfinite_metric_or_prediction"
+    )
+    success = bool(np.isfinite(selected_train_r2) and np.isfinite(test_r2))
     return {
-        "train_r2":       float(llm_train_r2) if llm_train_ok else float("nan"),
-        "test_r2":        float(test_r2),
-        "decision":       decision,
-        "llm_code":       llm_code if has_formula else None,
-        "llm_train_r2":   float(llm_train_r2) if llm_train_ok else float("nan"),
-        "route_reason":   route_reason,
+        "train_r2": float(selected_train_r2), "test_r2": float(test_r2),
+        "train_r2_source": train_r2_source, "test_r2_status": test_r2_status,
+        "decision": decision, "llm_code": llm_code if has_formula else None,
+        "llm_train_r2": _metric(llm_train_r2), "route_reason": route_reason,
         "route_execution_status": route_execution_status,
         "structural_risk_flag": structural_risk_flag,
         "structural_risk_tokens": structural_tokens,
-        "degradation_probe": degradation_probe,
-        "degradation_tau": degradation_tau,
+        "degradation_probe": degradation_probe, "degradation_tau": degradation_tau,
         "ood_diagnostic": ood_diagnostic,
+        "ood_covariate_protocol": {
+            "density_fit_rows": "X_train", "query_rows": "X_test",
+            "query_labels_used": False, "access_mode": "query_time_covariate_access",
+        },
         "blend_weights": query_blend_weights,
-        "nn_rerun_time_s": round(nn_rerun_time_s, 3),  # Issue 3: NN cost paid by hybrid
-        "llm_called":     bool(llm_result.get("llm_called", False)),   # B2
-        "bypass_kind":    llm_result.get("bypass_kind", "none"),       # B2
-        "llm_source":     llm_result.get("llm_source", "unknown"),
-        "llm_timeout_s":  llm_result.get("timeout_s"),
+        "nn_rerun_time_s": round(nn_rerun_time_s, 3),
+        "llm_called": bool(llm_result.get("llm_called", False)),
+        "bypass_kind": llm_result.get("bypass_kind", "none"),
+        "llm_source": llm_result.get("llm_source", "unknown"),
+        "llm_timeout_s": llm_result.get("timeout_s"),
         "llm_temperature_requested": llm_result.get("temperature_requested"),
         "llm_temperature_sent": llm_result.get("temperature_sent", False),
-        "success":        True,
+        "success": success,
     }
 
 
@@ -1039,31 +1046,61 @@ def _hybrid_predict_and_eval(
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _aggressive_split(
-    X: np.ndarray, y: np.ndarray, config: dict
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    X: np.ndarray, y: np.ndarray, config: dict, return_metadata: bool = False
+):
     """
-    Train on lower 40% of primary variable; test on upper 60%.
-    Falls back to index-based split when array is too small.
+    Train on the configured primary-feature 40/60 extrapolation split.
+
+    The historical index-based fallback is preserved exactly, but when used it
+    is identified in optional metadata so result artifacts never mislabel it as
+    a percentile split.
     """
     var_idx    = config.get("split_var_idx", 0)
     split_type = config.get("split_type", "high")
     vals       = X[:, var_idx] if (X.ndim >= 2 and X.shape[1] > var_idx) else X.flatten()
 
     if split_type == "high":
-        thresh      = np.percentile(vals, 40)
-        train_mask  = vals <= thresh
-        test_mask   = vals >  thresh
+        quantile = 40
+        thresh = np.percentile(vals, quantile)
+        train_mask = vals <= thresh
+        test_mask = vals > thresh
+        selection_rule = "feature_value <= threshold"
     else:
-        thresh      = np.percentile(vals, 60)
-        train_mask  = vals >= thresh
-        test_mask   = vals <  thresh
+        quantile = 60
+        thresh = np.percentile(vals, quantile)
+        train_mask = vals >= thresh
+        test_mask = vals < thresh
+        selection_rule = "feature_value >= threshold"
 
-    if train_mask.sum() < 20 or test_mask.sum() < 20:
-        idx        = np.arange(len(X))
+    fallback_used = bool(train_mask.sum() < 20 or test_mask.sum() < 20)
+    fallback_reason = None
+    realized_method = "primary_feature_percentile"
+    if fallback_used:
+        idx = np.arange(len(X))
         train_mask = idx < int(0.4 * len(X))
-        test_mask  = ~train_mask
+        test_mask = ~train_mask
+        realized_method = "row_index_fallback"
+        fallback_reason = "percentile_partition_has_fewer_than_20_rows"
+        selection_rule = "row_index < int(0.4 * n_rows)"
 
-    return X[train_mask], y[train_mask], X[test_mask], y[test_mask]
+    result = (X[train_mask], y[train_mask], X[test_mask], y[test_mask])
+    if not return_metadata:
+        return result
+
+    metadata = {
+        "requested_method": "primary_feature_percentile",
+        "realized_method": realized_method,
+        "split_var_idx": int(var_idx),
+        "split_type": split_type,
+        "quantile_percent": int(quantile),
+        "threshold": float(thresh),
+        "selection_rule": selection_rule,
+        "fallback_used": fallback_used,
+        "fallback_reason": fallback_reason,
+        "train_size": int(train_mask.sum()),
+        "test_size": int(test_mask.sum()),
+    }
+    return (*result, metadata)
 
 
 # FIX-C3/DISCLOSURE: Gate B requires every DeFi benchmark to expose either
@@ -1490,7 +1527,14 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
             })
             tc.setdefault("description", desc)
 
-            X_tr, y_tr, X_te, y_te = _aggressive_split(X_full, y_full, tc["config"])
+            X_tr, y_tr, X_te, y_te, split_details = _aggressive_split(
+                X_full, y_full, tc["config"], return_metadata=True
+            )
+            split_var_idx = tc["config"].get("split_var_idx", 0)
+            split_details["split_var_name"] = (
+                var_names[split_var_idx]
+                if 0 <= split_var_idx < len(var_names) else None
+            )
             print(f"  Split → train={len(X_tr)}, test={len(X_te)}")
 
             case_results = {}
@@ -1519,10 +1563,12 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 }
 
             # ── Hybrid (all Fixes applied) ────────────────────────────────────
+            hybrid_llm_state = {}
             try:
                 _t0_hyb = time.time()
                 hy_m = _hybrid_predict_and_eval(
-                    desc, tc["domain"], X_tr, y_tr, X_te, y_te, var_names, metadata
+                    desc, tc["domain"], X_tr, y_tr, X_te, y_te, var_names, metadata,
+                    llm_attempt_state=hybrid_llm_state,
                 )
                 _hyb_wall = round(time.time() - _t0_hyb, 3)
 
@@ -1541,11 +1587,15 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "decision":        hy_m["decision"],
                     "route_reason":    hy_m.get("route_reason"),
                     "route_execution_status": hy_m.get("route_execution_status"),
+                    "train_r2_source": hy_m.get("train_r2_source"),
+                    "test_r2_status": hy_m.get("test_r2_status"),
                     "structural_risk_flag": hy_m.get("structural_risk_flag"),
                     "structural_risk_tokens": hy_m.get("structural_risk_tokens"),
                     "degradation_probe": hy_m.get("degradation_probe"),
                     "degradation_tau": hy_m.get("degradation_tau"),
                     "ood_diagnostic": hy_m.get("ood_diagnostic"),
+                    "ood_covariate_protocol": hy_m.get("ood_covariate_protocol"),
+                    "ood_covariate_protocol": hy_m.get("ood_covariate_protocol"),
                     "blend_weights": hy_m.get("blend_weights"),
                     "llm_called":      hy_m.get("llm_called"),      # B2
                     "bypass_kind":     hy_m.get("bypass_kind"),     # B2
@@ -1564,7 +1614,13 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
             except Exception as e:
                 case_results["hybrid"] = {
                     "train_r2": None, "test_r2": None,
-                    "llm_called": False, "bypass_kind": "none",
+                    "llm_called": bool(hybrid_llm_state.get("llm_called", False)),
+                    "bypass_kind": hybrid_llm_state.get("bypass_kind", "none"),
+                    "llm_source": hybrid_llm_state.get("llm_source", "unknown"),
+                    "llm_timeout_s": hybrid_llm_state.get("llm_timeout_s"),
+                    "llm_temperature_requested": hybrid_llm_state.get("llm_temperature_requested"),
+                    "llm_temperature_sent": hybrid_llm_state.get("llm_temperature_sent", False),
+                    "formula": hybrid_llm_state.get("llm_code"),
                     "success": False, "time_s": 0.0, "error": str(e), "reason": "fit_or_metric_failed",
                 }
 
@@ -1609,8 +1665,9 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 "results":              case_results,
                 "split_protocol": {
                     "name": "aggressive_extrapolation_40_60",
-                    "split_var_idx": tc["config"].get("split_var_idx", 0),
-                    "split_type": tc["config"].get("split_type", "high"),
+                    **split_details,
+                    # Keep the canonical sizes explicit for source-level
+                    # protocol/rescoring contracts; values match split_details.
                     "train_size": int(len(X_tr)),
                     "test_size": int(len(X_te)),
                 },
