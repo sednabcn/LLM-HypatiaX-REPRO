@@ -57,6 +57,13 @@ def test_retry_selector_accepts_candidate_that_passes_declared_gate():
         target_name="energy",
         variable_names=("x",),
         variable_domains={"x": {"minimum": -2, "maximum": 2}},
+        constraints=(
+            ConstraintSpec(
+                constraint_id="energy-nonnegative",
+                kind="nonnegative_output",
+                severity="soft",
+            ),
+        ),
     )
     system = _system("x**2", problem)
 
@@ -105,13 +112,6 @@ def test_training_only_report_selects_candidate_from_candidate_specific_fold_evi
         target_name="energy",
         variable_names=("x",),
         variable_domains={"x": {"minimum": -2, "maximum": 2}},
-        constraints=(
-            ConstraintSpec(
-                constraint_id="energy-nonnegative",
-                kind="nonnegative_output",
-                severity="soft",
-            ),
-        ),
     )
     system = _system("x**2", problem)
     X = np.linspace(-2.0, 2.0, 20).reshape(-1, 1)
