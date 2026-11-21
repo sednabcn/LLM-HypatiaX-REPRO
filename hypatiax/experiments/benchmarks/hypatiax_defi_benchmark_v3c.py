@@ -37,7 +37,7 @@ Issue 3 fix  Hybrid timing now includes full NN re-run cost on fallback
              to the wall-clock time recorded for the hybrid method.
 
 Routing policy update  The old high-fit lock and post-hoc overrides are removed.
-             Pure LLM now requires trust-gate pass, no structural-risk flag,
+             Hybrid's LLM-only route requires trust-gate pass, no structural-risk flag,
              train R2 >= 0.95, and a valid training-only degradation probe
              with Delta <= the pre-calibrated tau. Structural risk takes
              precedence and forces ensemble. Missing tau fails closed to
@@ -835,7 +835,7 @@ def _hybrid_predict_and_eval(
     Routing priority:
       1. Trust gate failure -> NN fallback.
       2. Structural-risk function call -> LLM+NN ensemble (always takes precedence).
-      3. Training-only NN edge degradation; pure LLM only if train R² >= 0.95
+      3. Training-only NN edge degradation; LLM-only Hybrid route if train R² >= 0.95
          and Delta <= the pre-calibrated tau. Missing tau -> ensemble.
       4. KDE fitted on training covariates; per-query w_LLM=0.3+0.7*p_OOD.
       5. Held-out labels are used only for final metrics, never routing/blending.
@@ -916,7 +916,7 @@ def _hybrid_predict_and_eval(
             nn_rerun_time_s = time.time() - _t_nn0
             test_r2 = float(nn_m.get("test_r2", float("nan")))
             decision = "nn_fallback" if np.isfinite(test_r2) else "nn_unavailable"
-            route_reason = "pure_llm_evaluation_failed_nn_fallback" if decision == "nn_fallback" else "pure_llm_evaluation_and_nn_fallback_failed"
+            route_reason = "hybrid_llm_evaluation_failed_nn_fallback" if decision == "nn_fallback" else "hybrid_llm_evaluation_and_nn_fallback_failed"
             route_execution_status = decision
 
     elif decision == "ensemble" and has_formula:
@@ -1325,7 +1325,7 @@ def _generate_report(results: list):
               f"median-based {reduction_median:.1f}% reduction")
 
         # Issue 3: also report hybrid speedup excluding NN-fallback cases
-        # (these are the only fair comparison — pure LLM call vs NN)
+        # (these are LLM-routed Hybrid cases, compared with standalone NN time)
         llm_only_nn   = [r["results"].get("neural_network", {}).get("time_s", 0.0) or 0.0
                           for r in results
                           if r["results"].get("hybrid", {}).get("decision", "") not in
