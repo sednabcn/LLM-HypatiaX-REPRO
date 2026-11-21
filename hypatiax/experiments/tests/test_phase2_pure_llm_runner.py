@@ -89,7 +89,8 @@ def test_phase2_rendered_prompt_matches_hds_training_payload_for_fixture():
     baseline = object.__new__(PureLLMBaseline)
     prompt = baseline._generate_standard_prompt(
         NEUTRAL_TASK_DESCRIPTION, case.domain, case.variable_names,
-        {"constants": constants, "data_patterns": patterns})
+        {"constants": constants, "data_patterns": patterns,
+         "hds_prompt_context": True})
     assert json.dumps(expected, indent=2) in prompt
     assert "Fixture Equation" not in prompt
     assert "Fixture Equation description" not in prompt
