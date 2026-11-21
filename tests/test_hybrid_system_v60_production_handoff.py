@@ -73,18 +73,27 @@ class NativeV60ProductionHandoffTests(unittest.TestCase):
             "normalized_expression": "x",
             "producer_provenance": [],
         }]
+        evidence = {
+            "candidate_id": "c1",
+            "expression": "x",
+            "mean_validation_rmse": 0.0,
+            "mean_validation_nrmse": 0.0,
+            "std_validation_rmse": 0.0,
+            "std_validation_nrmse": 0.0,
+            "complexity": 1,
+        }
+        evidence_digest = hashlib.sha256(
+            json.dumps(evidence, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+        ).hexdigest()
         single = {
+            "schema": "v60_native_objective_selection_v1",
             "selection_status": "selected",
+            "selection_performed": True,
+            "far_or_evaluation_data_used": False,
+            "pareto_candidate_ids": ["c1"],
             "selected_candidate_id": "c1",
-            "objective_evidence": [{
-                "candidate_id": "c1",
-                "expression": "x",
-                "mean_validation_rmse": 0.0,
-                "mean_validation_nrmse": 0.0,
-                "std_validation_rmse": 0.0,
-                "std_validation_nrmse": 0.0,
-                "complexity": 1,
-            }],
+            "objective_evidence": [{**evidence, "objective_evidence_sha256": evidence_digest}],
+            "selected_objective_evidence_sha256": evidence_digest,
         }
         multi = {"selection_status": "no_credible_candidate", "objective_evidence": []}
         final = finalize_native_v60_model(
@@ -212,16 +221,11 @@ class NativeV60ProductionHandoffTests(unittest.TestCase):
             "discover",
             side_effect=AssertionError("legacy discovery must not run"),
         ):
-            result = engine.discover(
-                X, y, ["x"],
-                metadata={"v60_activate_native_model": True},
-            )
-        self.assertFalse(result["success"])
-        self.assertEqual(result["error"], "NO_CREDIBLE_CANDIDATE")
-        self.assertEqual(
-            result["native_v60_production_handoff"]["status"],
-            "blocked_no_credible_native_model",
-        )
+            with self.assertRaisesRegex(ValueError, "requires a typed DiscoveryProblem"):
+                engine.discover(
+                    X, y, ["x"],
+                    metadata={"v60_activate_native_model": True},
+                )
 
     def test_default_mode_still_delegates_to_v50_2(self):
         engine = HybridDiscoverySystemV60(use_llm=False)
