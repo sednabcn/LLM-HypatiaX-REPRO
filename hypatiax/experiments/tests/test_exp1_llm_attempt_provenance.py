@@ -81,3 +81,50 @@ def test_exp1_artifact_declares_query_time_ood_covariate_scope():
     assert '"query_rows": "X_test"' in source
     assert '"query_labels_used": False' in source
     assert '"access_mode": "query_time_covariate_access"' in source
+
+
+def test_exp1_split_audit_identifies_preserved_index_fallback():
+    import numpy as np
+
+    benchmark = _benchmark()
+    X = np.ones((100, 1), dtype=float)
+    y = np.arange(100, dtype=float)
+
+    X_train, y_train, X_test, y_test, audit = benchmark._aggressive_split(
+        X, y, {"split_var_idx": 0, "split_type": "high"},
+        return_metadata=True,
+    )
+
+    assert audit["requested_method"] == "primary_feature_percentile"
+    assert audit["realized_method"] == "row_index_fallback"
+    assert audit["fallback_used"] is True
+    assert audit["fallback_reason"] == "percentile_partition_has_fewer_than_20_rows"
+    assert audit["train_size"] == 40
+    assert audit["test_size"] == 60
+    np.testing.assert_array_equal(X_train, X[:40])
+    np.testing.assert_array_equal(y_train, y[:40])
+    np.testing.assert_array_equal(X_test, X[40:])
+    np.testing.assert_array_equal(y_test, y[40:])
+
+
+def test_exp1_split_audit_records_primary_feature_percentile():
+    import numpy as np
+
+    benchmark = _benchmark()
+    X = np.arange(100, dtype=float).reshape(-1, 1)
+    y = 2.0 * X[:, 0]
+
+    X_train, y_train, X_test, y_test, audit = benchmark._aggressive_split(
+        X, y, {"split_var_idx": 0, "split_type": "high"},
+        return_metadata=True,
+    )
+
+    assert audit["realized_method"] == "primary_feature_percentile"
+    assert audit["fallback_used"] is False
+    assert audit["quantile_percent"] == 40
+    assert audit["threshold"] == 39.6
+    assert audit["selection_rule"] == "feature_value <= threshold"
+    assert audit["train_size"] == 40
+    assert audit["test_size"] == 60
+    assert len(X_train) == len(y_train) == 40
+    assert len(X_test) == len(y_test) == 60
