@@ -61,6 +61,18 @@ def test_exp1_llm_request_honours_timeout_without_hidden_retries():
     assert 'temperature_sent": hy_m.get("llm_temperature_sent")' in source
 
 
+def test_exp1_failed_api_request_is_still_recorded_as_attempted():
+    source = BENCHMARK.read_text()
+    tree = ast.parse(source)
+    generate = _function_source(tree, "_generate_llm_formula")
+
+    assert "api_attempted = False" in generate
+    assert "api_attempted = True" in generate
+    assert '"llm_called": api_attempted' in generate
+    # Client-construction failures happen before the attempted-call flag.
+    assert generate.index("api_attempted = True") > generate.index("client = Anthropic(")
+
+
 def test_exp1_configuration_matches_the_v3c_primary_feature_split():
     root = Path(__file__).resolve().parents[3]
     for name in ("repro.yaml", "fresh_rerun.yaml"):
