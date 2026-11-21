@@ -785,10 +785,14 @@ def formula({var_list}):
     return <expression>
 """
     call_info = {}
+    api_attempted = False
     try:
         from hypatiax.core.llm_call import create_message, last_call_info  # UNIFIED-TEMPERATURE
+        # Set immediately before entering the single-attempt API wrapper. A
+        # timeout/provider error is still an attempted live request.
+        api_attempted = True
         resp = create_message(
-        client,
+            client,
             model=LLM_MODEL,
             max_tokens=1000,
             messages=[{"role": "user", "content": prompt}],
@@ -811,7 +815,7 @@ def formula({var_list}):
             call_info = last_call_info()
         return {"python_code": None, "formula": None,
                 "success": False, "error": str(e),
-                "llm_called": False, "bypass_kind": "none",
+                "llm_called": api_attempted, "bypass_kind": "none",
                 "llm_source": "v3c_builtin_failed", "timeout_s": timeout_s,
                 "temperature_requested": call_info.get("temperature_requested"),
                 "temperature_sent": call_info.get("temperature_sent", False)}
