@@ -929,6 +929,7 @@ def _hybrid_predict_and_eval(
     X_test:  np.ndarray, y_test:  np.ndarray,
     var_names: list[str], metadata: dict,
     llm_attempt_state: dict | None = None,
+    nn_result: dict | None = None,
 ) -> dict:
     """Run the Exp1 LLM/NN route and report metrics for the predictor used."""
     llm_result = _generate_llm_formula(description, domain, var_names, metadata)
@@ -993,19 +994,41 @@ def _hybrid_predict_and_eval(
             return float("nan")
         return value if np.isfinite(value) else float("nan")
 
+    def _valid_nn_result(candidate):
+        if not isinstance(candidate, dict) or not candidate.get("success", False):
+            return False
+        try:
+            pred_train = np.asarray(candidate.get("y_pred_train"), dtype=float).reshape(-1)
+            pred_test = np.asarray(candidate.get("y_pred_test"), dtype=float).reshape(-1)
+            return bool(
+                pred_train.shape == np.asarray(y_train).reshape(-1).shape
+                and pred_test.shape == np.asarray(y_test).reshape(-1).shape
+                and np.isfinite(pred_train).all() and np.isfinite(pred_test).all()
+                and np.isfinite(_metric(candidate.get("train_r2")))
+                and np.isfinite(_metric(candidate.get("test_r2")))
+            )
+        except (TypeError, ValueError):
+            return False
+
+    def _raw_nn():
+        nonlocal nn_rerun_time_s
+        if _valid_nn_result(nn_result):
+            return nn_result
+        t0 = time.time()
+        trained = _train_and_eval_nn(X_train, y_train, X_test, y_test)
+        nn_rerun_time_s += time.time() - t0
+        return trained
+
     def _use_nn_fallback(nn_result, reason):
         nonlocal selected_train_r2, train_r2_source, test_r2
         nonlocal decision, route_reason, route_execution_status
-        selected_train_r2 = _metric(nn_result.get("train_r2"))
-        test_r2 = _metric(nn_result.get("test_r2"))
+        valid = _valid_nn_result(nn_result)
+        selected_train_r2 = _metric(nn_result.get("train_r2")) if valid else float("nan")
+        test_r2 = _metric(nn_result.get("test_r2")) if valid else float("nan")
         train_r2_source = "nn_fallback"
-        decision = "nn_fallback" if np.isfinite(test_r2) else "nn_unavailable"
+        decision = "nn_fallback" if valid else "nn_unavailable"
         route_reason = reason
-        route_execution_status = (
-            "nn_fallback_executed"
-            if np.isfinite(selected_train_r2) and np.isfinite(test_r2)
-            else "nn_fallback_failed"
-        )
+        route_execution_status = "nn_fallback_executed" if valid else "nn_fallback_failed"
 
     if decision == "llm":
         selected_train_r2 = _metric(llm_train_r2)
@@ -1013,9 +1036,7 @@ def _hybrid_predict_and_eval(
         test_r2, ok = _eval_formula_r2(llm_code, X_test, y_test, constants=constants)
         test_r2 = _metric(test_r2) if ok else float("nan")
         if not np.isfinite(test_r2):
-            t0 = time.time()
-            nn_m = _train_and_eval_nn(X_train, y_train, X_test, y_test)
-            nn_rerun_time_s = time.time() - t0
+            nn_m = _raw_nn()
             _use_nn_fallback(
                 nn_m, "hybrid_llm_evaluation_failed_nn_fallback"
                 if np.isfinite(_metric(nn_m.get("test_r2")))
@@ -1026,13 +1047,11 @@ def _hybrid_predict_and_eval(
 
     elif decision == "ensemble" and has_formula:
         llm_test_preds = _execute_formula(llm_code, X_test, constants=constants)
-        t0 = time.time()
-        nn_m = _train_and_eval_nn(X_train, y_train, X_test, y_test)
-        nn_rerun_time_s = time.time() - t0
+        nn_m = _raw_nn()
         llm_train_preds = _execute_formula(llm_code, X_train, constants=constants)
         if (llm_test_preds is None or llm_train_preds is None
                 or nn_m.get("y_pred_test") is None or nn_m.get("y_pred_train") is None
-                or not nn_m.get("success", False)):
+                or not _valid_nn_result(nn_m)):
             _use_nn_fallback(
                 nn_m, "ensemble_inputs_unavailable_nn_fallback"
                 if np.isfinite(_metric(nn_m.get("test_r2")))
@@ -1074,16 +1093,14 @@ def _hybrid_predict_and_eval(
             except Exception:
                 nn_m = _train_and_eval_nn(X_train, y_train, X_test, y_test)
         else:
-            nn_m = _train_and_eval_nn(X_train, y_train, X_test, y_test)
-        nn_rerun_time_s = time.time() - t0
-        selected_train_r2 = _metric(nn_m.get("train_r2"))
-        test_r2 = _metric(nn_m.get("test_r2"))
+            nn_m = _raw_nn()
+        if llm_trustworthy:
+            nn_rerun_time_s += time.time() - t0
+        valid_nn = _valid_nn_result(nn_m)
+        selected_train_r2 = _metric(nn_m.get("train_r2")) if valid_nn else float("nan")
+        test_r2 = _metric(nn_m.get("test_r2")) if valid_nn else float("nan")
         train_r2_source = "nn_route"
-        route_execution_status = (
-            "nn_executed"
-            if np.isfinite(selected_train_r2) and np.isfinite(test_r2)
-            else "nn_metrics_undefined"
-        )
+        route_execution_status = "nn_executed" if valid_nn else "nn_training_failed_or_metrics_undefined"
 
     y_test_arr = np.asarray(y_test, dtype=float).reshape(-1)
     if y_test_arr.size == 0 or not np.isfinite(y_test_arr).all():
@@ -1632,11 +1649,16 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 case_results["neural_network"] = {
                     "train_r2":    nn_m["train_r2"],
                     "test_r2":     nn_m["test_r2"],
-                    "success":     bool(_math.isfinite(nn_m["train_r2"]) and _math.isfinite(nn_m["test_r2"])),  # C4
+                    "success":     bool(nn_m.get("success", False)),
                     "timed_out":   nn_m.get("timed_out", False),
+                    "epochs_completed": nn_m.get("epochs_completed"),
+                    "best_epoch": nn_m.get("best_epoch"),
+                    "validation_loss": nn_m.get("validation_loss"),
+                    "training_time_s": nn_m.get("training_time_s"),
+                    "failure_reason": nn_m.get("failure_reason"),
                     "time_s":      round(time.time() - _t0_nn, 3),
-                    "y_pred_train": nn_m["y_pred_train"].tolist(),
-                    "y_pred_test":  nn_m["y_pred_test"].tolist(),
+                    "y_pred_train": nn_m["y_pred_train"].tolist() if nn_m.get("y_pred_train") is not None else None,
+                    "y_pred_test":  nn_m["y_pred_test"].tolist() if nn_m.get("y_pred_test") is not None else None,
                 }
             except Exception as e:
                 case_results["neural_network"] = {
@@ -1651,6 +1673,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 hy_m = _hybrid_predict_and_eval(
                     desc, tc["domain"], X_tr, y_tr, X_te, y_te, var_names, metadata,
                     llm_attempt_state=hybrid_llm_state,
+                    nn_result=nn_m,
                 )
                 _hyb_wall = round(time.time() - _t0_hyb, 3)
 
