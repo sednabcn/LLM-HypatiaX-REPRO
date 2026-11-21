@@ -76,7 +76,7 @@ formula_handling:
 evaluation:
   evaluator: hypatiax.core.r2_canonical
   evaluator_version: "r2_canonical@8f11733"     # VERIFY: label in existing rows
-  evaluator_sha256: "7d5395ed728323d8db8b0a5e9e6804a2b142a401c8d7fe4d19d54b32973b7971"   # VERIFY: compare with the entry for hypatiax/core/r2_canonical.py in triage_out/freeze_manifest.json
+  evaluator_sha256: "994ed7a4a08b1ad73dd6121a946c2c0e1cf3548fadd22455dc25ac549f8e2a01"   # VERIFY: compare with the entry for hypatiax/core/r2_canonical.py in triage_out/freeze_manifest.json
   scorer_call: r2_scored                        # same wrapper as exp1_ablation._safe_r2 (floor -100, |pred| limit 1e100)
   also_record_raw: r2_checked                   # r2_raw = r2_checked() on the same arrays
   sign_flip: false                              # HYPATIAX_R2_SIGN_FLIP=0
