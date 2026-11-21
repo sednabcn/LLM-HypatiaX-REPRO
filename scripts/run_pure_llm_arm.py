@@ -156,12 +156,13 @@ def gate_config(cfg: dict, template_sha: Optional[str] = None) -> list[tuple[str
     out.append(("A3-7 temperature == 0.25", temp == 0.25, f"got {temp!r}"))
     pin = cfg_get(cfg, "prompt_template_sha256")
     if template_sha is not None:
-        out.append(("A3-2 prompt template hash computed for provenance",
-                    isinstance(template_sha, str) and len(template_sha) == 64,
+        valid_hash = isinstance(template_sha, str) and re.fullmatch(r"[0-9a-f]{64}", template_sha) is not None
+        out.append(("A3-2 prompt template hash computed for provenance", valid_hash,
                     f"computed={template_sha}"))
-        if pin:
-            out.append(("A3-2 configured prompt hash matches", pin == template_sha,
-                        f"config={pin!r} computed={template_sha}"))
+        out.append(("A3-2 prompt template hash is pinned and matches",
+                    isinstance(pin, str) and re.fullmatch(r"[0-9a-f]{64}", pin) is not None
+                    and pin == template_sha,
+                    f"config={pin!r} computed={template_sha}; render offline, review, then pin this exact hash"))
     return out
 
 
