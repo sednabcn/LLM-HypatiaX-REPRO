@@ -321,7 +321,7 @@ def test_exp2_extrap_rejects_stale_files_and_delegates_post_run_analysis():
     assert "ci_analysis.yml" not in block
     check = (ROOT / ".github/workflows/ci_pipeline_check.yml").read_text()
     assert '"exp2_feynman_extrap": ["benchmark_results_extrap*.json", "protocol_core_extrap_*.json",' in check
-    assert '"exp2_extrap_summary.json"]' in check
+    assert '"exp2_extrap_summary.json", "discovery_reports_extrap.json"' in check
 
 
 def test_exp2_resume_false_skips_cached_and_committed_checkpoints():
