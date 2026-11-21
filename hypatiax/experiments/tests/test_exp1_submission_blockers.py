@@ -3,6 +3,10 @@
 import ast
 from pathlib import Path
 
+import numpy as np
+
+from hypatiax.protocols.experiment_protocol_defi import DeFiExperimentProtocol
+
 
 BENCHMARK = (
     Path(__file__).resolve().parents[1]
@@ -96,3 +100,46 @@ def test_case_record_identifies_the_protocol_split_for_rescoring():
     assert '"name": "aggressive_extrapolation_40_60"' in runner
     assert '"train_size": int(len(X_tr))' in runner
     assert '"test_size": int(len(X_te))' in runner
+
+
+def test_kelly_extrapolation_holdout_is_not_a_constant_target():
+    protocol = DeFiExperimentProtocol()
+    case = next(
+        item for item in protocol._generate_liquidity_tests(200)
+        if item[0].startswith("Optimal LP Position (Kelly)")
+    )
+    _, X, y, names, metadata = case
+    assert names == ["expected_fee_apy", "il_risk"]
+    assert metadata["constants"]["risk_aversion"] == 2.0
+    assert np.all(np.asarray(y) <= 1.0)
+    assert np.any(np.asarray(y) == 1.0)
+    order = np.argsort(np.asarray(X)[:, 0], kind="stable")
+    y_test = np.asarray(y)[order[80:]]
+    assert np.ptp(y_test) > 1e-12
+
+
+def test_option_formula_inputs_include_every_stochastic_target_variable():
+    protocol = DeFiExperimentProtocol()
+    cases = protocol._generate_derivatives_tests(200)
+    by_name = {item[0]: item for item in cases}
+
+    delta = by_name["Options Delta rate of change of option price relative to underlying"]
+    assert delta[1].shape[1] == 3
+    assert delta[3] == ["moneyness", "implied_volatility", "time_to_expiry"]
+
+    for title in (
+        "Black-Scholes Call Price for European call option",
+        "Black-Scholes Put Price for European put option",
+    ):
+        case = by_name[title]
+        assert case[1].shape[1] == 3
+        assert case[3] == ["spot_price", "implied_volatility", "time_to_expiry"]
+        assert case[4]["constants"] == {"strike": 100.0, "risk_free_rate": 0.04}
+
+    for title in (
+        "Gamma of option rate of change of delta with respect to spot",
+        "Vega of option sensitivity of price to implied volatility",
+    ):
+        assert by_name[title][4]["constants"] == {
+            "strike": 100.0, "risk_free_rate": 0.04
+        }
