@@ -26,6 +26,7 @@ def _common(monkeypatch, route):
         },
     )
     monkeypatch.setattr(bench, "_formula_has_pathological_behavior", lambda code: False)
+    monkeypatch.setattr(bench, "_eval_formula_r2", lambda *a, **k: (0.8, True))
     monkeypatch.setattr(bench, "structural_risk_tokens", lambda code: [])
     monkeypatch.setattr(
         bench, "_extrapolation_probe",
