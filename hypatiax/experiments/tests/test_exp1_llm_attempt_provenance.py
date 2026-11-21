@@ -128,3 +128,52 @@ def test_exp1_split_audit_records_primary_feature_percentile():
     assert audit["test_size"] == 60
     assert len(X_train) == len(y_train) == 40
     assert len(X_test) == len(y_test) == 60
+
+def test_exp1_post_request_hybrid_failure_preserves_attempt_provenance(monkeypatch):
+    import numpy as np
+    import pytest
+
+    benchmark = _benchmark()
+    state = {}
+    monkeypatch.setattr(
+        benchmark,
+        "_generate_llm_formula",
+        lambda *args, **kwargs: {
+            "python_code": None,
+            "llm_called": True,
+            "bypass_kind": "live",
+            "llm_source": "v3c_builtin_failed",
+            "timeout_s": 17.0,
+            "temperature_requested": 0.25,
+            "temperature_sent": False,
+        },
+    )
+    monkeypatch.setattr(
+        benchmark, "_eval_formula_r2", lambda *args, **kwargs: (float("nan"), False)
+    )
+
+    def fail_after_request(*args, **kwargs):
+        raise RuntimeError("simulated post-request routing failure")
+
+    monkeypatch.setattr(benchmark, "structural_risk_tokens", fail_after_request)
+
+    with pytest.raises(RuntimeError, match="post-request routing failure"):
+        benchmark._hybrid_predict_and_eval(
+            "test quantity",
+            "test domain",
+            np.ones((20, 1)),
+            np.arange(20, dtype=float),
+            np.ones((10, 1)),
+            np.arange(10, dtype=float),
+            ["x"],
+            {},
+            llm_attempt_state=state,
+        )
+
+    assert state["llm_called"] is True
+    assert state["bypass_kind"] == "live"
+    assert state["llm_source"] == "v3c_builtin_failed"
+    assert state["llm_timeout_s"] == 17.0
+    assert state["llm_temperature_requested"] == 0.25
+    assert state["llm_temperature_sent"] is False
+
