@@ -15,7 +15,7 @@ def test_exp1b_benchmark_uses_its_declared_portfolio_case_filter():
     end = source.index('\nrun portfolio "', start)
     block = source[start:end]
 
-    assert 'DEFI_TASK_FILTER="Portfolio"' in block
+    assert 'DEFI_TASK_FILTER=\\"Portfolio\\"' in block
     assert 'DEFI_SEEDS="${_SHARD_SEEDS}"' in block
     assert 'PYSR_SEED="${_SEEDS[0]}"' in block
 
