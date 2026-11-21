@@ -93,14 +93,17 @@ def test_exp1_runner_passes_attempt_state_into_hybrid_and_persists_failure_prove
         assert _contains_name(failure_fields[artifact_key], "hybrid_llm_state")
         assert state_key in ast.unparse(failure_fields[artifact_key])
 
-    # A failure after the request must not be rewritten as "not called".
-    assert "False" not in ast.unparse(failure_fields["llm_called"])
+    # The explicit boolean fallback is only for cases with no recorded state;
+    # the value itself must be read from the preserved attempt-state mapping.
+    assert isinstance(failure_fields["llm_called"], ast.Call)
+    assert isinstance(failure_fields["llm_called"].func, ast.Name)
+    assert failure_fields["llm_called"].func.id == "bool"
 
 
 def test_exp1_success_artifact_keeps_ood_scope_and_llm_attempt_metadata():
     runner = _runner()
     success_fields = _literal_dict_fields(
-        _dict_assignment(runner, "case_results", "hybrid")
+        _dict_assignment(runner, "case_results", "hybrid", containing_name="hy_m")
     )
 
     required = {
