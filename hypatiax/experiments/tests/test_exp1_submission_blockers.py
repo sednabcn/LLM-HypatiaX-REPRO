@@ -49,6 +49,13 @@ def test_hybrid_formula_and_provenance_are_written_to_case_results():
         assert f'"{field}"' in runner
 
 
+def test_exp1_ood_covariate_protocol_is_persisted_in_hybrid_artifact():
+    tree = ast.parse(BENCHMARK.read_text())
+    runner = _function_source(tree, "run_benchmark")
+
+    assert '"ood_covariate_protocol": hy_m.get("ood_covariate_protocol")' in runner
+
+
 def test_exp1_llm_request_honours_timeout_without_hidden_retries():
     source = BENCHMARK.read_text()
     assert 'os.environ.get("LLM_METHOD_TIMEOUT", "120")' in source
