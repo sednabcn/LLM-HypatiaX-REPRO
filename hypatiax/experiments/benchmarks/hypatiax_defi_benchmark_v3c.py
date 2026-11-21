@@ -974,7 +974,6 @@ def _hybrid_predict_and_eval(
             nn_m    = _train_and_eval_nn(X_train, y_train, X_test, y_test)
             nn_rerun_time_s = time.time() - _t_nn0
             selected_train_r2 = float(nn_m.get("train_r2", float("nan")))
-            selected_train_r2 = float(nn_m.get("train_r2", float("nan")))
             test_r2 = float(nn_m.get("test_r2", float("nan")))
             decision = "nn_fallback" if np.isfinite(test_r2) else "nn_unavailable"
             route_reason = "hybrid_llm_evaluation_failed_nn_fallback" if decision == "nn_fallback" else "hybrid_llm_evaluation_and_nn_fallback_failed"
@@ -1020,6 +1019,7 @@ def _hybrid_predict_and_eval(
                 else:
                     route_execution_status = "ensemble_executed"
         else:
+            selected_train_r2 = float(nn_m.get("train_r2", float("nan")))
             test_r2 = float(nn_m.get("test_r2", float("nan")))
             decision = "nn_fallback" if np.isfinite(test_r2) else "nn_unavailable"
             route_reason = "llm_test_prediction_unavailable_nn_fallback" if decision == "nn_fallback" else "llm_and_nn_predictions_unavailable"
@@ -1061,6 +1061,11 @@ def _hybrid_predict_and_eval(
 
     return {
         "train_r2":       float(selected_train_r2),
+        "train_r2_source": (
+            "neural_network_fallback"
+            if decision in ("nn", "nn_fallback", "nn_unavailable")
+            else "llm_component" if decision == "ensemble" else "llm_formula"
+        ),
         "test_r2":        float(test_r2),
         "test_r2_status": (
             "undefined_constant_target"
