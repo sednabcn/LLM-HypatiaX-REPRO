@@ -849,6 +849,7 @@ def _hybrid_predict_and_eval(
     X_train: np.ndarray, y_train: np.ndarray,
     X_test:  np.ndarray, y_test:  np.ndarray,
     var_names: list[str], metadata: dict,
+    llm_attempt_state: dict | None = None,
 ) -> dict:
     """
     Full hybrid pipeline for one test case.
@@ -869,6 +870,17 @@ def _hybrid_predict_and_eval(
     llm_result = _generate_llm_formula(description, domain, var_names, metadata)
     llm_code   = llm_result.get("python_code") or ""
     has_formula = bool(llm_code and "def formula" in llm_code)
+    # Preserve request provenance even if a later routing/evaluation step raises.
+    if llm_attempt_state is not None:
+        llm_attempt_state.update({
+            "llm_called": bool(llm_result.get("llm_called", False)),
+            "bypass_kind": llm_result.get("bypass_kind", "none"),
+            "llm_source": llm_result.get("llm_source", "unknown"),
+            "llm_timeout_s": llm_result.get("timeout_s"),
+            "llm_temperature_requested": llm_result.get("temperature_requested"),
+            "llm_temperature_sent": llm_result.get("temperature_sent", False),
+            "llm_code": llm_code if has_formula else None,
+        })
 
     # Extract constants from metadata — injected into exec globals so formulas
     # that reference protocol constants (e.g. K=100) don't NameError at eval time.
@@ -1568,10 +1580,12 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 }
 
             # ── Hybrid (all Fixes applied) ────────────────────────────────────
+            hybrid_llm_state = {}
             try:
                 _t0_hyb = time.time()
                 hy_m = _hybrid_predict_and_eval(
-                    desc, tc["domain"], X_tr, y_tr, X_te, y_te, var_names, metadata
+                    desc, tc["domain"], X_tr, y_tr, X_te, y_te, var_names, metadata,
+                    llm_attempt_state=hybrid_llm_state,
                 )
                 _hyb_wall = round(time.time() - _t0_hyb, 3)
 
@@ -1613,7 +1627,13 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
             except Exception as e:
                 case_results["hybrid"] = {
                     "train_r2": None, "test_r2": None,
-                    "llm_called": False, "bypass_kind": "none",
+                    "llm_called": bool(hybrid_llm_state.get("llm_called", False)),
+                    "bypass_kind": hybrid_llm_state.get("bypass_kind", "none"),
+                    "llm_source": hybrid_llm_state.get("llm_source", "unknown"),
+                    "llm_timeout_s": hybrid_llm_state.get("llm_timeout_s"),
+                    "llm_temperature_requested": hybrid_llm_state.get("llm_temperature_requested"),
+                    "llm_temperature_sent": hybrid_llm_state.get("llm_temperature_sent", False),
+                    "formula": hybrid_llm_state.get("llm_code"),
                     "success": False, "time_s": 0.0, "error": str(e), "reason": "fit_or_metric_failed",
                 }
 
