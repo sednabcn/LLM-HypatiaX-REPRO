@@ -136,7 +136,7 @@ jobs:
         run: python -m pytest -q hypatiax/experiments/tests/test_result_subdir_map.py
       - name: Run exp1 offline protocol and provenance regressions
         run: >-
-          python -m pytest -q -k "not exp1c"
+          python -m pytest -q
           hypatiax/experiments/tests/test_exp1_submission_blockers.py
           hypatiax/experiments/tests/test_exp1_llm_attempt_provenance.py
       - name: Run Phase 2 Pure-LLM runner offline contract tests
