@@ -117,8 +117,12 @@ def test_phase2_rendered_prompt_matches_hds_training_payload_for_fixture():
     assert "Fixture Equation" not in prompt
     assert "Fixture Equation description" not in prompt
     assert NEUTRAL_TASK_DESCRIPTION in prompt
-    assert "h=6.626e-34 (Planck)" in prompt
-    assert "Do NOT use bare 'e' for elementary charge — use q_e instead." in prompt
+    assert "h=6.626e-34" in prompt
+    assert "c=299800000.0" in prompt
+    assert "Do not infer, fit, estimate, or optimize any coefficient" in prompt
+    assert "Use NumPy for element-wise operations" in prompt
+    assert "Do not import or use SciPy" in prompt
+    assert "no Markdown, no code fences" in prompt
 
 
 def test_phase2_render_gate_checks_prompt_text_not_json_escaped_wrapper():
@@ -151,3 +155,19 @@ def test_phase2_prompt_gate_does_not_confuse_neutral_wording_with_equation_leak(
     rows = gate_prompt_leaks(prompt, case)
     description = next(row for row in rows if row[0] == "A3-2 equation description absent")
     assert description[1], description
+
+
+
+def test_phase2_prompt_constants_gate_parses_numeric_assignments():
+    from scripts.run_pure_llm_arm import Case, gate_prompt_leaks
+    import numpy as np
+
+    case = Case("Fixture", 42, "description", "physics", ["T"], {},
+                np.ones((4, 1)), np.ones(4))
+    constants = {"h": 6.626e-34, "hbar": 1.055e-34, "c": 2.998e8,
+                 "k_B": 1.381e-23, "k": 1.381e-23}
+    prompt = ("Task: Find the formula for the target quantity as a function of the listed variables."
+              + "\n" + ", ".join(f"{key}={value!r}" for key, value in constants.items()))
+    rows = gate_prompt_leaks(prompt, case, expected_constants=constants)
+    constant_gate = next(row for row in rows if row[0] == "A3-2 exact HDS rounded constants present")
+    assert constant_gate[1], constant_gate
