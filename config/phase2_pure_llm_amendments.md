@@ -1,7 +1,7 @@
 # Phase 2 prompt amendment — matched HDS inputs
 
 **Decision date:** 20 November 2026  
-**Status:** Approved design; implementation committed on `fix/phase2-matched-hds-prompt-inputs`; offline CI verification still required before any API call.
+**Status:** Approved and merged via PR #308. Offline CI passed on final head `a71d0f68d620ac8175428d88e7452a717abcae1c`; merge commit `f06fa48a12c04efb7cfbb1fdc7ae289a236cc131`. No API calls or experiment runs have been made.
 
 ## Decision
 
@@ -38,7 +38,7 @@ The Pure-LLM prompt must not receive the equation name, equation description, ta
 - `scripts/run_pure_llm_arm.py` now computes the pattern payload with `DataPatternAnalyzer().analyze(X_train, y_train, variable_names)`, supplies neutral task wording, and passes the fixed rounded HDS constants and pattern payload to the baseline.
 - `hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py` now renders the training-only pattern JSON and exact HDS constants block.
 - The preflight gate checks the exact expected pattern JSON, all rounded constants, neutral wording, and absence of equation name/description and evaluation-set leakage markers. It exits before API calls on failure.
-- Offline regression tests cover the matched-input wiring and render a fixed fixture to compare the exact HDS analyzer payload, constants, and absence of equation labels. CI has not yet verified the final branch head; the live-call gate remains closed.
+- Offline regression tests cover the matched-input wiring and render a fixed fixture to compare the exact HDS analyzer payload, constants, and absence of equation labels. R2 policy, runner smoke, and bypass audit passed on the final PR head. The separate prompt-template hash pin and request-parameter parity gates remain open.
 
 ## Scope and interpretation
 
@@ -46,4 +46,4 @@ This is a prompt-input parity amendment only. It does not claim that the two gen
 
 ## Gate status
 
-This document records the design decision and implementation. The live-call gate remains closed until CI verifies the implementation and offline regression tests on the final PR commit; request-parameter parity must also be confirmed from captured requests before any experiment run.
+This document records the design decision and implementation. The live-call gate remains closed until the prompt-template hash is rendered and pinned, request parameters are compared with captured HDS request parameters, and the user authorizes a single API smoke test.

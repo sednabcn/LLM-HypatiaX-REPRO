@@ -63,6 +63,28 @@ def test_phase2_prompt_uses_hds_training_patterns_and_rounded_constants():
     assert "Prompt parity/leak gate failed: no Phase 2 API calls were made." in runner
 
 
+def test_phase2_prompt_hash_must_be_pinned_before_live_run():
+    from scripts.run_pure_llm_arm import gate_config
+
+    cfg = {
+        "llm": {
+            "max_calls_per_case": 3,
+            "prompt_inputs": ["domain", "variable_names", "training_pattern_statistics", "hds_rounded_constants"],
+            "temperature": 0.25,
+            "max_tokens": 2000,
+            "prompt_template_sha256": None,
+        },
+        "formula_handling": {"selection_among_samples": "train_r2"},
+    }
+    missing_pin = gate_config(cfg, "a" * 64)
+    assert any(name.endswith("is pinned and matches") and not passed
+               for name, passed, _ in missing_pin)
+
+    cfg["llm"]["prompt_template_sha256"] = "a" * 64
+    pinned = gate_config(cfg, "a" * 64)
+    assert all(passed for _, passed, _ in pinned)
+
+
 def test_phase2_runner_checks_exact_hds_pattern_and_constant_payloads():
     runner = (REPO / "scripts" / "run_pure_llm_arm.py").read_text()
     assert "exact HDS training-pattern payload present" in runner
