@@ -463,10 +463,19 @@ def _train_and_eval_nn(
         Xte   = torch.FloatTensor(sx.transform(X_test))  # X_test already augmented above
         yp_te = _decode(model(Xte).numpy().flatten())
 
+    train_r2 = _r2(y_train, yp_tr)
+    test_r2 = _r2(y_test, yp_te)
+    test_target = np.asarray(y_test, dtype=float).reshape(-1)
+    test_r2_status = (
+        "undefined_constant_target"
+        if test_target.size == 0 or float(np.ptp(test_target)) <= 1e-12
+        else "defined" if np.isfinite(test_r2) else "nonfinite_prediction"
+    )
     return {
-        "train_r2":    _r2(y_train, yp_tr),
-        "test_r2":     _r2(y_test,  yp_te),
-        "success":     True,
+        "train_r2":    train_r2,
+        "test_r2":     test_r2,
+        "test_r2_status": test_r2_status,
+        "success":     bool(np.isfinite(train_r2) and np.isfinite(test_r2)),
         "timed_out":   timed_out,
         "y_pred_train": yp_tr,
         "y_pred_test":  yp_te,
@@ -765,22 +774,34 @@ def _generate_llm_formula(
         for k, v in constants.items():
             constants_block += f"  {k} = {v}\n"
 
-    # [FIX-GT-LEAK] The prompt must NOT contain metadata['ground_truth'] (the
-    # answer key). The LLM is given only description/domain/variables/constants
-    # and must derive the formula itself.
+    # [FIX-GT-LEAK] Never include metadata['ground_truth'] in the prompt.
+    # Protocol notes are descriptive context, not the answer key.
+    protocol_note = str(metadata.get("note") or "").strip()
+    note_block = f"\\nProtocol context: {protocol_note}" if protocol_note else ""
     prompt   = f"""You are an expert in DeFi (decentralised finance) mathematics.
 
-Task: Derive the mathematical formula for the following quantity.
+Task: derive the formula for the following quantity.
 
 Description : {description}
 Domain      : {domain}
-Variables   : {var_list}{constants_block}
-Return ONLY a Python function called `formula` that accepts the variables as
-positional numpy-array arguments (in the order listed) and returns a numpy array.
-Use numpy (imported as np) for any mathematical operations.
-Do not include imports, explanations, or markdown — just the function definition.
+Variables   : {var_list}{constants_block}{note_block}
 
-Example output:
+Return exactly one plain Python function named formula with the listed
+positional arguments. Return a NumPy-compatible one-dimensional array.
+The result must be computable using ONLY these approved functions:
+np.sqrt, np.exp, np.log, np.log2, np.log10, np.minimum, np.maximum,
+np.clip, np.sin, np.cos, np.tan, np.arcsin, np.arccos, np.arctan,
+np.arctan2, np.sign, np.tanh, np.sinh, np.cosh, norm_cdf, norm_pdf,
+erf, erfc, and moneyness.
+Use supplied constants exactly as given. Do not invent hidden input values.
+
+Do NOT use imports, np.where, np.dot, np.inf, np.nan, np.erf, attribute
+access other than the approved np functions above, conditionals, loops,
+multiple function definitions, or helper functions. Use np.minimum,
+np.maximum, and np.clip for caps and bounds. Avoid unnecessary zero-division
+guards when the task's input domain is strictly positive.
+
+Do not include explanations or markdown. Example:
 def formula({var_list}):
     return <expression>
 """
@@ -943,6 +964,8 @@ def _hybrid_predict_and_eval(
     # Step 5: Evaluate on TEST set using Fix 5 unified evaluator
     nn_rerun_time_s = 0.0   # Issue 3: track NN cost paid by hybrid on fallback
     route_execution_status = "selected_route_executed"
+    # train_r2 must describe the predictor actually selected for this case.
+    selected_train_r2 = float(llm_train_r2) if llm_train_ok else float("nan")
 
     if decision == "llm":
         test_r2, ok = _eval_formula_r2(llm_code, X_test, y_test, constants=constants)
@@ -950,6 +973,8 @@ def _hybrid_predict_and_eval(
             _t_nn0 = time.time()
             nn_m    = _train_and_eval_nn(X_train, y_train, X_test, y_test)
             nn_rerun_time_s = time.time() - _t_nn0
+            selected_train_r2 = float(nn_m.get("train_r2", float("nan")))
+            selected_train_r2 = float(nn_m.get("train_r2", float("nan")))
             test_r2 = float(nn_m.get("test_r2", float("nan")))
             decision = "nn_fallback" if np.isfinite(test_r2) else "nn_unavailable"
             route_reason = "hybrid_llm_evaluation_failed_nn_fallback" if decision == "nn_fallback" else "hybrid_llm_evaluation_and_nn_fallback_failed"
@@ -971,6 +996,7 @@ def _hybrid_predict_and_eval(
                 or nn_m.get("y_pred_train") is None
                 or not nn_m.get("success", False)
             ):
+                selected_train_r2 = float(nn_m.get("train_r2", float("nan")))
                 test_r2 = float(nn_m.get("test_r2", float("nan")))
                 decision = "nn_fallback" if np.isfinite(test_r2) else "nn_unavailable"
                 route_reason = "ensemble_inputs_unavailable_nn_fallback" if decision == "nn_fallback" else "ensemble_and_nn_fallback_failed"
@@ -1024,12 +1050,24 @@ def _hybrid_predict_and_eval(
             _t_nn0 = time.time()
             nn_m             = _train_and_eval_nn(X_train, y_train, X_test, y_test)
             nn_rerun_time_s = time.time() - _t_nn0
+        selected_train_r2 = float(nn_m.get("train_r2", float("nan")))
         test_r2 = float(nn_m.get("test_r2", float("nan")))
-        route_execution_status = "nn_fallback_executed" if np.isfinite(test_r2) else "nn_fallback_failed"
+        if np.isfinite(test_r2):
+            route_execution_status = "nn_fallback_executed"
+        elif np.asarray(y_test, dtype=float).size and float(np.ptp(np.asarray(y_test, dtype=float))) <= 1e-12:
+            route_execution_status = "nn_fallback_undefined_test_r2_constant_target"
+        else:
+            route_execution_status = "nn_fallback_failed"
 
     return {
-        "train_r2":       float(llm_train_r2) if llm_train_ok else float("nan"),
+        "train_r2":       float(selected_train_r2),
         "test_r2":        float(test_r2),
+        "test_r2_status": (
+            "undefined_constant_target"
+            if np.asarray(y_test, dtype=float).size
+            and float(np.ptp(np.asarray(y_test, dtype=float))) <= 1e-12
+            else "defined" if np.isfinite(test_r2) else "nonfinite_prediction"
+        ),
         "decision":       decision,
         "llm_code":       llm_code if has_formula else None,
         "llm_train_r2":   float(llm_train_r2) if llm_train_ok else float("nan"),
@@ -1567,6 +1605,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 case_results["neural_network"] = {
                     "train_r2":    nn_m["train_r2"],
                     "test_r2":     nn_m["test_r2"],
+                    "test_r2_status": nn_m.get("test_r2_status"),
                     "success":     bool(_math.isfinite(nn_m["train_r2"]) and _math.isfinite(nn_m["test_r2"])),  # C4
                     "timed_out":   nn_m.get("timed_out", False),
                     "time_s":      round(time.time() - _t0_nn, 3),
@@ -1601,6 +1640,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 case_results["hybrid"] = {
                     "train_r2":        _train_r2,
                     "test_r2":         _test_r2,
+                    "test_r2_status": hy_m.get("test_r2_status"),
                     "decision":        hy_m["decision"],
                     "route_reason":    hy_m.get("route_reason"),
                     "route_execution_status": hy_m.get("route_execution_status"),
