@@ -737,15 +737,24 @@ def _generate_llm_formula(
 ) -> dict:
     """
     Call the Anthropic API to generate a Python formula function.
-    Returns dict with keys: python_code, formula, success, error.
+    The request honours the runner's LLM_METHOD_TIMEOUT and disables hidden
+    SDK retries so the configured per-request wall-clock budget is meaningful.
     """
+    timeout_s = None
     try:
+        timeout_s = float(os.environ.get("LLM_METHOD_TIMEOUT", "120"))
+        if not np.isfinite(timeout_s) or timeout_s <= 0:
+            raise ValueError("LLM_METHOD_TIMEOUT must be a finite positive number")
         from anthropic import Anthropic
-        client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+        client = Anthropic(
+            api_key=os.environ["ANTHROPIC_API_KEY"],
+            timeout=timeout_s,
+            max_retries=0,
+        )
     except Exception as e:
         return {"python_code": None, "formula": None, "success": False,
                 "llm_called": False, "bypass_kind": "none",
-                "llm_source": "v3c_builtin_failed",
+                "llm_source": "v3c_builtin_failed", "timeout_s": timeout_s,
                 "error": f"API client error: {e}"}
 
     var_list = ", ".join(var_names)
@@ -792,12 +801,12 @@ def formula({var_list}):
         return {"python_code": code, "formula": code,
                 "success": "def formula" in code, "error": None,
                 "llm_called": True, "bypass_kind": "live",
-                "llm_source": "v3c_builtin"}
+                "llm_source": "v3c_builtin", "timeout_s": timeout_s}
     except Exception as e:
         return {"python_code": None, "formula": None,
                 "success": False, "error": str(e),
                 "llm_called": False, "bypass_kind": "none",
-                "llm_source": "v3c_builtin_failed"}
+                "llm_source": "v3c_builtin_failed", "timeout_s": timeout_s}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1010,6 +1019,7 @@ def _hybrid_predict_and_eval(
         "llm_called":     bool(llm_result.get("llm_called", False)),   # B2
         "bypass_kind":    llm_result.get("bypass_kind", "none"),       # B2
         "llm_source":     llm_result.get("llm_source", "unknown"),
+        "llm_timeout_s":  llm_result.get("timeout_s"),
         "success":        True,
     }
 
@@ -1530,6 +1540,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "llm_called":      hy_m.get("llm_called"),      # B2
                     "bypass_kind":     hy_m.get("bypass_kind"),     # B2
                     "llm_source":      hy_m.get("llm_source"),
+                    "llm_timeout_s":   hy_m.get("llm_timeout_s"),
                     # Retain the exact generated Python formula for audit and
                     # independent rescoring on the identical protocol split.
                     "formula":         hy_m.get("llm_code"),
