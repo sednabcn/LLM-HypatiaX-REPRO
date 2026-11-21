@@ -1,0 +1,73 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=25mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue}
+\title{Neural-Network Fallback: Reliability, Extrapolation, and Remediation}
+\author{LLM-HypatiaX-REPRO}
+\date{21 November 2026}
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Execution reliability has improved, but predictive usefulness of the neural-network (NN) fallback has not been demonstrated. The central issue is a validation/test distribution mismatch: the benchmark tests directional extrapolation, while the former NN validation split sampled randomly from the in-range training region. The inspected workflow artifact is stale relative to merged PR \#318 and cannot establish fresh post-merge performance. Remediation is implemented directly on the existing master branch; no additional branch is required.
+\end{abstract}
+
+\section{Executive summary}
+The benchmark deliberately evaluates extrapolation beyond the observed fitting range. Randomly splitting the outer training partition for NN validation rewards interpolation, not the directional extrapolation required by the test set. A high training score alongside poor test performance should therefore be described primarily as extrapolation failure and validation-distribution mismatch, rather than simply as overfitting.
+
+The artifact inspected from workflow run \texttt{44931963638} uses an older output schema and is not a fresh measurement of merged PR \#318. The additional seed files are incomplete. Old numerical metrics are diagnostic only.
+
+\section{Findings and evidence}
+\subsection{Execution reliability}
+The inspected seed-42 artifact contains 74 standalone NN cases, all completed without timeout. This demonstrates execution reliability for that artifact, not predictive quality. Four additional seed files each contain nine NN cases marked unsuccessful with zero runtime, leaving only 65 valid NN metrics per seed.
+
+\subsection{Prediction quality}
+In the old seed-42 artifact, mean training R-squared is approximately 0.995, mean test R-squared approximately -3.291, and median test R-squared approximately -0.691. 51 of 74 test R-squared values are negative. These values are historical diagnostics and must not be presented as fresh post-PR \#318 results.
+
+\subsection{Fallback usefulness}
+Six hybrid decisions selected an NN in the old artifact: five direct NN selections and one explicit fallback. Five of the six had non-positive test R-squared; the sole positive case was Vega (approximately 0.629). The explicit fallback case, Optimal LP Position (Kelly), reported test R-squared of 0.0, but its test target is constant at 1.0. R-squared is undefined for a constant target, so this is not evidence of predictive quality.
+
+\subsection{Artifact freshness}
+The artifact from run \texttt{44931963638} lacks metadata emitted by the merged PR \#318 implementation, including \texttt{best\_epoch}, \texttt{validation\_loss}, \texttt{epochs\_completed}, \texttt{training\_time\_s}, and \texttt{failure\_reason}. Its output schema matches the older implementation. The multi-seed files are also incomplete. These artifacts do not constitute a clean fresh evaluation of the merged implementation.
+
+\section{Root cause: extrapolation mismatch}
+The outer benchmark split is directional: training observations are at or below the 40th percentile of the primary feature, while test observations are above that threshold. The split is approximately 80 training rows and 120 test rows.
+
+The former NN procedure randomly divided the 80 outer-training rows into fitting and validation subsets (approximately 64 and 16 rows). Both subsets came from the same lower-feature region. Early stopping therefore rewarded in-range interpolation while the benchmark test measured predictions in a higher-feature region not represented during fitting.
+
+The network architecture (128/64/32 hidden units) is large relative to roughly 64 fitting examples, and a generic MLP has no built-in guarantee of sensible extrapolation. This can amplify instability, but the primary design flaw is the mismatch between random in-range validation and directional out-of-range testing.
+
+\section{Remediation implemented on the existing branch}
+The repair was committed directly to \texttt{master}; no additional branch was created.
+
+\begin{enumerate}[leftmargin=*]
+\item \textbf{Directional validation.} The NN now holds out a one-sided edge of the outer training data using the same primary feature and direction as the benchmark split. Outer test rows and labels are not used for model selection.
+\item \textbf{Training-only baselines.} The NN edge-validation score is compared with mean and linear baselines evaluated on the same internal edge.
+\item \textbf{Fail-closed quality gate.} NN selection requires a pre-calibrated minimum edge-validation R-squared threshold and performance at least as good as the strongest finite baseline. The threshold is supplied through \texttt{HYPATIAX\_NN\_EDGE\_MIN\_R2}.
+\item \textbf{Explicit unavailability.} If the threshold is absent or invalid, or the NN fails the quality gate, routing reports \texttt{nn\_unavailable} rather than silently selecting an unqualified NN.
+\item \textbf{Probe alignment.} The existing extrapolation probe now uses the same one-sided primary-feature direction instead of a two-sided PCA edge split.
+\item \textbf{Regression coverage.} Tests cover directional split ordering, fail-closed behavior without calibration, baseline comparison, and rejection of a low-quality fallback.
+\end{enumerate}
+
+\section{Calibration and leakage safeguards}
+The quality threshold must be calibrated using development data or a separate calibration procedure, never by optimizing against the benchmark outer test set. Until \texttt{HYPATIAX\_NN\_EDGE\_MIN\_R2} is set to a documented calibrated value, the gate deliberately rejects NN fallback. This conservative default avoids treating successful execution as proof of predictive suitability.
+
+Preprocessing and model selection remain confined to the inner fitting and validation subsets. The outer test partition is reserved for final scoring only. Constant or near-constant targets should report R-squared as undefined/NaN, with a suitable complementary metric where meaningful.
+
+\section{Acceptance criteria and remaining validation}
+The implementation repair is in place, but predictive improvement has not yet been established. Completion of empirical validation requires:
+\begin{enumerate}[leftmargin=*]
+\item Calibrate and document the edge-validation threshold without using outer test labels.
+\item Run focused regression tests and verify the full CI result.
+\item Launch a fresh, fully identified five-seed evaluation after calibration.
+\item Confirm all expected seed/case combinations and current metadata fields are present.
+\item Report execution reliability separately from predictive quality and compare NN fallback decisions with the training-only baselines.
+\end{enumerate}
+
+The previous artifact remains stale and incomplete; a successful workflow status alone does not prove that fresh NN predictions were generated. No fresh five-seed experiment is claimed in this report.
+
+\end{document}
