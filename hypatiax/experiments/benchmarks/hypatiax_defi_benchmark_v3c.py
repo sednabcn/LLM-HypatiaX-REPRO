@@ -777,7 +777,7 @@ def _generate_llm_formula(
     # [FIX-GT-LEAK] Never include metadata['ground_truth'] in the prompt.
     # Protocol notes are descriptive context, not the answer key.
     protocol_note = str(metadata.get("note") or "").strip()
-    note_block = f"\\nProtocol context: {protocol_note}" if protocol_note else ""
+    note_block = f"\nProtocol context: {protocol_note}" if protocol_note else ""
     prompt   = f"""You are an expert in DeFi (decentralised finance) mathematics.
 
 Task: derive the formula for the following quantity.
@@ -1644,6 +1644,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
 
                 case_results["hybrid"] = {
                     "train_r2":        _train_r2,
+                    "train_r2_source": hy_m.get("train_r2_source"),
                     "test_r2":         _test_r2,
                     "test_r2_status": hy_m.get("test_r2_status"),
                     "decision":        hy_m["decision"],
