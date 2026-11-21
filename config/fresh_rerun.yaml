@@ -95,7 +95,7 @@ benchmarks:
     enabled: true
     script: "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py"
     output_subdir: "defi"
-    split: "pca_40_60"
+    split: "primary_feature_40_60"
     train_frac: 0.40
   core15:
     enabled: true
@@ -323,6 +323,17 @@ deferred_experiments:
       random_state: 42
       output_dir: comparison_results/protocol30/pca-40-60
       interpretation: "PCA-held-out 60 percent is the extrapolation evaluation set"
+    # exp1c is the exp1 result view under Protocol-30, not a new experiment.
+    # Reuse the existing Protocol-30 PCA stage; analyse the NN/Hybrid pair
+    # (method IDs 2 and 3) from its six-method artifact.
+    exp1c:
+      alias_of: exp1
+      protocol_variant: protocol30_pca_40_60
+      runner_stage: exp2_protocol30_pca_4060
+      method_ids: [2, 3]
+      method_names: [ImprovedNN, EnhancedHybridDeFi]
+      output_dir: comparison_results/protocol30/pca-40-60
+      verification_status: not_executed
     noise_level: 0.0
     recovery_threshold: 0.999999
     verification_status: not_executed
