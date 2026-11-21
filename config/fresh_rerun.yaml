@@ -333,6 +333,8 @@ deferred_experiments:
       method_ids: [2, 3]
       method_names: [ImprovedNN, EnhancedHybridDeFi]
       output_dir: comparison_results/protocol30/pca-40-60
+      source_artifact: protocol30_pca_4060_aggregate.json
+      projection_artifact: protocol30_pca_4060_exp1c_view.json
       verification_status: not_executed
     noise_level: 0.0
     recovery_threshold: 0.999999
