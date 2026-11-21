@@ -445,7 +445,10 @@ def _train_and_eval_nn(
                 and np.isfinite(X_test).all() and np.isfinite(y_test).all()):
             raise ValueError("nonfinite_nn_input")
 
+        # Preserve the benchmark's established per-case RNG reset while
+        # using a local RandomState below for the validation partition.
         torch.manual_seed(seed)
+        np.random.seed(seed)
         hidden = hidden or [128, 64, 32]
         # Local RNG: deterministic validation rows without perturbing the
         # benchmark's global NumPy RNG stream.
