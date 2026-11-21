@@ -28,14 +28,16 @@ def test_exp1b_sweep_only_does_not_run_the_seed42_single_case_twice():
         if isinstance(n, ast.If)
         and isinstance(n.test, ast.BoolOp)
         and any(
-            isinstance(v, ast.Compare)
-            and isinstance(v.left, ast.Name)
-            and v.left.id == "PV_SWEEP_ONLY"
+            isinstance(v, ast.Name) and v.id == "PV_SWEEP_ONLY"
             for v in n.test.values
         )
     ]
     assert nodes
-    assert "skipping the separate seed-42 single-case rerun" in source
+    assert any(
+        any(isinstance(call, ast.Call) for call in ast.walk(node))
+        and "skipping the separate seed-42 single-case rerun" in ast.get_source_segment(source, node)
+        for node in nodes
+    )
 
 
 def test_exp1b_per_seed_rows_preserve_llm_request_and_formula_provenance():
