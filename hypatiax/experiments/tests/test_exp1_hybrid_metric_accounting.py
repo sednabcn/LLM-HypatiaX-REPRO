@@ -206,6 +206,13 @@ def test_exp1_provider_failure_after_request_entry_keeps_attempt_provenance(monk
     assert "simulated provider timeout" in result["error"]
 
 
+def test_exp1_invalid_split_feature_index_falls_back_to_first_real_feature():
+    X = np.arange(40, dtype=float).reshape(20, 2)
+    assert bench._effective_split_feature_index(X, 7) == 0
+    assert bench._effective_split_feature_index(X, 1) == 1
+    assert bench._effective_split_feature_index(X, None) == 0
+
+
 def test_exp1_split_metadata_discloses_row_index_fallback():
     X = np.ones((100, 1), dtype=float)
     y = np.arange(100, dtype=float)

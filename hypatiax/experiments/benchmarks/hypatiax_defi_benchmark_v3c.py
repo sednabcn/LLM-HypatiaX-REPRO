@@ -1279,6 +1279,23 @@ def _hybrid_predict_and_eval(
 # SECTION 6 — Data splitting
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _effective_split_feature_index(X: np.ndarray, configured_index: int) -> int:
+    """Resolve a configured primary feature safely against the actual input width.
+
+    Some protocol cases expose fewer features than their historical split
+    configuration. In that case use column zero consistently for splitting,
+    NN validation, and routing rather than passing an invalid index downstream.
+    """
+    X = np.asarray(X)
+    try:
+        index = int(configured_index)
+    except (TypeError, ValueError, OverflowError):
+        return 0
+    if X.ndim != 2 or X.shape[1] == 0 or not 0 <= index < X.shape[1]:
+        return 0
+    return index
+
+
 def _aggressive_split(
     X: np.ndarray, y: np.ndarray, config: dict, return_metadata: bool = False
 ):
@@ -1761,10 +1778,15 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
             })
             tc.setdefault("description", desc)
 
+            requested_split_var_idx = tc["config"].get("split_var_idx", 0)
+            split_var_idx = _effective_split_feature_index(X_full, requested_split_var_idx)
+            split_config = dict(tc["config"])
+            split_config["split_var_idx"] = split_var_idx
             X_tr, y_tr, X_te, y_te, split_details = _aggressive_split(
-                X_full, y_full, tc["config"], return_metadata=True
+                X_full, y_full, split_config, return_metadata=True
             )
-            split_var_idx = tc["config"].get("split_var_idx", 0)
+            split_details["requested_split_var_idx"] = requested_split_var_idx
+            split_details["split_var_idx"] = split_var_idx
             split_details["split_var_name"] = (
                 var_names[split_var_idx]
                 if 0 <= split_var_idx < len(var_names) else None
