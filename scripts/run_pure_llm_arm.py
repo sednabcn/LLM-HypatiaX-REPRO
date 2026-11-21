@@ -535,7 +535,8 @@ class BaselineProvider:
             else:
                 if p.name == "metadata":
                     # Matched HDS inputs: training-only pattern summary and rounded constants.
-                    kw["metadata"] = {"constants": prompt_constants, "data_patterns": patterns}
+                    kw["metadata"] = {"constants": prompt_constants, "data_patterns": patterns,
+                                     "hds_prompt_context": True}
                     continue
                 if p.default is inspect.Parameter.empty and p.kind in (p.POSITIONAL_OR_KEYWORD, p.KEYWORD_ONLY):
                     raise TypeError(f"generate_formula{inspect.signature(self.fn)}: unmapped required "
