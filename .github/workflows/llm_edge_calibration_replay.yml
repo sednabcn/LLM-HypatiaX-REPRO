@@ -25,7 +25,9 @@ jobs:
       - name: Install project dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
+          python -m pip install --extra-index-url https://download.pytorch.org/whl/cpu \
+            numpy==2.3.5 scipy==1.16.3 scikit-learn==1.7.2 \
+            python-dotenv==1.2.2 torch==2.12.1+cpu
       - name: Download the original calibration artifact
         uses: actions/download-artifact@v4
         with:
