@@ -432,6 +432,10 @@ def _train_and_eval_nn(
         "epochs_completed": 0, "best_epoch": None,
         "validation_loss": None, "training_time_s": 0.0,
         "failure_reason": None, "y_pred_train": None, "y_pred_test": None,
+        "train_r2_status": None, "test_r2_status": None,
+        "nn_edge_r2_status": None,
+        "validation_split_realized_method": None,
+        "validation_split_fallback_reason": None,
     }
     try:
         X_train = np.asarray(X_train, dtype=float)
@@ -460,13 +464,24 @@ def _train_and_eval_nn(
         if split_type not in {"high", "low"}:
             raise ValueError("invalid_directional_validation_split_type")
         realized_method = split_metadata.get("realized_method", "primary_feature_percentile")
+        split_var_idx = int(split_metadata.get("split_var_idx", 0))
+        validation_split_fallback_reason = None
         if realized_method == "row_index_fallback":
             order = np.arange(len(X_train), dtype=int)
+            validation_split_realized_method = "row_index_fallback"
+        elif split_var_idx < 0 or split_var_idx >= X_train.shape[1]:
+            # Metadata can become stale when a protocol changes its feature
+            # layout. Keep validation strictly inside X_train and use the
+            # protocol's documented row-order fallback rather than failing the
+            # entire NN arm. Record the fallback so it is visible in results.
+            order = np.arange(len(X_train), dtype=int)
+            validation_split_realized_method = "row_index_fallback"
+            validation_split_fallback_reason = (
+                f"feature_index_out_of_range:{split_var_idx}:n_features={X_train.shape[1]}"
+            )
         else:
-            split_var_idx = int(split_metadata.get("split_var_idx", 0))
-            if split_var_idx < 0 or split_var_idx >= X_train.shape[1]:
-                raise ValueError("directional_validation_feature_index_out_of_range")
             order = np.argsort(X_train[:, split_var_idx], kind="mergesort")
+            validation_split_realized_method = "primary_feature_percentile"
         n_val = max(5, int(np.ceil(len(X_train) * 0.20)))
         if len(X_train) - n_val < 8 or n_val >= len(X_train):
             raise ValueError("insufficient_rows_for_directional_edge_validation")
@@ -575,8 +590,9 @@ def _train_and_eval_nn(
                 or not np.isfinite(yp_train).all() or not np.isfinite(yp_test).all()):
             raise ValueError("invalid_nn_prediction_shape_or_values")
 
-        train_r2 = float(_r2_checked(y_train, yp_train)[0])
-        test_r2 = float(_r2_checked(y_test, yp_test)[0])
+        train_r2, train_r2_status = _r2_checked(y_train, yp_train)
+        test_r2, test_r2_status = _r2_checked(y_test, yp_test)
+        train_r2, test_r2 = float(train_r2), float(test_r2)
         # Score the NN on the same directional edge used for model selection.
         # X_val is already augmented above using the training-fitted schema.
         # Applying _augment_features a second time changes its width and raises
@@ -587,7 +603,8 @@ def _train_and_eval_nn(
         with torch.no_grad():
             edge_raw = model(edge_pred_scaled).cpu().numpy().reshape(-1)
         edge_pred = sy.inverse_transform(edge_raw.reshape(-1, 1)).reshape(-1)
-        nn_edge_r2 = float(_r2_checked(y_val, edge_pred)[0])
+        nn_edge_r2, nn_edge_r2_status = _r2_checked(y_val, edge_pred)
+        nn_edge_r2 = float(nn_edge_r2)
 
         selected_model = "nn"
         use_ridge = bool(
@@ -608,10 +625,16 @@ def _train_and_eval_nn(
             yp_test = np.full(len(y_test), mean_value, dtype=float)
             selected_model = "training_mean"
 
-        train_r2 = float(_r2_checked(y_train, yp_train)[0])
-        test_r2 = float(_r2_checked(y_test, yp_test)[0])
+        train_r2, train_r2_status = _r2_checked(y_train, yp_train)
+        test_r2, test_r2_status = _r2_checked(y_test, yp_test)
+        train_r2, test_r2 = float(train_r2), float(test_r2)
         result.update({
             "train_r2": train_r2, "test_r2": test_r2,
+            "train_r2_status": train_r2_status,
+            "test_r2_status": test_r2_status,
+            "nn_edge_r2_status": nn_edge_r2_status,
+            "validation_split_realized_method": validation_split_realized_method,
+            "validation_split_fallback_reason": validation_split_fallback_reason,
             "success": bool(np.isfinite(train_r2) and np.isfinite(test_r2)),
             "y_pred_train": yp_train, "y_pred_test": yp_test,
             "nn_edge_r2": nn_edge_r2, "ridge_edge_r2": ridge_edge_r2,
@@ -2091,6 +2114,13 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 dec = f" [{res.get('decision', '')}]" if method == "hybrid" else ""
                 print(f"  {method:15s}: train={_fmt(res.get('train_r2'))}, "
                       f"test={_fmt(res.get('test_r2'))}{dec}")
+                if method == "neural_network":
+                    if res.get("failure_reason"):
+                        print(f"    NN failure: {res['failure_reason']}")
+                    if res.get("validation_split_fallback_reason"):
+                        print(f"    NN validation fallback: {res['validation_split_fallback_reason']}")
+                    if res.get("test_r2_status") not in (None, "ok"):
+                        print(f"    NN test metric status: {res['test_r2_status']}")
 
             record = {
                 "equation_id":            tc["name"],
