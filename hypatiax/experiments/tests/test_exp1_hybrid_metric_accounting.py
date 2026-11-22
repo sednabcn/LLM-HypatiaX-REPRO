@@ -371,3 +371,30 @@ def test_exp1_options_delta_predictions_are_clipped_to_semantic_bounds(monkeypat
     assert np.min(nn_result["y_pred_test"]) >= 0.0
     assert np.max(nn_result["y_pred_test"]) <= 1.0
     assert result["physical_bounds_applied"] == [0.0, 1.0]
+
+def test_exp1_nn_default_augmentation_reuses_transformed_validation_features():
+    # Exercise the production default (augment=True) with two input columns,
+    # including the ratio features. The edge-validation matrix must be
+    # transformed exactly once and retain the scaler's fitted feature width.
+    x0 = np.geomspace(1.0, 4.0, 48)
+    x1 = np.geomspace(2.0, 5.0, 48)
+    X_train = np.column_stack([x0, x1])
+    y_train = 2.0 * x0 ** 1.3 * x1 ** 0.7
+    xt0 = np.geomspace(5.0, 8.0, 12)
+    xt1 = np.geomspace(6.0, 9.0, 12)
+    X_test = np.column_stack([xt0, xt1])
+    y_test = 2.0 * xt0 ** 1.3 * xt1 ** 0.7
+
+    result = bench._train_and_eval_nn(
+        X_train, y_train, X_test, y_test,
+        epochs=30, hidden=[8], seed=123, max_time_s=30,
+        patience=6,
+    )
+
+    assert result["success"] is True, result["failure_reason"]
+    assert result["failure_reason"] is None
+    assert np.isfinite(result["nn_edge_r2"])
+    assert result["y_pred_train"].shape == y_train.shape
+    assert result["y_pred_test"].shape == y_test.shape
+    assert np.isfinite(result["y_pred_train"]).all()
+    assert np.isfinite(result["y_pred_test"]).all()
