@@ -50,6 +50,14 @@ def _cohort_assignment(cases: list[dict]) -> dict[str, str]:
     return assigned
 
 
+def _match_protocol_case(name: str, matches: list[tuple]):
+    """Prefer exact descriptions; substring fallback is only for legacy aliases."""
+    exact = next((item for item in matches if name.lower() == item[0].lower()), None)
+    if exact is not None:
+        return exact
+    return next((item for item in matches if name.lower() in item[0].lower()), None)
+
+
 def _array_hash(*arrays: np.ndarray) -> str:
     digest = hashlib.sha256()
     for array in arrays:
@@ -228,9 +236,7 @@ def run(output: Path, max_calls: int, resume: bool = True) -> dict:
         }
         try:
             matches = protocol.load_test_data(case["domain"], num_samples=case["num_samples"])
-            match = next((item for item in matches if name.lower() == item[0].lower()), None)
-            if match is None:
-                match = next((item for item in matches if name.lower() in item[0].lower()), None)
+            match = _match_protocol_case(name, matches)
             if match is None:
                 raise ValueError("protocol_case_not_found")
             description, X_full, y_full, var_names, metadata = match
