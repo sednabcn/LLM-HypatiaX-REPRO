@@ -1121,17 +1121,28 @@ def _hybrid_predict_and_eval(
         valid = _valid_nn_result(nn_result)
         selected_train_r2 = _metric(nn_result.get("train_r2")) if valid else float("nan")
         test_r2 = _metric(nn_result.get("test_r2")) if valid else float("nan")
-        train_r2_source = "nn_fallback"
-        decision = "nn_fallback" if valid else "nn_unavailable"
-        route_reason = reason
-        route_execution_status = "nn_fallback_executed" if valid else "nn_fallback_failed"
-        if bool(nn_result.get("abstained", False)):
-            # Never retain a non-zero MLP weight when the MLP abstained,
-            # including a fallback reached from the fitted-LLM route.
+        abstained = bool(nn_result.get("abstained", False))
+        if abstained:
+            # Preserve the explicit abstention route used by the ensemble
+            # branch: the replacement predictor is selected, not the MLP.
+            train_r2_source = "nn_abstention_" + str(
+                nn_result.get("selected_model", "fallback")
+            )
+            route_execution_status = (
+                "nn_abstention_fallback_executed"
+                if valid else "nn_abstention_fallback_failed"
+            )
             query_blend_weights = {
                 "llm": [1.0] * len(X_test),
                 "nn": [0.0] * len(X_test),
             }
+        else:
+            train_r2_source = "nn_fallback"
+            route_execution_status = (
+                "nn_fallback_executed" if valid else "nn_fallback_failed"
+            )
+        decision = "nn_fallback" if valid else "nn_unavailable"
+        route_reason = reason
 
     if decision == "llm":
         selected_train_r2 = _metric(llm_train_r2)
