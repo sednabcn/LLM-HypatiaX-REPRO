@@ -1116,7 +1116,7 @@ def _hybrid_predict_and_eval(
         return trained
 
     def _use_nn_fallback(nn_result, reason):
-        nonlocal selected_train_r2, train_r2_source, test_r2
+        nonlocal selected_train_r2, train_r2_source, test_r2, query_blend_weights
         nonlocal decision, route_reason, route_execution_status
         valid = _valid_nn_result(nn_result)
         selected_train_r2 = _metric(nn_result.get("train_r2")) if valid else float("nan")
@@ -1125,6 +1125,13 @@ def _hybrid_predict_and_eval(
         decision = "nn_fallback" if valid else "nn_unavailable"
         route_reason = reason
         route_execution_status = "nn_fallback_executed" if valid else "nn_fallback_failed"
+        if bool(nn_result.get("abstained", False)):
+            # Never retain a non-zero MLP weight when the MLP abstained,
+            # including a fallback reached from the fitted-LLM route.
+            query_blend_weights = {
+                "llm": [1.0] * len(X_test),
+                "nn": [0.0] * len(X_test),
+            }
 
     if decision == "llm":
         selected_train_r2 = _metric(llm_train_r2)
