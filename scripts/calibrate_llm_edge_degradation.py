@@ -28,7 +28,7 @@ from hypatiax.protocols.experiment_protocol_defi import DeFiExperimentProtocol
 
 
 MODEL = "claude-sonnet-4-6"
-PROTOCOL_VERSION = "llm-edge-calibration-v1"
+PROTOCOL_VERSION = "llm-edge-calibration-v2-diagnostics"
 SPLIT_SEED = 20261122
 EDGE_FRACTION = 0.15
 CALIBRATION_FRACTION = 0.60
@@ -189,28 +189,122 @@ def _bootstrap_interval(values: np.ndarray, statistic: str, seed: int) -> list[f
     return [float(bounds[0]), float(bounds[1])]
 
 
+def _score_predictions(y_true: np.ndarray, y_pred: np.ndarray,
+                       reference_scale: float) -> dict:
+    """Return transparent fit diagnostics; never clip or discard poor finite fits."""
+    y_true = np.asarray(y_true, dtype=float).reshape(-1)
+    y_pred = np.asarray(y_pred, dtype=float).reshape(-1)
+    if y_true.shape != y_pred.shape:
+        return {"ok": False, "failure_reason": "prediction_target_shape_mismatch"}
+    if y_true.size < 2:
+        return {"ok": False, "failure_reason": "fewer_than_two_targets"}
+    if not np.isfinite(y_true).all():
+        return {"ok": False, "failure_reason": "nonfinite_targets"}
+    if not np.isfinite(y_pred).all():
+        return {"ok": False, "failure_reason": "nonfinite_predictions"}
+    metrics = benchmark._compute_metrics(y_true, y_pred)
+    if not np.isfinite(metrics["r2"]):
+        return {"ok": False, "failure_reason": "undefined_r2"}
+    scale = float(reference_scale)
+    nrmse = float(metrics["rmse"] / scale) if np.isfinite(scale) and scale > 1e-12 else None
+    return {
+        "ok": True,
+        "r2": float(metrics["r2"]),
+        "mae": float(metrics["mae"]),
+        "rmse": float(metrics["rmse"]),
+        "nrmse_core_scale": nrmse,
+        "target_min": float(np.min(y_true)),
+        "target_max": float(np.max(y_true)),
+        "target_std": float(np.std(y_true)),
+        "prediction_min": float(np.min(y_pred)),
+        "prediction_max": float(np.max(y_pred)),
+        "prediction_std": float(np.std(y_pred)),
+    }
+
+
+def _evaluate_formula_pair(formula: str, X_core: np.ndarray, y_core: np.ndarray,
+                           X_edge: np.ndarray, y_edge: np.ndarray,
+                           constants: dict | None = None) -> dict:
+    """Score both disjoint partitions and normalize both errors by core target scale."""
+    core_scale = float(np.std(np.asarray(y_core, dtype=float)))
+    diagnostics = {}
+    for label, X, y in (("core", X_core, y_core), ("edge", X_edge, y_edge)):
+        try:
+            predictions = benchmark._execute_formula(formula, X, constants=constants)
+        except Exception as exc:
+            diagnostics[label] = {
+                "ok": False,
+                "failure_reason": f"formula_execution_exception:{type(exc).__name__}",
+            }
+            continue
+        if predictions is None:
+            diagnostics[label] = {
+                "ok": False,
+                "failure_reason": "formula_execution_failed_or_invalid_output",
+            }
+            continue
+        diagnostics[label] = _score_predictions(y, predictions, core_scale)
+
+    core, edge = diagnostics["core"], diagnostics["edge"]
+    if core.get("ok") and edge.get("ok"):
+        delta_r2 = float(core["r2"] - edge["r2"])
+        core_nrmse, edge_nrmse = (
+            core.get("nrmse_core_scale"), edge.get("nrmse_core_scale")
+        )
+        delta_nrmse = (
+            float(edge_nrmse - core_nrmse)
+            if core_nrmse is not None and edge_nrmse is not None else None
+        )
+        return {
+            "ok": True, "core": core, "edge": edge,
+            "delta_llm": delta_r2, "delta_nrmse_core_scale": delta_nrmse,
+        }
+    return {
+        "ok": False, "core": core, "edge": edge,
+        "failure_reason": ";".join(
+            f"{part}:{data.get('failure_reason', 'unknown')}"
+            for part, data in diagnostics.items() if not data.get("ok")
+        ),
+    }
+
+
 def _summarize(records: list[dict]) -> dict:
     summary = {}
     for cohort in ("calibration", "evaluation"):
-        valid = [r for r in records if r["cohort"] == cohort
-                 and r.get("status") == "scored"
+        cohort_records = [r for r in records if r["cohort"] == cohort]
+        valid = [r for r in cohort_records if r.get("status") == "scored"
                  and r.get("delta_llm") is not None]
         deltas = np.asarray([r["delta_llm"] for r in valid], dtype=float)
+        nrmse_deltas = np.asarray([
+            r["delta_nrmse_core_scale"] for r in valid
+            if r.get("delta_nrmse_core_scale") is not None
+        ], dtype=float)
         summary[cohort] = {
-            "n_equations": sum(r["cohort"] == cohort for r in records),
+            "n_equations": len(cohort_records),
             "n_scored": int(deltas.size),
-            "n_failed_or_undefined": sum(
-                r["cohort"] == cohort and r.get("status") != "scored"
-                for r in records),
+            "n_failed_or_undefined": sum(r.get("status") != "scored" for r in cohort_records),
+            "n_finite_r2_below_minus_one_core": sum(
+                (r.get("core_diagnostics") or {}).get("r2", 0) < -1 for r in valid
+            ),
+            "n_finite_r2_below_minus_one_edge": sum(
+                (r.get("edge_diagnostics") or {}).get("r2", 0) < -1 for r in valid
+            ),
             "delta_mean": float(np.mean(deltas)) if deltas.size else None,
             "delta_median": float(np.median(deltas)) if deltas.size else None,
             "delta_q10": float(np.quantile(deltas, 0.10)) if deltas.size else None,
             "delta_q90": float(np.quantile(deltas, 0.90)) if deltas.size else None,
+            "delta_nrmse_core_scale_median": (
+                float(np.median(nrmse_deltas)) if nrmse_deltas.size else None
+            ),
             "delta_median_bootstrap_95ci": _bootstrap_interval(
                 deltas, "median", SPLIT_SEED + (0 if cohort == "calibration" else 1)
             ),
             "delta_q90_bootstrap_95ci": _bootstrap_interval(
                 deltas, "q90", SPLIT_SEED + (10 if cohort == "calibration" else 11)
+            ),
+            "tau_eligible": False,
+            "tau_ineligibility_reason": (
+                "No predeclared acceptable-fit criterion; diagnostics are descriptive only"
             ),
         }
     return summary
@@ -299,24 +393,28 @@ def run(output: Path, max_calls: int, resume: bool = True) -> dict:
                 result["status"] = "generation_failed"
             else:
                 constants = metadata.get("constants") or {}
-                r2_core, core_ok = benchmark._eval_formula_r2(
-                    formula, X_core, y_core, constants=constants
+                scored = _evaluate_formula_pair(
+                    formula, X_core, y_core, X_edge, y_edge, constants=constants
                 )
-                r2_edge, edge_ok = benchmark._eval_formula_r2(
-                    formula, X_edge, y_edge, constants=constants
-                )
-                if (core_ok and edge_ok and np.isfinite(r2_core)
-                        and np.isfinite(r2_edge)):
+                result["core_diagnostics"] = scored.get("core")
+                result["edge_diagnostics"] = scored.get("edge")
+                if scored["ok"]:
                     result.update({
                         "status": "scored",
-                        "r2_core": float(r2_core),
-                        "r2_edge": float(r2_edge),
-                        "delta_llm": float(r2_core - r2_edge),
+                        "r2_core": scored["core"]["r2"],
+                        "r2_edge": scored["edge"]["r2"],
+                        "delta_llm": scored["delta_llm"],
+                        "delta_nrmse_core_scale": scored["delta_nrmse_core_scale"],
                     })
                 else:
                     result["status"] = "score_undefined"
-                    result["r2_core"] = float(r2_core) if np.isfinite(r2_core) else None
-                    result["r2_edge"] = float(r2_edge) if np.isfinite(r2_edge) else None
+                    result["score_failure_reason"] = scored.get("failure_reason")
+                    result["r2_core"] = (
+                        scored["core"].get("r2") if scored.get("core", {}).get("ok") else None
+                    )
+                    result["r2_edge"] = (
+                        scored["edge"].get("r2") if scored.get("edge", {}).get("ok") else None
+                    )
         except Exception as exc:
             result["status"] = "error"
             result["error"] = f"{type(exc).__name__}: {exc}"
