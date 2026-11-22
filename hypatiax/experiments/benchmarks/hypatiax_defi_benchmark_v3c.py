@@ -1436,6 +1436,93 @@ def _get_test_cases() -> list[dict]:
 # SECTION 8 — Checkpoint helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+_DIAGNOSTIC_FIELDS = (
+    "nn_selected_model", "nn_abstained", "nn_edge_r2", "ridge_edge_r2",
+)
+_ALLOWED_NN_MODELS = {"nn", "log_ridge", "training_mean"}
+
+
+def _is_intractable_case(test_case: dict) -> bool:
+    """Return the canonical intractability classification for a test case."""
+    name = str(test_case.get("name", test_case.get("equation_id", ""))).lower()
+    return bool(
+        test_case.get("extrapolation_intractable", False)
+        or "impermanent loss breakeven" in name
+    )
+
+
+def _normalize_saved_record(record: dict) -> dict:
+    """Backfill diagnostic keys in legacy checkpoints without changing values."""
+    if not isinstance(record, dict):
+        return record
+    if "impermanent loss breakeven" in str(record.get("equation_id", "")).lower():
+        record["extrapolation_intractable"] = True
+    results = record.setdefault("results", {})
+    for arm in ("neural_network", "hybrid"):
+        arm_result = results.setdefault(arm, {})
+        if not isinstance(arm_result, dict):
+            arm_result = {}
+            results[arm] = arm_result
+        for field in _DIAGNOSTIC_FIELDS:
+            arm_result.setdefault(field, None)
+    results["hybrid"].setdefault("blend_weights", None)
+    return record
+
+
+def _validate_result_records(records: list, require_il_record: bool = False) -> None:
+    """Fail closed when serialized diagnostics or abstention weights are invalid."""
+    if not isinstance(records, list) or not records:
+        raise ValueError("Benchmark results must be a non-empty list")
+
+    il_records = []
+    errors = []
+    for record in records:
+        equation_id = str(record.get("equation_id", "<unknown>"))
+        if "impermanent loss breakeven" in equation_id.lower():
+            il_records.append(record)
+            if record.get("extrapolation_intractable") is not True:
+                errors.append(f"{equation_id}: extrapolation_intractable must be true")
+
+        result_arms = record.get("results", {})
+        for arm in ("neural_network", "hybrid"):
+            data = result_arms.get(arm)
+            if not isinstance(data, dict):
+                errors.append(f"{equation_id}: missing results.{arm}")
+                continue
+            for field in _DIAGNOSTIC_FIELDS:
+                if field not in data:
+                    errors.append(f"{equation_id} {arm}: missing {field}")
+
+            selected = data.get("nn_selected_model")
+            if selected is not None and selected not in _ALLOWED_NN_MODELS:
+                errors.append(f"{equation_id} {arm}: invalid nn_selected_model={selected!r}")
+            if (arm == "neural_network" and data.get("success")
+                    and selected is None):
+                errors.append(f"{equation_id}: successful NN has no selected model")
+
+        hybrid = result_arms.get("hybrid", {})
+        if isinstance(hybrid, dict) and hybrid.get("nn_abstained") is True:
+            weights = hybrid.get("blend_weights")
+            nn_weights = weights.get("nn") if isinstance(weights, dict) else None
+            try:
+                values = np.asarray(nn_weights, dtype=float).reshape(-1)
+                valid_zero_weights = (
+                    values.size > 0 and np.isfinite(values).all()
+                    and np.all(np.abs(values) <= 1e-12)
+                )
+            except (TypeError, ValueError):
+                valid_zero_weights = False
+            if not valid_zero_weights:
+                errors.append(
+                    f"{equation_id}: abstained hybrid must save all-zero NN blend weights"
+                )
+
+    if require_il_record and not il_records:
+        errors.append("IL breakeven record is missing")
+    if errors:
+        raise ValueError("Invalid benchmark results:\n- " + "\n- ".join(errors))
+
+
 def _load_checkpoint() -> tuple[list, int]:
     if not CHECKPOINT_FILE.exists():
         return [], 0
@@ -1447,13 +1534,14 @@ def _load_checkpoint() -> tuple[list, int]:
         seen = {}
         for item in data:
             seen[item.get("equation_id", id(item))] = item
-        data = list(seen.values())
+        data = [_normalize_saved_record(item) for item in seen.values()]
         return data, len(data)
     except Exception:
         return [], 0
 
 
 def _save_checkpoint(results: list):
+    _validate_result_records(results)
     def _default(obj):
         if isinstance(obj, (np.integer,)):         return int(obj)
         if isinstance(obj, (np.floating, float)):
@@ -1466,6 +1554,7 @@ def _save_checkpoint(results: list):
 
 
 def _save_final(results: list):
+    _validate_result_records(results, require_il_record=True)
     def _default(obj):
         if isinstance(obj, (np.integer,)):         return int(obj)
         if isinstance(obj, (np.floating, float)):
@@ -1483,7 +1572,7 @@ def _save_final(results: list):
 # ─────────────────────────────────────────────────────────────────────────────
 
 _INTRACTABLE_NAMES = {
-    tc["name"] for tc in _get_test_cases() if tc.get("extrapolation_intractable")
+    tc["name"] for tc in _get_test_cases() if _is_intractable_case(tc)
 }
 _STANDARD_TOTAL = len(_get_test_cases()) - len(_INTRACTABLE_NAMES)  # = 66 + adjustments
 
@@ -1709,12 +1798,18 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
     print("=" * 80)
 
     for i, tc in enumerate(test_cases, 1):
-        # Skip already-done cases when resuming
-        if resume and any(r.get("equation_id") == tc["name"] for r in all_results):
+        # Normalize a saved record before skipping it on resume.
+        existing = next(
+            (r for r in all_results if r.get("equation_id") == tc["name"]),
+            None,
+        ) if resume else None
+        if existing is not None:
+            _normalize_saved_record(existing)
+            existing["extrapolation_intractable"] = _is_intractable_case(tc)
             print(f"[{i:02d}/{total}] ⏭  {tc['name']} — already done")
             continue
 
-        is_intractable = tc.get("extrapolation_intractable", False)
+        is_intractable = _is_intractable_case(tc)
         print(f"\n[{i:02d}/{total}] {tc['name']}  "
               f"({tc['difficulty'].upper()}"
               f"{' — INTRACTABLE' if is_intractable else ''})")
@@ -1736,11 +1831,17 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
             desc, X_full, y_full, var_names, metadata = match
             _is_il_breakeven = "impermanent loss breakeven" in tc["name"].lower()
             metadata.update({
-                "extrapolation_test": False if _is_il_breakeven else bool(metadata.get("extrapolation_test", True)),
-                "extrapolation_intractable": bool(_is_il_breakeven or tc.get("extrapolation_intractable", False)),
-                "difficulty":         tc["difficulty"],
-                "formula_type":       tc["formula_type"],
+                "extrapolation_test": (
+                    False if _is_il_breakeven
+                    else bool(metadata.get("extrapolation_test", True))
+                ),
+                "extrapolation_intractable": is_intractable,
+                "difficulty": tc["difficulty"],
+                "formula_type": tc["formula_type"],
             })
+            assert not _is_il_breakeven or metadata["extrapolation_intractable"], (
+                f"IL breakeven classification failed: {tc['name']}"
+            )
             tc.setdefault("description", desc)
 
             X_tr, y_tr, X_te, y_te, split_details = _aggressive_split(
@@ -1794,6 +1895,9 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 case_results["neural_network"] = {
                     "train_r2": None, "test_r2": None,
                     "success": False, "time_s": 0.0, "error": str(e), "reason": "fit_or_metric_failed",
+                    "nn_edge_r2": None, "ridge_edge_r2": None,
+                    "ridge_eligible": None, "nn_abstained": None,
+                    "nn_selected_model": None,
                 }
 
             # ── Hybrid (all Fixes applied) ────────────────────────────────────
@@ -1863,6 +1967,9 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "llm_temperature_sent": hybrid_llm_state.get("llm_temperature_sent", False),
                     "formula": hybrid_llm_state.get("llm_code"),
                     "success": False, "time_s": 0.0, "error": str(e), "reason": "fit_or_metric_failed",
+                    "blend_weights": None, "nn_abstained": None,
+                    "nn_selected_model": None, "nn_edge_r2": None,
+                    "ridge_edge_r2": None,
                 }
 
             # ── Augment with extrapolation gap and stability score ────────────
@@ -1902,7 +2009,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 "equation_id":            tc["name"],
                 "difficulty":           tc["difficulty"],
                 "formula_type":         tc["formula_type"],
-                "extrapolation_intractable": is_intractable,
+                "extrapolation_intractable": metadata["extrapolation_intractable"],
                 "results":              case_results,
                 "split_protocol": {
                     "name": "aggressive_extrapolation_40_60",
