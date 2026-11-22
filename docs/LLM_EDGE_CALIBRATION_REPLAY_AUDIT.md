@@ -24,7 +24,7 @@ The benchmark, protocol generator, and edge-split source files used by the repla
 
 All 47 formulas that scored in the original artifact were replayed. Their core and edge R² values exactly match the original stored values (maximum absolute difference: 0.0 for both partitions).
 
-The 23 verified-but-undefined formula rows failed the restricted formula execution/valid-output check on both partitions. The current evaluator records a generic execution/invalid-output reason; it does not yet distinguish parser, runtime, shape, or finite-value causes. Four generation failures had no saved formula.
+The 23 verified-but-undefined formula rows failed the restricted formula execution/valid-output check on both partitions in the original saved artifact. The original artifact predates categorized execution diagnostics, so those historical failures cannot now be reliably split into parser, runtime, shape, or finite-value causes. Four generation failures had no saved formula.
 
 ## Scores on the 47 input-verified formulas
 
@@ -52,12 +52,25 @@ The means are dominated by extreme poor-fit cases. The zero-heavy medians do not
 
 These examples show why a finite R² difference alone is not a reliable degradation statistic. In particular, a negative `R²_core - R²_edge` can coexist with a poor core fit, a poor edge fit, or worsening common-scale error.
 
+## Follow-up implementation and CI verification
+
+The calibration evaluator now calls the benchmark's diagnostic formula-execution API and stores partition-level failure reasons and execution metadata instead of collapsing all failures into a generic invalid-output status. Covered failure classes include invalid input/shape, non-finite input, parse errors, execution errors, invalid output type/shape, excessive or unrepaired non-finite predictions, and constant predictions. The legacy benchmark wrapper retains its original `None`/array contract.
+
+The normalization regression test was updated to mock this diagnostic API. The duplicate root-level test module was removed, leaving the canonical test under `hypatiax/experiments/tests/`.
+
+Verified on `master` at commit `aed17e5c5f6c6419a7fc2bebbb45dabd38ea1743`:
+
+- [R2 policy gate run 45045119964](https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/45045119964): all three jobs passed; full pytest suite **931 passed**.
+- [Runner smoke run 45045120024](https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/45045120024): completed successfully, including offline smoke checks.
+
+These runs supersede the earlier failed R2 gate #1947 and cancelled smoke attempt #2198. They establish CI correctness for this code revision; they do not change the scientific interpretation of the saved calibration artifact.
+
 ## Decision
 
-1. **Do not select or deploy tau from this artifact.** Although the replay is complete and input-integrity verified, the formula population has substantial undefined and poor-fit cases, and no acceptable-fit criterion was predeclared.
+1. **Do not select or deploy tau from this artifact.** Although replay is complete and input-integrity verified, the formula population has substantial undefined and poor-fit cases, and no acceptable-fit criterion was predeclared.
 2. Keep `tau = null` and retain the existing fail-closed ensemble route.
 3. Preserve all poor finite scores in descriptive reporting; do not clip, winsorize, or discard them to improve a threshold.
-4. Before a new calibration attempt, freeze an acceptable-fit/bad-route definition and retain detailed formula execution failure reasons in the artifact.
-5. Continue reporting the calibration and independent evaluation cohorts separately; do not tune a threshold on the evaluation cohort.
+4. Use the separate protocol in [LLM-specific training-only tau calibration protocol](LLM_TAU_TRAINING_ONLY_PROTOCOL.md) before any future threshold selection.
+5. Continue reporting calibration and independent evaluation cohorts separately; do not tune a threshold on the evaluation cohort.
 
-This report does not change the benchmark baseline, routing policy, or `tau`.
+This report does not change the benchmark baseline, routing policy, or `tau`. No new LLM/provider calls were made for this audit or its CI verification.
