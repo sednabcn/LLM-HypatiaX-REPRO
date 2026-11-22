@@ -1560,8 +1560,8 @@ def _save_checkpoint(results: list):
     CHECKPOINT_FILE.write_text(json.dumps(results, indent=2, default=_default))
 
 
-def _save_final(results: list):
-    _validate_result_records(results, require_il_record=True)
+def _save_final(results: list, require_il_record: bool = True):
+    _validate_result_records(results, require_il_record=require_il_record)
     def _default(obj):
         if isinstance(obj, (np.integer,)):         return int(obj)
         if isinstance(obj, (np.floating, float)):
@@ -2051,7 +2051,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
 
     # Final report + save
     _generate_report(all_results)
-    _save_final(all_results)
+    _save_final(all_results, require_il_record=not verify_fix5)
 
     # Remove checkpoint on clean completion (not on verify-fix5 partial run)
     if not verify_fix5 and CHECKPOINT_FILE.exists():
