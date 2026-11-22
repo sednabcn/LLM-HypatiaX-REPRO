@@ -467,8 +467,8 @@ def _train_and_eval_nn(
         # A log-linear Ridge candidate captures positive power-law/product/
         # ratio relationships. Eligibility and all fitting use training rows only.
         ridge_edge_r2 = float("nan")
-        ridge_eligible = bool(np.all(X_fit > 0) and np.all(y_fit > 0)
-                              and np.all(X_val > 0) and np.all(y_val > 0))
+        ridge_eligible = bool(np.all(X_train > 0) and np.all(y_train > 0)
+                              and np.all(X_test > 0))
         if ridge_eligible:
             try:
                 ridge_probe = Ridge(alpha=1.0)
