@@ -506,3 +506,44 @@ def test_exp1_nn_route_records_abstention_replacement_status(monkeypatch):
     assert result["blend_weights"]["nn"] == [0.0] * len(yte)
     assert result["blend_weights"]["llm"] == [0.0] * len(yte)
     assert result["blend_weights"]["replacement"] == [1.0] * len(yte)
+
+
+
+def test_exp1_nn_invalid_validation_feature_index_uses_audited_row_fallback():
+    # A stale protocol feature index must not discard the whole NN arm.
+    # The fallback uses only training-row order and is recorded explicitly.
+    X_train = np.linspace(0.0, 1.0, 48).reshape(-1, 1)
+    y_train = 2.0 * X_train[:, 0] + 1.0
+    X_test = np.linspace(1.1, 2.0, 12).reshape(-1, 1)
+    y_test = 2.0 * X_test[:, 0] + 1.0
+
+    result = bench._train_and_eval_nn(
+        X_train, y_train, X_test, y_test,
+        epochs=8, hidden=[8], seed=17, max_time_s=30,
+        augment=False, patience=4,
+        split_metadata={"split_var_idx": 3, "split_type": "high"},
+    )
+
+    assert result["validation_split_realized_method"] == "row_index_fallback"
+    assert result["validation_split_fallback_reason"] == (
+        "feature_index_out_of_range:3:n_features=1"
+    )
+    assert result["failure_reason"] is None
+    assert result["success"] is True
+
+
+def test_exp1_nn_constant_test_target_records_undefined_r2_status():
+    X_train = np.linspace(0.0, 1.0, 32).reshape(-1, 1)
+    y_train = X_train[:, 0] ** 2
+    X_test = np.linspace(1.1, 2.0, 8).reshape(-1, 1)
+    y_test = np.ones(8, dtype=float)
+
+    result = bench._train_and_eval_nn(
+        X_train, y_train, X_test, y_test,
+        epochs=8, hidden=[8], seed=23, max_time_s=30,
+        augment=False, patience=4,
+    )
+
+    assert result["test_r2_status"] == "degenerate_target"
+    assert np.isnan(result["test_r2"])
+    assert result["success"] is False
