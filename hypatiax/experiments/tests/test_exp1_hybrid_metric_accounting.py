@@ -321,3 +321,53 @@ def test_exp1_hybrid_rejects_invalid_nn_fallback_predictions(monkeypatch):
     assert result["success"] is False
     assert np.isnan(result["train_r2"])
     assert np.isnan(result["test_r2"])
+
+
+
+def test_exp1_nn_reports_training_edge_ridge_and_abstention_diagnostics():
+    X_train = np.geomspace(1.0, 4.0, 48).reshape(-1, 1)
+    y_train = 3.0 * X_train[:, 0] ** 1.7
+    X_test = np.geomspace(5.0, 8.0, 12).reshape(-1, 1)
+    y_test = 3.0 * X_test[:, 0] ** 1.7
+
+    result = bench._train_and_eval_nn(
+        X_train, y_train, X_test, y_test,
+        epochs=40, hidden=[8], seed=123, max_time_s=30,
+        augment=False, patience=6,
+    )
+
+    assert result["success"] is True
+    assert result["ridge_eligible"] is True
+    assert np.isfinite(result["ridge_edge_r2"])
+    assert np.isfinite(result["nn_edge_r2"])
+    assert result["selected_model"] in {"nn", "log_ridge", "training_mean"}
+    assert isinstance(result["abstained"], bool)
+    assert np.isfinite(result["y_pred_test"]).all()
+
+
+def test_exp1_options_delta_predictions_are_clipped_to_semantic_bounds(monkeypatch):
+    _common(monkeypatch, "nn")
+    Xtr, ytr, Xte, yte = _inputs()
+    ytr = np.linspace(0.1, 0.9, len(ytr))
+    yte = np.linspace(0.1, 0.9, len(yte))
+    nn_result = {
+        "train_r2": -1.0, "test_r2": -1.0, "success": True,
+        "y_pred_train": np.linspace(-2.0, 2.0, len(ytr)),
+        "y_pred_test": np.linspace(-3.0, 3.0, len(yte)),
+    }
+    monkeypatch.setattr(
+        bench, "_generate_llm_formula",
+        lambda *a, **k: {"python_code": None, "llm_called": False},
+    )
+
+    result = bench._hybrid_predict_and_eval(
+        "Options Delta rate of change", "derivatives",
+        Xtr, ytr, Xte, yte, ["moneyness"], {}, nn_result=nn_result,
+    )
+
+    assert nn_result["physical_bounds_applied"] == [0.0, 1.0]
+    assert np.min(nn_result["y_pred_train"]) >= 0.0
+    assert np.max(nn_result["y_pred_train"]) <= 1.0
+    assert np.min(nn_result["y_pred_test"]) >= 0.0
+    assert np.max(nn_result["y_pred_test"]) <= 1.0
+    assert result["physical_bounds_applied"] == [0.0, 1.0]
