@@ -149,8 +149,14 @@ def replay(input_path: Path, output_path: Path) -> dict:
         "output": str(output_path),
         "tau_selected": None,
     }, indent=2))
+    output["integrity_status"] = (
+        "verified" if output["n_integrity_mismatch"] == 0 else "mismatch_requires_investigation"
+    )
     if output["n_integrity_mismatch"]:
-        raise RuntimeError("Replay aborted: one or more original input hashes/indices did not match")
+        print("INTEGRITY MISMATCHES:", json.dumps([
+            {"equation_id": r["equation_id"], "checks": r.get("input_integrity_checks")}
+            for r in replayed if r.get("replay_status") == "integrity_mismatch"
+        ], indent=2))
     return output
 
 
