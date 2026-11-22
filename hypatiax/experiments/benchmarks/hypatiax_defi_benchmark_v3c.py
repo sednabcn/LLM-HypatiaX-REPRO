@@ -1227,8 +1227,26 @@ def _hybrid_predict_and_eval(
         valid_nn = _valid_nn_result(nn_m)
         selected_train_r2 = _metric(nn_m.get("train_r2")) if valid_nn else float("nan")
         test_r2 = _metric(nn_m.get("test_r2")) if valid_nn else float("nan")
-        train_r2_source = "nn_route"
-        route_execution_status = "nn_executed" if valid_nn else "nn_training_failed_or_metrics_undefined"
+        if bool(nn_m.get("abstained", False)):
+            # The NN quality gate selected a replacement predictor (Ridge or
+            # training mean), so expose abstention rather than labelling it NN.
+            train_r2_source = "nn_abstention_" + str(
+                nn_m.get("selected_model", "fallback")
+            )
+            route_execution_status = (
+                "nn_abstention_fallback_executed"
+                if valid_nn else "nn_abstention_fallback_failed"
+            )
+            query_blend_weights = {
+                "llm": [1.0] * len(X_test),
+                "nn": [0.0] * len(X_test),
+            }
+        else:
+            train_r2_source = "nn_route"
+            route_execution_status = (
+                "nn_executed" if valid_nn
+                else "nn_training_failed_or_metrics_undefined"
+            )
 
     y_test_arr = np.asarray(y_test, dtype=float).reshape(-1)
     if y_test_arr.size == 0 or not np.isfinite(y_test_arr).all():
