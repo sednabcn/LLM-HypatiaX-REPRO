@@ -414,6 +414,7 @@ def _train_and_eval_nn(
     augment: bool = True,
     patience: int = 30,
     min_delta: float = 1e-6,
+    split_metadata: dict | None = None,
 ) -> dict:
     """
     Train an MLP with a deterministic validation split drawn ONLY from the
@@ -451,14 +452,26 @@ def _train_and_eval_nn(
         torch.manual_seed(seed)
         np.random.seed(seed)
         hidden = hidden or [128, 64, 32]
-        # Local RNG: deterministic validation rows without perturbing the
-        # benchmark's global NumPy RNG stream.
-        # Validate on the outer-training partition's directional edge, not a
-        # random interpolation holdout. The outer test partition remains untouched.
-        try:
-            fit_idx, val_idx = training_edge_split_indices(X_train, 0.20)
-        except Exception:
+        # Match the benchmark's actual one-sided extrapolation direction.
+        # The outer test partition remains untouched: validation is the
+        # corresponding edge of X_train, selected only from training covariates.
+        split_metadata = split_metadata or {}
+        split_type = str(split_metadata.get("split_type", "high")).lower()
+        if split_type not in {"high", "low"}:
+            raise ValueError("invalid_directional_validation_split_type")
+        realized_method = split_metadata.get("realized_method", "primary_feature_percentile")
+        if realized_method == "row_index_fallback":
+            order = np.arange(len(X_train), dtype=int)
+        else:
+            split_var_idx = int(split_metadata.get("split_var_idx", 0))
+            if split_var_idx < 0 or split_var_idx >= X_train.shape[1]:
+                raise ValueError("directional_validation_feature_index_out_of_range")
+            order = np.argsort(X_train[:, split_var_idx], kind="mergesort")
+        n_val = max(5, int(np.ceil(len(X_train) * 0.20)))
+        if len(X_train) - n_val < 8 or n_val >= len(X_train):
             raise ValueError("insufficient_rows_for_directional_edge_validation")
+        val_idx = order[-n_val:] if split_type == "high" else order[:n_val]
+        fit_idx = np.setdiff1d(np.arange(len(X_train)), val_idx, assume_unique=True)
         if len(fit_idx) < 8 or len(val_idx) < 5:
             raise ValueError("insufficient_rows_for_directional_edge_validation")
         X_fit, y_fit = X_train[fit_idx], y_train[fit_idx]
@@ -993,6 +1006,7 @@ def _hybrid_predict_and_eval(
     var_names: list[str], metadata: dict,
     llm_attempt_state: dict | None = None,
     nn_result: dict | None = None,
+    split_metadata: dict | None = None,
 ) -> dict:
     """Run the Exp1 LLM/NN route and report metrics for the predictor used."""
     llm_result = _generate_llm_formula(description, domain, var_names, metadata)
@@ -1094,7 +1108,10 @@ def _hybrid_predict_and_eval(
         if _valid_nn_result(nn_result):
             return nn_result
         t0 = time.time()
-        trained = _train_and_eval_nn(X_train, y_train, X_test, y_test)
+        trained = _train_and_eval_nn(
+            X_train, y_train, X_test, y_test,
+            split_metadata=split_metadata,
+        )
         nn_rerun_time_s += time.time() - t0
         return trained
 
@@ -1136,6 +1153,18 @@ def _hybrid_predict_and_eval(
                 if _valid_nn_result(nn_m)
                 else "ensemble_and_nn_fallback_failed",
             )
+        elif bool(nn_m.get("abstained", False)):
+            # The NN quality gate rejected the MLP. Its replacement (log-Ridge
+            # or training mean) is the selected predictor; do not let rejected
+            # NN output enter the LLM/NN ensemble.
+            selected_train_r2 = _metric(nn_m.get("train_r2"))
+            test_r2 = _metric(nn_m.get("test_r2"))
+            train_r2_source = "nn_abstention_" + str(nn_m.get("selected_model", "fallback"))
+            route_execution_status = "nn_abstention_fallback_executed"
+            query_blend_weights = {
+                "llm": [1.0] * len(X_test),
+                "nn": [0.0] * len(X_test),
+            }
         else:
             ensemble_test = _ensemble_llm_nn(
                 llm_pred_test=llm_test_preds, nn_pred_test=nn_m["y_pred_test"],
@@ -1166,6 +1195,7 @@ def _hybrid_predict_and_eval(
                     nn_m = _train_and_eval_nn(
                         np.column_stack([X_train, llm_train_preds]), y_train,
                         np.column_stack([X_test, llm_test_preds]), y_test,
+                        split_metadata=split_metadata,
                     )
                     nn_rerun_time_s += time.time() - t0
                     if not _valid_nn_result(nn_m):
@@ -1705,7 +1735,8 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
 
             desc, X_full, y_full, var_names, metadata = match
             metadata.update({
-                "extrapolation_test": True,
+                "extrapolation_test": bool(metadata.get("extrapolation_test", True)),
+                "extrapolation_intractable": bool(tc.get("extrapolation_intractable", False)),
                 "difficulty":         tc["difficulty"],
                 "formula_type":       tc["formula_type"],
             })
@@ -1746,6 +1777,11 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "best_epoch": nn_m.get("best_epoch"),
                     "validation_loss": nn_m.get("validation_loss"),
                     "training_time_s": nn_m.get("training_time_s"),
+                    "nn_edge_r2": nn_m.get("nn_edge_r2"),
+                    "ridge_edge_r2": nn_m.get("ridge_edge_r2"),
+                    "ridge_eligible": nn_m.get("ridge_eligible"),
+                    "nn_abstained": nn_m.get("abstained", False),
+                    "nn_selected_model": nn_m.get("selected_model", "nn"),
                     "failure_reason": nn_m.get("failure_reason"),
                     "time_s":      round(time.time() - _t0_nn, 3),
                     "y_pred_train": nn_m["y_pred_train"].tolist() if nn_m.get("y_pred_train") is not None else None,
@@ -1765,6 +1801,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     desc, tc["domain"], X_tr, y_tr, X_te, y_te, var_names, metadata,
                     llm_attempt_state=hybrid_llm_state,
                     nn_result=nn_m,
+                    split_metadata=split_details,
                 )
                 _hyb_wall = round(time.time() - _t0_hyb, 3)
 
@@ -1793,6 +1830,11 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "ood_diagnostic": hy_m.get("ood_diagnostic"),
                     "ood_covariate_protocol": hy_m.get("ood_covariate_protocol"),
                     "blend_weights": hy_m.get("blend_weights"),
+                    "nn_abstained": hy_m.get("nn_abstained"),
+                    "nn_selected_model": hy_m.get("nn_selected_model"),
+                    "nn_edge_r2": hy_m.get("nn_edge_r2"),
+                    "ridge_edge_r2": hy_m.get("ridge_edge_r2"),
+                    "physical_bounds_applied": hy_m.get("physical_bounds_applied"),
                     "llm_called":      hy_m.get("llm_called"),      # B2
                     "bypass_kind":     hy_m.get("bypass_kind"),     # B2
                     "llm_source":      hy_m.get("llm_source"),
