@@ -131,3 +131,23 @@ These are **review leads only**, not equation families. Literal-normalized match
 No candidate was adjudicated for formula correctness, canonical equation-family identity, overlap with Core-15 or the historical 74, statistical independence, or calibration/evaluation cohort eligibility. The candidate registry remains unchanged: all review states remain unreviewed, all family IDs remain null, and no cohort assignments were made. No LLM/provider calls were made.
 
 Machine-readable output: `data/external_candidates/financemath_provisional_code_clusters.json`.
+
+
+## FinanceMath provisional family and overlap review (2026-11-22)
+
+A manual formula-level review was completed for the 13 literal-normalized code clusters (28 records), using their source questions and Python solutions. The 13 code clusters collapse to **12 provisional mathematical families**: the two geometric-mean-return clusters (SHAPE-0011 and SHAPE-0012) implement the same product-of-gross-returns, nth-root-minus-one formula and are grouped together. Five clusters are exact duplicate question/data/solution pairs (SHAPE-0003, 0005, 0007, 0009, 0013) and count as at most one item each. The other reviewed clusters are distinct formula families, including real return via inflation, financial leverage ratio, Gordon growth valuation, combinations, duration gap, and bond issue-price present value.
+
+None of the 28 records in these 13 clusters directly matches a named Core-15 formula or a historical-74 equation ID based on the reviewed formula and question. This is limited to those 28 records; it is not a claim about the remaining 1,172 records.
+
+A separate conservative keyword scan over all 1,200 questions produced **35 overlap leads**:
+- 26 mentions of VaR / value-at-risk / expected-shortfall terminology;
+- 1 portfolio standard-deviation/volatility mention;
+- 2 information-ratio mentions;
+- 2 Sharpe-ratio mentions;
+- 1 loan-to-value mention;
+- 1 convexity-adjustment mention;
+- 3 duration-gap mentions.
+
+These are leads, not 35 confirmed formula duplicates. Some are contextual mentions or component calculations rather than the same canonical equation. In particular, VaR is broad and includes materially different approaches (parametric, option delta, portfolio/component, credit, and backtesting-related calculations). Each lead must be checked against the actual Core-15 and historical-74 formula definitions before assigning an exclusion. Keyword absence also does not prove no overlap.
+
+Machine-readable review: `data/external_candidates/financemath_provisional_family_review.json`. The original candidate registry remains unchanged; no family IDs were written into it, no independence status was assigned, and no calibration/evaluation cohort was created. The manifest remains draft and `degradation_tau` remains null. No LLM/provider calls were made.
