@@ -174,6 +174,21 @@ def _atomic_save(path: Path, records: list[dict]) -> None:
             os.unlink(temp_name)
 
 
+def _bootstrap_interval(values: np.ndarray, statistic: str, seed: int) -> list[float] | None:
+    if values.size < 2:
+        return None
+    rng = np.random.RandomState(seed)
+    samples = rng.choice(values, size=(2000, values.size), replace=True)
+    if statistic == "median":
+        estimates = np.median(samples, axis=1)
+    elif statistic == "q90":
+        estimates = np.quantile(samples, 0.90, axis=1)
+    else:
+        raise ValueError(f"unsupported bootstrap statistic: {statistic}")
+    bounds = np.quantile(estimates, [0.025, 0.975])
+    return [float(bounds[0]), float(bounds[1])]
+
+
 def _summarize(records: list[dict]) -> dict:
     summary = {}
     for cohort in ("calibration", "evaluation"):
@@ -191,6 +206,12 @@ def _summarize(records: list[dict]) -> dict:
             "delta_median": float(np.median(deltas)) if deltas.size else None,
             "delta_q10": float(np.quantile(deltas, 0.10)) if deltas.size else None,
             "delta_q90": float(np.quantile(deltas, 0.90)) if deltas.size else None,
+            "delta_median_bootstrap_95ci": _bootstrap_interval(
+                deltas, "median", SPLIT_SEED + (0 if cohort == "calibration" else 1)
+            ),
+            "delta_q90_bootstrap_95ci": _bootstrap_interval(
+                deltas, "q90", SPLIT_SEED + (10 if cohort == "calibration" else 11)
+            ),
         }
     return summary
 
