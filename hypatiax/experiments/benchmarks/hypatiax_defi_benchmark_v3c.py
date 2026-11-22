@@ -1058,6 +1058,22 @@ def _hybrid_predict_and_eval(
         try:
             pred_train = np.asarray(candidate.get("y_pred_train"), dtype=float).reshape(-1)
             pred_test = np.asarray(candidate.get("y_pred_test"), dtype=float).reshape(-1)
+            # Apply only semantic, predeclared physical bounds; never estimate
+            # bounds from observed or held-out target values.
+            case_name = str(description).lower()
+            bounds = None
+            if "options delta" in case_name or case_name.strip() == "delta":
+                bounds = (0.0, 1.0)
+            elif "utilisation" in case_name or "utilization" in case_name:
+                bounds = (0.0, 1.0)
+            if bounds is not None:
+                pred_train = np.clip(pred_train, *bounds)
+                pred_test = np.clip(pred_test, *bounds)
+                candidate["y_pred_train"] = pred_train
+                candidate["y_pred_test"] = pred_test
+                candidate["train_r2"] = float(_r2_checked(np.asarray(y_train).reshape(-1), pred_train)[0])
+                candidate["test_r2"] = float(_r2_checked(np.asarray(y_test).reshape(-1), pred_test)[0])
+                candidate["physical_bounds_applied"] = list(bounds)
             return bool(
                 pred_train.shape == np.asarray(y_train).reshape(-1).shape
                 and pred_test.shape == np.asarray(y_test).reshape(-1).shape
@@ -1188,6 +1204,11 @@ def _hybrid_predict_and_eval(
             "query_labels_used": False, "access_mode": "query_time_covariate_access",
         },
         "blend_weights": query_blend_weights,
+        "nn_abstained": bool(nn_m.get("abstained", False)) if "nn_m" in locals() else False,
+        "nn_selected_model": nn_m.get("selected_model") if "nn_m" in locals() else None,
+        "nn_edge_r2": nn_m.get("nn_edge_r2") if "nn_m" in locals() else None,
+        "ridge_edge_r2": nn_m.get("ridge_edge_r2") if "nn_m" in locals() else None,
+        "physical_bounds_applied": nn_m.get("physical_bounds_applied") if "nn_m" in locals() else None,
         "nn_rerun_time_s": round(nn_rerun_time_s, 3),
         "llm_called": bool(llm_result.get("llm_called", False)),
         "bypass_kind": llm_result.get("bypass_kind", "none"),
