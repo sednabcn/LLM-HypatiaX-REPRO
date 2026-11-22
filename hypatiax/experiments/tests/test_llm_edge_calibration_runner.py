@@ -4,6 +4,7 @@ import numpy as np
 
 from scripts.calibrate_llm_edge_degradation import (
     _array_hash,
+    _bootstrap_interval,
     _cohort_assignment,
     _json_rows,
     _match_protocol_case,
@@ -57,3 +58,14 @@ def test_array_hash_covers_labels_as_well_as_covariates():
     assert _array_hash(X, np.array([3.0, 4.0])) != _array_hash(
         X, np.array([3.0, 5.0])
     )
+
+
+def test_bootstrap_uncertainty_is_reproducible_and_finite():
+    values = np.array([0.01, 0.02, 0.03, 0.10, 0.20])
+    first = _bootstrap_interval(values, "q90", seed=123)
+    second = _bootstrap_interval(values, "q90", seed=123)
+
+    assert first == second
+    assert len(first) == 2
+    assert np.isfinite(first).all()
+    assert first[0] <= first[1]
