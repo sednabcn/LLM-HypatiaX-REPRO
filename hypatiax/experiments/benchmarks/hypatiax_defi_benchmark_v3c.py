@@ -575,20 +575,23 @@ def _train_and_eval_nn(
         nn_edge_r2 = float(_r2_checked(y_val, edge_pred)[0])
 
         selected_model = "nn"
-        abstained = bool(not np.isfinite(nn_edge_r2) or nn_edge_r2 < 0.0)
-        if abstained:
-            # Refit the strongest non-NN fallback on all outer-training rows.
-            # Prefer log-Ridge only when its edge score beats the training mean.
-            if ridge_eligible and np.isfinite(ridge_edge_r2) and ridge_edge_r2 > 0.0:
-                ridge_final = Ridge(alpha=1.0).fit(np.log(X_train), np.log(y_train))
-                yp_train = np.exp(np.clip(ridge_final.predict(np.log(X_train)), -700, 700))
-                yp_test = np.exp(np.clip(ridge_final.predict(np.log(X_test)), -700, 700))
-                selected_model = "log_ridge"
-            else:
-                mean_value = float(np.mean(y_train))
-                yp_train = np.full(len(y_train), mean_value, dtype=float)
-                yp_test = np.full(len(y_test), mean_value, dtype=float)
-                selected_model = "training_mean"
+        use_ridge = bool(
+            ridge_eligible and np.isfinite(ridge_edge_r2)
+            and ridge_edge_r2 > max(0.0, nn_edge_r2 if np.isfinite(nn_edge_r2) else -np.inf)
+        )
+        abstained = bool(use_ridge or not np.isfinite(nn_edge_r2) or nn_edge_r2 < 0.0)
+        if use_ridge:
+            ridge_final = Ridge(alpha=1.0).fit(np.log(X_train), np.log(y_train))
+            yp_train = np.exp(np.clip(ridge_final.predict(np.log(X_train)), -700, 700))
+            yp_test = np.exp(np.clip(ridge_final.predict(np.log(X_test)), -700, 700))
+            selected_model = "log_ridge"
+        elif abstained:
+            # No positive edge-validated Ridge candidate: abstain to the
+            # training-mean predictor rather than extrapolating with the MLP.
+            mean_value = float(np.mean(y_train))
+            yp_train = np.full(len(y_train), mean_value, dtype=float)
+            yp_test = np.full(len(y_test), mean_value, dtype=float)
+            selected_model = "training_mean"
 
         train_r2 = float(_r2_checked(y_train, yp_train)[0])
         test_r2 = float(_r2_checked(y_test, yp_test)[0])
