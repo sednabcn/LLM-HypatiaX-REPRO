@@ -135,9 +135,17 @@ def replay(input_path: Path, output_path: Path) -> dict:
         "tau_selected": None,
         "tau_eligibility": "not_eligible: no predeclared acceptable-fit criterion",
     }
+    output["integrity_status"] = (
+        "verified" if output["n_integrity_mismatch"] == 0 else "mismatch_requires_investigation"
+    )
+    output["integrity_mismatches"] = [
+        {"equation_id": r["equation_id"], "checks": r.get("input_integrity_checks")}
+        for r in replayed if r.get("replay_status") == "integrity_mismatch"
+    ]
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(output, indent=2, allow_nan=False), encoding="utf-8")
     print(json.dumps({
+        "integrity_status": output["integrity_status"],
         "n_records": output["n_records"],
         "n_integrity_verified": output["n_integrity_verified"],
         "n_integrity_mismatch": output["n_integrity_mismatch"],
@@ -149,14 +157,8 @@ def replay(input_path: Path, output_path: Path) -> dict:
         "output": str(output_path),
         "tau_selected": None,
     }, indent=2))
-    output["integrity_status"] = (
-        "verified" if output["n_integrity_mismatch"] == 0 else "mismatch_requires_investigation"
-    )
     if output["n_integrity_mismatch"]:
-        print("INTEGRITY MISMATCHES:", json.dumps([
-            {"equation_id": r["equation_id"], "checks": r.get("input_integrity_checks")}
-            for r in replayed if r.get("replay_status") == "integrity_mismatch"
-        ], indent=2))
+        print("INTEGRITY MISMATCHES:", json.dumps(output["integrity_mismatches"], indent=2))
     return output
 
 
