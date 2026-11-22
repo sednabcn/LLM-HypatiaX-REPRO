@@ -1,10 +1,10 @@
 # LLM-specific training-only degradation-tau calibration protocol
 
-**Status: numerical acceptance criteria preregistered; protocol not executed.**  
+**Status: repository-approved risk constants aligned; operational calibration manifest remains incomplete and no run is authorized by this specification alone.**  
 **Policy state: `degradation_tau: null`; pure-LLM routing remains fail-closed.**  
 **Cost boundary: no LLM/provider calls, paid calibration, or workflow dispatch is authorized by this document.**
 
-The numerical criteria below are conservative operational design choices adopted before any new calibration observations. They are not empirically validated guarantees. They must be treated as fixed for the planned study; changing them requires a new versioned protocol before data collection.
+The numeric risk constants below are read from the repository's existing `config/tau_calibration_manifest.json` validator and are the repository's approved constants. They supersede the provisional 10%/95%-Bonferroni proposal in an earlier revision of this document. They are not empirical guarantees. The equation/category manifest, candidate thresholds, bad-route evaluator, and provenance must still be completed and validated before a run.
 
 ## 1. Purpose and estimand
 
@@ -50,7 +50,7 @@ The edge covariates may be used by the evaluator to produce predictions after fo
 
 The previous 44/30 split is too small and its saved artifact is already inspected; it must not be recycled as a fresh untouched calibration/evaluation split.
 
-**Preregistered planning floor:** target at least 100 equations in the calibration cohort and 100 in the independent evaluation cohort, with at least 30 equations in each primary difficulty stratum in each cohort. The 100-per-cohort target is a floor, not a substitute for the precision check: before spending, calculate the attainable one-sided confidence-bound precision under the fixed risk target and the actual number of candidate thresholds. If the catalogue cannot meet the stratum counts or the precision target, report the shortfall and classify the study as exploratory; do not relax criteria after seeing outcomes.
+**Repository-approved planning floor:** at least 59 independent equation/family units in every declared calibration category, even in the zero-failure case. This follows the exact one-sided binomial requirement for tolerated bad-route probability ε = 0.05 and family-wise error δ = 0.05: `ceil(log(0.05) / log(1 - 0.05)) = 59`. Repeated seeds, noise levels, prompts, or reruns of one equation do not create independent units. The independent evaluation cohort must be a separately locked set of distinct equation/family units; its required size and precision target must be specified in the run manifest before any generation. Do not treat the existing 44/30 split as satisfying the per-category calibration minimum.
 
 ## 4. Predeclared formula-quality and bad-route definitions
 
@@ -59,26 +59,22 @@ A degradation threshold is meaningful only among formulas that are usable on the
 - **Formula-generation/execution coverage:** proportion of all assigned equations for which a formula is generated and both core and edge predictions are valid under the frozen evaluator.
 - **Bad accepted route:** an equation that the proposed pure-LLM rule would accept but whose frozen formula fails the predeclared edge-quality criteria.
 
-The following numeric criteria are fixed for the planned protocol, before any new observations:
+The following constants are fixed in `scripts/validate_tau_calibration_manifest.py` and `config/tau_calibration_manifest.json`:
 
-| Criterion | Preregistered cutoff |
+| Criterion | Repository-approved value |
 |---|---:|
-| Core fit eligibility | R² ≥ 0.95 **and** core-scale NRMSE ≤ 0.25 |
-| Edge fit eligibility | R² ≥ 0.90 **and** edge core-scale NRMSE ≤ 0.35 |
-| Maximum edge error increase | `delta_nrmse` ≤ 0.10 |
-| Maximum bad-route risk | 10% |
-| Confidence requirement | One-sided 95% upper confidence bound below 10% |
-| Valid formula/scoring coverage | ≥ 70% overall and ≥ 60% in every primary difficulty stratum |
-| Cohort size planning floor | ≥ 100 assigned equations in each cohort; ≥ 30 per primary difficulty stratum in each cohort |
+| Minimum edge R² | 0.99 |
+| Minimum relative margin against ensemble | 0.00 |
+| Maximum tolerated bad-route probability (ε) | 5% |
+| Family-wise error rate (δ) | 5% |
+| Confidence level | One-sided 95% |
+| Minimum independent units per calibration category if zero failures | 59 |
 
-A formula is **quality-eligible** only if it passes every core and edge fit/error criterion above. A **bad accepted route** is any accepted formula that fails one or more of those criteria when evaluated on edge labels. Formula generation failures, execution failures, undefined metrics, and formulas failing core eligibility are not safe outcomes: they remain in the assigned-equation denominator and count against valid-scoring coverage. They cannot be admitted to the pure-LLM route.
+The manifest defines the edge region as the upper 20% of training rows ordered by projection onto the first PCA direction. The exact edge construction and evaluator must be frozen and hash-pinned before calibration. The bad-route rule must implement both the absolute edge R² floor and the comparison against the ensemble using the manifest's `relative_margin_against_ensemble` definition. Missing/invalid scores fail closed and are never treated as successful routes.
 
-The 0.95 core R² threshold is aligned with the existing `pure_llm_train_r2_min = 0.95`; the 0.90 edge R², NRMSE limits, 0.10 error-increase margin, 10% risk target, and coverage minima are conservative operational design choices for this study, not values inferred from the existing 74-case artifact or established scientific constants. The existing `trust_gate_r2_min = 0.5` remains an independent existing gate; it does not relax these stricter formula-quality criteria.
+Threshold selection must use the manifest's **fixed-sequence exact binomial** procedure, testing candidates from strictest to laxest at family-wise `δ = 0.05` against `ε = 0.05`. Stop at the first candidate that is not certified; select the last candidate that passed. If none passes, keep `tau = null`. Candidate tau values must be finite, non-negative, unique, and declared in strictly increasing order before outcomes are examined. The validator requires a non-empty candidate list and a minimum of 59 independent units in every declared category even in the zero-failure case.
 
-For threshold selection across the preregistered candidate grid `[-1, -0.5, -0.25, 0, 0.05, 0.1, 0.2, 0.3, 0.5, 1]`, compute a one-sided exact binomial upper bound for the bad-route proportion at each candidate threshold, with Bonferroni adjustment across all 10 candidates (family-wise confidence at least 95%). Select the largest threshold whose adjusted upper bound is strictly below 10%, while satisfying the coverage minima. If no threshold qualifies, select none and keep `tau = null`. The candidate grid and adjustment must not be changed after calibration data are observed.
-
-These cutoffs are not to be inferred, relaxed, or optimized from the observed calibration distribution. If the planning-floor cohort size cannot deliver the required confidence-bound precision, increase the sample size before generation or classify the study as exploratory and do not deploy a threshold.
-
+These constants are not inferred from the 74-case replay or the earlier calibration distribution. The validator is authoritative for the constants and sample-size calculation. Do not substitute the provisional core/edge NRMSE cutoffs, 10% risk target, Bonferroni grid, or 100-per-cohort proposal from the superseded draft.
 A formula that is poor on core and edge is a formula-quality failure, not a useful positive or negative degradation observation. Preserve its metrics, count it against coverage, and do not use its delta to justify accepting the route. Undefined scores and generation failures also count against coverage and are never treated as safe.
 
 ## 5. Threshold selection on calibration only
@@ -105,7 +101,7 @@ Apply the frozen threshold and all frozen gates unchanged to the independent eva
 - confidence intervals using equations as the resampling unit;
 - exact manifests, hashes, prompts/templates, model/provider provenance, and code/config versions.
 
-**Go** only if the independently evaluated one-sided 95% bad-route upper confidence bound is below 10%, valid-scoring coverage is at least 70% overall and 60% in every primary difficulty stratum, and no predeclared integrity or leakage check fails. Evaluation uses the single frozen tau selected on calibration; do not retune it on evaluation.
+**Go** only if the independent evaluation cohort satisfies its predeclared sample-size/precision requirements, the one-sided 95% bad-route upper confidence bound is below the 5% risk target, all predeclared integrity/leakage checks pass, and the frozen policy's coverage is reported against predeclared minima. Evaluation uses the single frozen tau selected on calibration; do not retune it on evaluation.
 
 **No-go** if any condition fails, if sample counts are inadequate, if confidence bounds are too wide, or if a required stratum is underpowered. A no-go leaves `tau = null` and the fail-closed ensemble route unchanged. Do not repair the result by dropping difficult equations, changing cutoffs, or recalibrating on the evaluation cohort.
 
@@ -128,7 +124,9 @@ Never store API keys, credentials, or other secrets in artifacts.
 
 A future run is blocked until all of the following are true:
 
-- [x] Numeric core-fit, edge-fit, error-increase, risk, coverage, and candidate-threshold criteria are preregistered in this protocol.
+- [x] Repository-approved edge-fit, relative-margin, risk, confidence, and minimum calibration sample-size constants are pinned to the validator/manifest.
+- [ ] Candidate tau values, category list, independent equation/family IDs, source/formula/training-data hashes, edge evaluator, and calibration data-manifest hash are populated and pass `scripts/validate_tau_calibration_manifest.py --require-ready`.
+- [ ] Independent evaluation cohort and its precision/sample-size plan are frozen.
 - [ ] Calibration and independent evaluation equation manifests are frozen and disjoint.
 - [ ] Sample-size/precision analysis is approved.
 - [ ] Prompt/template and model/provider settings are frozen.
@@ -137,7 +135,7 @@ A future run is blocked until all of the following are true:
 - [ ] A cost estimate and explicit authorization for any paid LLM/provider calls are obtained.
 - [ ] The run uses a new output directory and does not overwrite historical artifacts or the protected baseline.
 
-This document does not authorize any provider calls or workflow dispatch. Until a separate explicit approval is given and the preflight is complete, do not run calibration, do not spend API credits, and do not modify routing configuration. Keep `config/fresh_rerun.yaml` at `degradation_tau: null`.
+This document does not authorize any provider calls or workflow dispatch. Until the manifest passes `--require-ready`, the independent evaluation design is frozen, and the run-specific cost/call cap is explicitly approved, do not run calibration, do not spend API credits, and do not modify routing configuration. Keep `config/fresh_rerun.yaml` at `degradation_tau: null`.
 
 ## 9. Relationship to existing diagnostics
 
