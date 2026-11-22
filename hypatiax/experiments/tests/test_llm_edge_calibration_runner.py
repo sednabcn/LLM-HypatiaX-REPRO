@@ -99,10 +99,18 @@ def test_prediction_scoring_reports_shape_and_nonfinite_failures():
 def test_core_scale_normalization_is_shared_across_partitions(monkeypatch):
     from scripts.calibrate_llm_edge_degradation import _evaluate_formula_pair
 
-    def fake_execute(_formula, X, constants=None):
-        return np.zeros(len(X), dtype=float)
+    def fake_execute_diagnostic(_formula, X, constants=None):
+        return {
+            "ok": True,
+            "predictions": np.zeros(len(X), dtype=float),
+            "execution_mode": "vectorized",
+            "nonfinite_fraction": 0.0,
+            "prediction_std": 0.0,
+        }
 
-    monkeypatch.setattr(benchmark, "_execute_formula", fake_execute)
+    monkeypatch.setattr(
+        benchmark, "_execute_formula_diagnostic", fake_execute_diagnostic
+    )
     y_core = np.array([0.0, 1.0, 2.0, 3.0])
     y_edge = np.array([0.0, 2.0, 4.0, 6.0])
     result = _evaluate_formula_pair(
