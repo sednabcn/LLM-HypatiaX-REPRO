@@ -151,3 +151,24 @@ A separate conservative keyword scan over all 1,200 questions produced **35 over
 These are leads, not 35 confirmed formula duplicates. Some are contextual mentions or component calculations rather than the same canonical equation. In particular, VaR is broad and includes materially different approaches (parametric, option delta, portfolio/component, credit, and backtesting-related calculations). Each lead must be checked against the actual Core-15 and historical-74 formula definitions before assigning an exclusion. Keyword absence also does not prove no overlap.
 
 Machine-readable review: `data/external_candidates/financemath_provisional_family_review.json`. The original candidate registry remains unchanged; no family IDs were written into it, no independence status was assigned, and no calibration/evaluation cohort was created. The manifest remains draft and `degradation_tau` remains null. No LLM/provider calls were made.
+
+
+## Full FinanceMath named-overlap screen and candidate adjudication (2026-11-22)
+
+The named-formula overlap screen was expanded to the complete 15 Core-15 names and all 74 historical equation IDs, with explicit aliases for common finance terms. It scanned all 1,200 pinned FinanceMath question texts and topics. It flagged 34 records across nine named terms: VaR (26 records, including 4/3 explicit 95%/99% variants), portfolio standard deviation (1), information ratio (2), Sharpe ratio (2), loan-to-value (1), convexity adjustment (1), and two Kelly-related string matches.
+
+A question-and-solution context review of all 34 keyword hits produced:
+- 16 likely broad VaR-family candidates, held out pending comparison with the exact Core-15 and historical-74 equation definitions;
+- 10 related risk calculations (e.g. VaR contribution/aggregation, backtest exception counts, sampling error, or expected-shortfall-related calculations) that are not automatically the same VaR equation;
+- 4 likely same formula-family candidates: bond duration-convexity price approximation, two-asset portfolio standard deviation, and two benchmark-plus-information-ratio portfolio Sharpe calculations;
+- 1 LTV component overlap requiring a family-boundary decision;
+- 1 information-ratio concept use that does not calculate the information ratio itself; and
+- 2 false positives caused by the surname “Kelly” (neither is the historical Kelly LP-sizing formula).
+
+These are provisional adjudications, not final exclusions. The repository contains Core-15 and historical-74 equation names, but not a complete machine-readable canonical formula specification sufficient to prove equivalence for every candidate. The 16 broad VaR-family candidates must be compared against exact formula definitions, and the four likely matches must be confirmed against their corresponding canonical equations. The other related calculations need a declared family-boundary rule. No flagged record has been written into the candidate registry as excluded.
+
+Machine-readable outputs:
+- `data/external_candidates/financemath_full_overlap_screen.json` (34 keyword hits and excerpts)
+- `data/external_candidates/financemath_overlap_candidate_adjudication.json` (context review of all 34 hits)
+
+This closes the all-record *named-term screening* pass, not full semantic-family adjudication of all 1,200 records. The 1,172 records outside the previously reviewed code-shape clusters still do not have mathematical-family IDs. No independence or calibration/evaluation cohort assignments are approved.
