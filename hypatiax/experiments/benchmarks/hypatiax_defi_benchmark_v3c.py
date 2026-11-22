@@ -149,6 +149,7 @@ import torch.nn as nn
 from dotenv import load_dotenv
 from scipy import stats
 from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import Ridge
 
 from hypatiax.core.r2_canonical import r2_checked as _r2_checked
 
@@ -452,12 +453,30 @@ def _train_and_eval_nn(
         hidden = hidden or [128, 64, 32]
         # Local RNG: deterministic validation rows without perturbing the
         # benchmark's global NumPy RNG stream.
-        order = np.random.RandomState(seed).permutation(len(X_train))
-        n_val = max(2, int(round(0.2 * len(X_train))))
-        n_val = min(n_val, len(X_train) - 3)
-        val_idx, fit_idx = order[:n_val], order[n_val:]
+        # Validate on the outer-training partition's directional edge, not a
+        # random interpolation holdout. The outer test partition remains untouched.
+        try:
+            fit_idx, val_idx = training_edge_split_indices(X_train, 0.20)
+        except Exception:
+            raise ValueError("insufficient_rows_for_directional_edge_validation")
+        if len(fit_idx) < 8 or len(val_idx) < 5:
+            raise ValueError("insufficient_rows_for_directional_edge_validation")
         X_fit, y_fit = X_train[fit_idx], y_train[fit_idx]
         X_val, y_val = X_train[val_idx], y_train[val_idx]
+
+        # A log-linear Ridge candidate captures positive power-law/product/
+        # ratio relationships. Eligibility and all fitting use training rows only.
+        ridge_edge_r2 = float("nan")
+        ridge_eligible = bool(np.all(X_fit > 0) and np.all(y_fit > 0)
+                              and np.all(X_val > 0) and np.all(y_val > 0))
+        if ridge_eligible:
+            try:
+                ridge_probe = Ridge(alpha=1.0)
+                ridge_probe.fit(np.log(X_fit), np.log(y_fit))
+                ridge_edge_pred = np.exp(np.clip(ridge_probe.predict(np.log(X_val)), -700, 700))
+                ridge_edge_r2 = float(_r2_checked(y_val, ridge_edge_pred)[0])
+            except Exception:
+                ridge_edge_r2 = float("nan")
 
         if augment:
             augmentation_schema = _feature_augmentation_schema(X_fit)
@@ -546,10 +565,40 @@ def _train_and_eval_nn(
 
         train_r2 = float(_r2_checked(y_train, yp_train)[0])
         test_r2 = float(_r2_checked(y_test, yp_test)[0])
+        # Score the NN on the same directional edge used for model selection.
+        edge_pred_scaled = torch.as_tensor(sx.transform(
+            _augment_features(X_val, schema=augmentation_schema) if augment else X_val
+        ), dtype=torch.float32)
+        with torch.no_grad():
+            edge_raw = model(edge_pred_scaled).cpu().numpy().reshape(-1)
+        edge_pred = sy.inverse_transform(edge_raw.reshape(-1, 1)).reshape(-1)
+        nn_edge_r2 = float(_r2_checked(y_val, edge_pred)[0])
+
+        selected_model = "nn"
+        abstained = bool(not np.isfinite(nn_edge_r2) or nn_edge_r2 < 0.0)
+        if abstained:
+            # Refit the strongest non-NN fallback on all outer-training rows.
+            # Prefer log-Ridge only when its edge score beats the training mean.
+            if ridge_eligible and np.isfinite(ridge_edge_r2) and ridge_edge_r2 > 0.0:
+                ridge_final = Ridge(alpha=1.0).fit(np.log(X_train), np.log(y_train))
+                yp_train = np.exp(np.clip(ridge_final.predict(np.log(X_train)), -700, 700))
+                yp_test = np.exp(np.clip(ridge_final.predict(np.log(X_test)), -700, 700))
+                selected_model = "log_ridge"
+            else:
+                mean_value = float(np.mean(y_train))
+                yp_train = np.full(len(y_train), mean_value, dtype=float)
+                yp_test = np.full(len(y_test), mean_value, dtype=float)
+                selected_model = "training_mean"
+
+        train_r2 = float(_r2_checked(y_train, yp_train)[0])
+        test_r2 = float(_r2_checked(y_test, yp_test)[0])
         result.update({
             "train_r2": train_r2, "test_r2": test_r2,
             "success": bool(np.isfinite(train_r2) and np.isfinite(test_r2)),
             "y_pred_train": yp_train, "y_pred_test": yp_test,
+            "nn_edge_r2": nn_edge_r2, "ridge_edge_r2": ridge_edge_r2,
+            "ridge_eligible": ridge_eligible, "abstained": abstained,
+            "selected_model": selected_model,
             "failure_reason": None if (np.isfinite(train_r2) and np.isfinite(test_r2))
                               else "undefined_train_or_test_metric",
         })
