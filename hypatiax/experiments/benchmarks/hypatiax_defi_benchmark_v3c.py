@@ -674,48 +674,89 @@ _EXEC_GLOBALS = {
 }
 
 
-def _execute_formula(llm_code: str, X: np.ndarray,
-                     constants: dict = None) -> np.ndarray | None:
-    """Evaluate an LLM formula through the restricted AST interpreter."""
+def _execute_formula_diagnostic(
+    llm_code: str, X: np.ndarray, constants: dict = None,
+) -> dict:
+    """Execute a restricted formula and retain a machine-readable failure class.
+
+    This diagnostic API is intended for calibration/replay. The legacy
+    _execute_formula wrapper below preserves the benchmark's None/array contract.
+    """
     from hypatiax.safe_formula import parse_formula
 
     try:
         X = np.asarray(X, dtype=float)
-        if X.ndim == 1:
-            X = X.reshape(-1, 1)
-        if X.ndim != 2 or X.shape[0] == 0 or X.shape[1] == 0:
-            return None
-        if not np.all(np.isfinite(X)):
-            return None
+    except Exception as exc:
+        return {"ok": False, "failure_reason": "invalid_input", "detail": f"{type(exc).__name__}: {exc}"}
+    if X.ndim == 1:
+        X = X.reshape(-1, 1)
+    if X.ndim != 2 or X.shape[0] == 0 or X.shape[1] == 0:
+        return {"ok": False, "failure_reason": "invalid_input_shape"}
+    if not np.all(np.isfinite(X)):
+        return {"ok": False, "failure_reason": "nonfinite_input"}
 
+    try:
         func = parse_formula(llm_code, constants=constants)
-        args = [X[:, i] for i in range(X.shape[1])]
+    except Exception as exc:
+        return {"ok": False, "failure_reason": "parse_error", "detail": f"{type(exc).__name__}: {exc}"}
+
+    args = [X[:, i] for i in range(X.shape[1])]
+    execution_mode = "vectorized"
+    try:
+        raw = func(*args)
+    except Exception as vector_exc:
+        execution_mode = "rowwise"
         try:
-            preds = func(*args)
-        except Exception:
-            preds = np.asarray([func(*row) for row in X], dtype=float)
+            raw = np.asarray([func(*row) for row in X], dtype=float)
+        except Exception as row_exc:
+            return {
+                "ok": False, "failure_reason": "execution_error",
+                "execution_mode": execution_mode,
+                "detail": f"{type(row_exc).__name__}: {row_exc}",
+                "vectorized_detail": f"{type(vector_exc).__name__}: {vector_exc}",
+            }
 
-        preds = np.asarray(preds, dtype=float)
-        if preds.ndim == 0:
-            preds = np.full(X.shape[0], float(preds))
-        if preds.ndim != 1 or preds.shape != (X.shape[0],):
-            return None
+    try:
+        preds = np.asarray(raw, dtype=float)
+    except Exception as exc:
+        return {"ok": False, "failure_reason": "invalid_output_type",
+                "execution_mode": execution_mode, "detail": f"{type(exc).__name__}: {exc}"}
+    if preds.ndim == 0:
+        preds = np.full(X.shape[0], float(preds))
+    if preds.ndim != 1 or preds.shape != (X.shape[0],):
+        return {
+            "ok": False, "failure_reason": "invalid_output_shape",
+            "execution_mode": execution_mode,
+            "output_shape": list(preds.shape), "expected_shape": [int(X.shape[0])],
+        }
 
-        invalid = ~np.isfinite(preds)
-        invalid_fraction = float(np.mean(invalid))
-        if invalid_fraction > 0.1:
-            return None
-        if invalid_fraction:
-            finite_values = preds[~invalid]
-            if finite_values.size == 0:
-                return None
-            preds[invalid] = float(np.median(finite_values))
+    invalid = ~np.isfinite(preds)
+    invalid_fraction = float(np.mean(invalid))
+    if invalid_fraction > 0.1:
+        return {"ok": False, "failure_reason": "excessive_nonfinite_predictions",
+                "execution_mode": execution_mode, "nonfinite_fraction": invalid_fraction}
+    if invalid_fraction:
+        finite_values = preds[~invalid]
+        if finite_values.size == 0:
+            return {"ok": False, "failure_reason": "all_predictions_nonfinite",
+                    "execution_mode": execution_mode, "nonfinite_fraction": invalid_fraction}
+        preds[invalid] = float(np.median(finite_values))
+    if not np.all(np.isfinite(preds)):
+        return {"ok": False, "failure_reason": "nonfinite_predictions_after_repair",
+                "execution_mode": execution_mode}
+    prediction_std = float(np.std(preds))
+    if prediction_std < 1e-12:
+        return {"ok": False, "failure_reason": "constant_predictions",
+                "execution_mode": execution_mode, "prediction_std": prediction_std}
+    return {"ok": True, "predictions": preds, "execution_mode": execution_mode,
+            "nonfinite_fraction": invalid_fraction, "prediction_std": prediction_std}
 
-        if not np.all(np.isfinite(preds)) or np.std(preds) < 1e-12:
-            return None
-        return preds
-    except Exception:
-        return None
+
+def _execute_formula(llm_code: str, X: np.ndarray,
+                     constants: dict = None) -> np.ndarray | None:
+    """Backward-compatible evaluator; detailed diagnostics are opt-in."""
+    result = _execute_formula_diagnostic(llm_code, X, constants=constants)
+    return result.get("predictions") if result.get("ok") else None
 
 
 def _compute_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict:
