@@ -9,6 +9,7 @@ LLM request. This script never changes routing tau.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -47,6 +48,15 @@ def _cohort_assignment(cases: list[dict]) -> dict[str, str]:
         for idx in order[n_cal:]:
             assigned[group[int(idx)]] = "evaluation"
     return assigned
+
+
+def _array_hash(*arrays: np.ndarray) -> str:
+    digest = hashlib.sha256()
+    for array in arrays:
+        values = np.ascontiguousarray(np.asarray(array, dtype="<f8"))
+        digest.update(str(values.shape).encode("ascii"))
+        digest.update(values.tobytes())
+    return digest.hexdigest()
 
 
 def _json_rows(X: np.ndarray, y: np.ndarray, names: list[str]) -> str:
@@ -198,7 +208,9 @@ def run(output: Path, max_calls: int, resume: bool = True) -> dict:
         }
         try:
             matches = protocol.load_test_data(case["domain"], num_samples=case["num_samples"])
-            match = next((item for item in matches if name.lower() in item[0].lower()), None)
+            match = next((item for item in matches if name.lower() == item[0].lower()), None)
+            if match is None:
+                match = next((item for item in matches if name.lower() in item[0].lower()), None)
             if match is None:
                 raise ValueError("protocol_case_not_found")
             description, X_full, y_full, var_names, metadata = match
@@ -216,14 +228,18 @@ def run(output: Path, max_calls: int, resume: bool = True) -> dict:
 
             # Only core rows are passed to the generation function. Edge labels
             # remain in this process solely for post-generation scoring.
+            calls_made += 1  # conservative cap: count each generation attempt, including provider failures
             generated = _generate_from_core(
                 description, case["domain"], var_names, metadata, X_core, y_core
             )
-            calls_made += int(generated.get("llm_called", False))
             result.update(generated)
             result.update({
                 "n_core": int(len(X_core)),
                 "n_edge": int(len(X_edge)),
+                "core_indices_in_outer_train": core_idx.astype(int).tolist(),
+                "edge_indices_in_outer_train": edge_idx.astype(int).tolist(),
+                "core_examples_sha256": _array_hash(X_core, y_core),
+                "edge_data_sha256": _array_hash(X_edge, y_edge),
                 "outer_split": outer_split,
                 "edge_split": {
                     "method": "two_tails_training_pca",
