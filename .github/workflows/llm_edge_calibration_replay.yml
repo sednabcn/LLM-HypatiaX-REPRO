@@ -1,0 +1,47 @@
+name: Replay saved LLM edge calibration (offline)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - "scripts/replay_llm_edge_calibration.py"
+      - ".github/workflows/llm_edge_calibration_replay.yml"
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install project dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+      - name: Download the original calibration artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: llm-edge-degradation-calibration
+          path: replay-input
+          repository: ${{ github.repository }}
+          run-id: 45038667467
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Replay saved formulas (no provider credentials or API calls)
+        run: |
+          python scripts/replay_llm_edge_calibration.py \
+            --input replay-input/routing_tau_calibration.json \
+            --output replay-output/llm_edge_calibration_replay.json
+      - name: Upload replay diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: llm-edge-calibration-replay
+          path: replay-output/llm_edge_calibration_replay.json
+          if-no-files-found: error
