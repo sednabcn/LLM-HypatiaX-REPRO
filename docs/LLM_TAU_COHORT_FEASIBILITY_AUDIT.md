@@ -63,3 +63,28 @@ Build a new, versioned registry from a named public benchmark release or other a
 ## Outcome
 
 The next valid step is to source and adjudicate a sufficiently large external equation-family registry, then freeze disjoint calibration/evaluation manifests. Until that exists and both validators pass, a paid calibration run would violate the approved protocol.
+
+
+## External source landscape reviewed (2026-11-22)
+
+A targeted source search identified several credible public research assets. They are **candidate source pools for expert extraction/adjudication**, not ready-made calibration cohorts. No source was imported or counted as independent equation units in this audit.
+
+| Source | Publicly documented scope | Disposition for this protocol |
+|---|---|---|
+| [FinanceMath](https://financemath-acl2024.github.io/) (ACL 2024) | 1,200 finance reasoning examples across multiple subareas; each has expert-annotated Python-formatted solutions. The project site says test annotations/answers were released in July 2026. | Best near-term candidate for finance-domain extraction. It is a reasoning QA benchmark, not a deduplicated equation-family registry; tabular problems and repeated underlying formula families must be filtered. Extract only examples whose mathematical model is explicit and whose solution can be independently verified. Preserve original IDs, split, license, and solution provenance. |
+| [formal-mathfin](https://github.com/formal-applied-math/formal-mathfin) | A Lean 4 mathematical-finance library; README reports 870 literature results, including stochastic calculus, pricing, fixed income, portfolio theory, and risk measures. | Strong formal-verification source for theorem/formula families, but the corpus is a theorem library rather than a tabular input/output benchmark. A separate, reviewed numeric problem specification and deterministic evaluator would be needed. Do not count theorem lemmas or variants as independent units without family-level adjudication. |
+| [IL_Measurement](https://github.com/ThanosDrossos/IL_Measurement) | MIT-licensed Uniswap v3 study with 30,058 closed-position observations across nine pools, plus extraction/analysis code. | Relevant DeFi domain source, but 30,058 are position observations, not 30,058 independent equations. The nine pools and repeated position/burn events are clustered; the README also notes its legacy tick-math appendix is superseded and does not run as-is. Use only as empirical validation/context for a small number of explicitly sourced DeFi formulas, not as an independent-unit count. |
+| [FinanceMath dataset card](https://huggingface.co/datasets/yale-nlp/FinanceMath) | Public validation/test dataset with Python solutions and ground-truth annotations. | Distribution and license details must be checked from the pinned dataset revision before use. Do not assume all 1,200 examples are unique equation families or eligible for formula-generation training. |
+
+### Recommended next extraction path
+
+1. Pin a specific FinanceMath dataset revision and license metadata; download only through a reproducible, offline-capable acquisition step and record revision/file hashes.
+2. Extract candidate examples whose solution is a deterministic equation or model, excluding table-retrieval-only questions, multi-step accounting lookups, and examples with hidden external facts.
+3. Independently map each candidate to a canonical equation-family ID; deduplicate algebraic rearrangements, parameter changes, and same-model question variants.
+4. Use formal-mathfin declarations as independent references for theorem/model identity and correctness where applicable, not as extra observations when they express the same family.
+5. Keep DeFi-specific formula families as a separately declared stratum if the target claim is DeFi. The IL_Measurement observations cannot be inflated into independent equation cases.
+6. Have a reviewer not involved in formula generation adjudicate source correctness, formula equivalence, category assignment, and independence. Only then consider allocating disjoint calibration and evaluation cohorts.
+
+### Feasibility conclusion
+
+FinanceMath may provide a large enough *raw candidate pool* for broad finance categories, but the public project description does not establish 59 independent, eligible formula families in any one category. formal-mathfin may expand the verified reference library but requires task construction. IL_Measurement adds DeFi empirical context, not equation-family count. Therefore the approved manifest remains draft and empty; no external records are currently eligible for counting toward the 59-unit minimum.
