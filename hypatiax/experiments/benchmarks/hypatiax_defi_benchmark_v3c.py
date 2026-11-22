@@ -1133,8 +1133,11 @@ def _hybrid_predict_and_eval(
                 if valid else "nn_abstention_fallback_failed"
             )
             query_blend_weights = {
-                "llm": [1.0] * len(X_test),
+                # No LLM/NN blend is executed on abstention. The NN quality
+                # gate selected a separate replacement predictor instead.
+                "llm": [0.0] * len(X_test),
                 "nn": [0.0] * len(X_test),
+                "replacement": [1.0] * len(X_test),
             }
         else:
             train_r2_source = "nn_fallback"
@@ -1180,8 +1183,11 @@ def _hybrid_predict_and_eval(
             train_r2_source = "nn_abstention_" + str(nn_m.get("selected_model", "fallback"))
             route_execution_status = "nn_abstention_fallback_executed"
             query_blend_weights = {
-                "llm": [1.0] * len(X_test),
+                # No LLM/NN blend is executed on abstention. The NN quality
+                # gate selected a separate replacement predictor instead.
+                "llm": [0.0] * len(X_test),
                 "nn": [0.0] * len(X_test),
+                "replacement": [1.0] * len(X_test),
             }
         else:
             ensemble_test = _ensemble_llm_nn(
@@ -1238,8 +1244,11 @@ def _hybrid_predict_and_eval(
                 if valid_nn else "nn_abstention_fallback_failed"
             )
             query_blend_weights = {
-                "llm": [1.0] * len(X_test),
+                # No LLM/NN blend is executed on abstention. The NN quality
+                # gate selected a separate replacement predictor instead.
+                "llm": [0.0] * len(X_test),
                 "nn": [0.0] * len(X_test),
+                "replacement": [1.0] * len(X_test),
             }
         else:
             train_r2_source = "nn_route"
