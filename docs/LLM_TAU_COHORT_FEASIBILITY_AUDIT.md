@@ -88,3 +88,29 @@ A targeted source search identified several credible public research assets. The
 ### Feasibility conclusion
 
 FinanceMath may provide a large enough *raw candidate pool* for broad finance categories, but the public project description does not establish 59 independent, eligible formula families in any one category. formal-mathfin may expand the verified reference library but requires task construction. IL_Measurement adds DeFi empirical context, not equation-family count. Therefore the approved manifest remains draft and empty; no external records are currently eligible for counting toward the 59-unit minimum.
+
+
+## FinanceMath candidate extraction completed (offline, 2026-11-22)
+
+The public source repository was inspected at immutable commit `bdc2b6b04252aa09630b66ec1e2a5c98e5a2794c`. Its source data blobs are pinned as:
+
+- `data/validation.json`: Git blob `2c6027405c2fb3009d5d43ba14cc3eb45952fc61` (200 records).
+- `data/test.json`: Git blob `75638f09072637df164a5602035da1c77e58b089` (1,000 records).
+
+An offline metadata/code-shape screen produced a reviewer queue of all 1,200 source IDs in [financemath_candidate_registry.json](../data/external_candidates/financemath_candidate_registry.json). It records source split, source ID, topic, table count, solution-presence/length, screening class, and explicit blank adjudication fields. It deliberately does not redistribute full question text or solution code.
+
+| Screening class | Records |
+|---|---:|
+| Text-only formula-shaped candidate | 610 |
+| Table-dependent formula-shaped candidate | 439 |
+| Procedural/library-shaped solution | 134 |
+| Non-formula/lookup-shaped solution | 17 |
+| **Total** | **1,200** |
+
+The heuristic marks a record as formula-shaped when its Python solution contains arithmetic operators and no obvious loop/import/library tokens; table presence separates table-dependent from text-only candidates. This is intentionally a high-recall queue, not semantic equation extraction. It does not prove that a problem has a single closed-form model, that its formula is eligible for the restricted evaluator, or that two problems are different mathematical families.
+
+All 1,200 entries remain `unreviewed`; family IDs are null; Core-15 and historical-74 overlap checks are unperformed; independence is not adjudicated; and cohort assignments are null. The 200/1,000 source split is preserved as provenance only. In particular, the test split must not be treated as an evaluation cohort until overlap, leakage, and protocol compatibility are independently established.
+
+The FinanceMath GitHub repository has no declared repository license in its GitHub metadata, although its Hugging Face dataset card identifies MIT. This registry therefore stores only IDs and derived screening metadata, cites the source, and avoids redistributing the question/solution payload. The Hugging Face file access route separately requires acceptance of contact-information conditions; the extraction used the public GitHub source blobs at the pinned revision.
+
+**Result:** a reproducible reviewer queue now exists, but the number of independent, eligible equation families is still **not established**. No entries were counted toward the 59-unit minimum; the calibration manifest remains draft and empty.
