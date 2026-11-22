@@ -51,8 +51,8 @@ def test_constant_predictions_are_distinguished(parser):
 
 
 def test_success_reports_execution_mode_and_repairs_small_nonfinite_fraction(parser):
-    parser(lambda x: np.array([1.0, 2.0, np.nan, 4.0]))
-    result = benchmark._execute_formula_diagnostic("f", np.arange(4.0).reshape(-1, 1))
+    parser(lambda x: np.where(np.asarray(x) == 0, np.nan, np.asarray(x) + 1.0))
+    result = benchmark._execute_formula_diagnostic("f", np.arange(20.0).reshape(-1, 1))
     assert result["ok"] is True
     assert result["execution_mode"] == "vectorized"
-    assert result["nonfinite_fraction"] == pytest.approx(0.25)
+    assert result["nonfinite_fraction"] == pytest.approx(0.05)
