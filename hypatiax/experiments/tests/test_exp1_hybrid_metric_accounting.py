@@ -398,3 +398,53 @@ def test_exp1_nn_default_augmentation_reuses_transformed_validation_features():
     assert result["y_pred_test"].shape == y_test.shape
     assert np.isfinite(result["y_pred_train"]).all()
     assert np.isfinite(result["y_pred_test"]).all()
+
+
+def test_exp1_directional_validation_matches_benchmark_split_direction():
+    X = np.column_stack([np.arange(50, dtype=float), np.arange(50, dtype=float)[::-1]])
+    y = X[:, 0] ** 2
+    high = bench._train_and_eval_nn(
+        X, y, X[:10], y[:10], epochs=2, hidden=[4], seed=9,
+        max_time_s=30, augment=False, patience=2,
+        split_metadata={"split_var_idx": 0, "split_type": "high"},
+    )
+    low = bench._train_and_eval_nn(
+        X, y, X[:10], y[:10], epochs=2, hidden=[4], seed=9,
+        max_time_s=30, augment=False, patience=2,
+        split_metadata={"split_var_idx": 0, "split_type": "low"},
+    )
+    # Different one-sided validation tails must produce distinct checkpoints
+    # or validation losses; held-out X/y are not involved in either split.
+    assert high["best_epoch"] is not None
+    assert low["best_epoch"] is not None
+    assert high["validation_loss"] != low["validation_loss"]
+
+
+def test_exp1_hybrid_abstention_bypasses_ensemble_and_records_zero_nn_weight(monkeypatch):
+    _common(monkeypatch, "ensemble")
+    Xtr, ytr, Xte, yte = _inputs()
+    nn_result = {
+        "train_r2": 0.25, "test_r2": 0.15, "success": True,
+        "y_pred_train": np.full(len(ytr), 0.4),
+        "y_pred_test": np.full(len(yte), 0.4),
+        "abstained": True, "selected_model": "log_ridge",
+        "nn_edge_r2": -0.2, "ridge_edge_r2": 0.3,
+    }
+    monkeypatch.setattr(
+        bench, "_train_and_eval_nn",
+        lambda *a, **k: (_ for _ in ()).throw(AssertionError("unexpected retraining")),
+    )
+    monkeypatch.setattr(
+        bench, "_ensemble_llm_nn",
+        lambda *a, **k: (_ for _ in ()).throw(AssertionError("abstained predictor must not be blended")),
+    )
+    result = bench._hybrid_predict_and_eval(
+        "fixture", "defi", Xtr, ytr, Xte, yte, ["x"], {},
+        nn_result=nn_result,
+    )
+    assert result["train_r2"] == 0.25
+    assert result["test_r2"] == 0.15
+    assert result["train_r2_source"] == "nn_abstention_log_ridge"
+    assert result["route_execution_status"] == "nn_abstention_fallback_executed"
+    assert result["blend_weights"]["nn"] == [0.0] * len(yte)
+    assert result["nn_selected_model"] == "log_ridge"
