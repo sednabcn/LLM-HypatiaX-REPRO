@@ -229,21 +229,24 @@ def _evaluate_formula_pair(formula: str, X_core: np.ndarray, y_core: np.ndarray,
     core_scale = float(np.std(np.asarray(y_core, dtype=float)))
     diagnostics = {}
     for label, X, y in (("core", X_core, y_core), ("edge", X_edge, y_edge)):
-        try:
-            predictions = benchmark._execute_formula(formula, X, constants=constants)
-        except Exception as exc:
+        execution = benchmark._execute_formula_diagnostic(
+            formula, X, constants=constants
+        )
+        if not execution.get("ok"):
             diagnostics[label] = {
                 "ok": False,
-                "failure_reason": f"formula_execution_exception:{type(exc).__name__}",
+                "failure_reason": execution.get("failure_reason", "unknown_execution_failure"),
+                "execution_diagnostics": {
+                    key: value for key, value in execution.items()
+                    if key not in {"predictions", "ok", "failure_reason"}
+                },
+                **({"detail": execution["detail"]} if execution.get("detail") else {}),
             }
             continue
-        if predictions is None:
-            diagnostics[label] = {
-                "ok": False,
-                "failure_reason": "formula_execution_failed_or_invalid_output",
-            }
-            continue
-        diagnostics[label] = _score_predictions(y, predictions, core_scale)
+        scored = _score_predictions(y, execution["predictions"], core_scale)
+        scored["execution_mode"] = execution.get("execution_mode")
+        scored["nonfinite_fraction_repaired"] = execution.get("nonfinite_fraction", 0.0)
+        diagnostics[label] = scored
 
     core, edge = diagnostics["core"], diagnostics["edge"]
     if core.get("ok") and edge.get("ok"):
