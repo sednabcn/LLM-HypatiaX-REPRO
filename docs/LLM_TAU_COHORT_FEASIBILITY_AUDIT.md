@@ -114,3 +114,20 @@ All 1,200 entries remain `unreviewed`; family IDs are null; Core-15 and historic
 The FinanceMath GitHub repository has no declared repository license in its GitHub metadata, although its Hugging Face dataset card identifies MIT. This registry therefore stores only IDs and derived screening metadata, cites the source, and avoids redistributing the question/solution payload. The Hugging Face file access route separately requires acceptance of contact-information conditions; the extraction used the public GitHub source blobs at the pinned revision.
 
 **Result:** a reproducible reviewer queue now exists, but the number of independent, eligible equation families is still **not established**. No entries were counted toward the 59-unit minimum; the calibration manifest remains draft and empty.
+
+
+## FinanceMath provisional code-fingerprint clustering (2026-11-22)
+
+A deterministic offline candidate-generation pass compared all 1,200 pinned FinanceMath Python solutions using a lightweight line-aware token scanner. It did **not** parse Python ASTs or assess mathematical equivalence. The scanner preserves identifiers, operators, literal values, and indentation transitions; comments and whitespace are ignored. A second fingerprint replaces numeric and string literals with placeholders while retaining identifiers and operators.
+
+Results:
+- 6 exact token-stream duplicate groups containing 12 records (1,188 exact-fingerprint singletons).
+- 13 literal-normalized token-shape groups containing 28 records (1,172 literal-normalized singletons).
+- All 1,200 source solutions were found.
+- The exact and literal-normalized groups overlap; do not add their counts together.
+
+These are **review leads only**, not equation families. Literal-normalized matches can represent different financial quantities or coincidental code shapes. Conversely, equivalent formulas can differ in variable names, algebraic form, or control flow and will be missed. The scanner is heuristic, and fingerprints use a non-cryptographic 64-bit FNV-1a code-point hash solely as deterministic grouping keys.
+
+No candidate was adjudicated for formula correctness, canonical equation-family identity, overlap with Core-15 or the historical 74, statistical independence, or calibration/evaluation cohort eligibility. The candidate registry remains unchanged: all review states remain unreviewed, all family IDs remain null, and no cohort assignments were made. No LLM/provider calls were made.
+
+Machine-readable output: `data/external_candidates/financemath_provisional_code_clusters.json`.
