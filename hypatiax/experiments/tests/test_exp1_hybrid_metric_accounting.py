@@ -474,3 +474,29 @@ def test_exp1_llm_failure_abstention_fallback_records_zero_nn_weight(monkeypatch
     assert result["nn_abstained"] is True
     assert result["nn_selected_model"] == "log_ridge"
     assert result["blend_weights"]["nn"] == [0.0] * len(yte)
+
+
+
+def test_exp1_nn_route_records_abstention_replacement_status(monkeypatch):
+    _common(monkeypatch, "nn")
+    Xtr, ytr, Xte, yte = _inputs()
+    nn_result = {
+        "train_r2": 0.25, "test_r2": 0.15, "success": True,
+        "y_pred_train": np.full(len(ytr), 0.4),
+        "y_pred_test": np.full(len(yte), 0.4),
+        "abstained": True, "selected_model": "training_mean",
+        "nn_edge_r2": -0.2, "ridge_edge_r2": float("nan"),
+    }
+    monkeypatch.setattr(
+        bench, "_generate_llm_formula",
+        lambda *a, **k: {"python_code": None, "llm_called": False},
+    )
+    result = bench._hybrid_predict_and_eval(
+        "fixture", "defi", Xtr, ytr, Xte, yte, ["x"], {},
+        nn_result=nn_result,
+    )
+    assert result["nn_abstained"] is True
+    assert result["nn_selected_model"] == "training_mean"
+    assert result["train_r2_source"] == "nn_abstention_training_mean"
+    assert result["route_execution_status"] == "nn_abstention_fallback_executed"
+    assert result["blend_weights"]["nn"] == [0.0] * len(yte)
