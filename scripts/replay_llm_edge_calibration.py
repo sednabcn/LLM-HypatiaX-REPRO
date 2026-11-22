@@ -50,11 +50,6 @@ def replay(input_path: Path, output_path: Path) -> dict:
             "replay_status": "not_replayed",
         }
         formula = record.get("formula")
-        if not formula:
-            result["replay_status"] = "no_saved_formula"
-            result["reason"] = "Original generation did not return a formula"
-            replayed.append(result)
-            continue
 
         matches = protocol.load_test_data(case["domain"], num_samples=case["num_samples"])
         match = _match_protocol_case(name, matches)
@@ -84,6 +79,11 @@ def replay(input_path: Path, output_path: Path) -> dict:
         if not all(checks.values()):
             result["replay_status"] = "integrity_mismatch"
             result["reason"] = "Regenerated protocol inputs differ from generation artifact"
+            replayed.append(result)
+            continue
+        if not formula:
+            result["replay_status"] = "no_saved_formula"
+            result["reason"] = "Original generation did not return a formula"
             replayed.append(result)
             continue
 
@@ -125,7 +125,7 @@ def replay(input_path: Path, output_path: Path) -> dict:
         "source_artifact": input_path.name,
         "n_records": len(replayed),
         "n_integrity_verified": sum(
-            r.get("replay_status") in {"scored", "score_undefined"}
+            r.get("replay_status") in {"scored", "score_undefined", "no_saved_formula"}
             and all((r.get("input_integrity_checks") or {}).values())
             for r in replayed
         ),
