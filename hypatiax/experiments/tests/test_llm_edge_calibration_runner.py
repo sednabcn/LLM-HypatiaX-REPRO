@@ -100,21 +100,23 @@ def test_core_scale_normalization_is_shared_across_partitions(monkeypatch):
     from scripts.calibrate_llm_edge_degradation import _evaluate_formula_pair
 
     def fake_execute(_formula, X, constants=None):
-        return np.asarray(X, dtype=float).reshape(-1)
+        return np.zeros(len(X), dtype=float)
 
     monkeypatch.setattr(benchmark, "_execute_formula", fake_execute)
     y_core = np.array([0.0, 1.0, 2.0, 3.0])
     y_edge = np.array([0.0, 2.0, 4.0, 6.0])
     result = _evaluate_formula_pair(
         "def formula(x): return x",
-        y_core.reshape(-1, 1), y_core,
-        y_edge.reshape(-1, 1), y_edge,
+        np.ones((4, 1)), y_core,
+        np.ones((4, 1)), y_edge,
     )
 
     assert result["ok"] is True
-    assert result["core"]["nrmse_core_scale"] == 0.0
-    assert result["edge"]["nrmse_core_scale"] > 0.0
-    assert result["delta_nrmse_core_scale"] == result["edge"]["nrmse_core_scale"]
+    assert result["core"]["nrmse_core_scale"] > 0.0
+    assert result["edge"]["nrmse_core_scale"] > result["core"]["nrmse_core_scale"]
+    assert result["delta_nrmse_core_scale"] == (
+        result["edge"]["nrmse_core_scale"] - result["core"]["nrmse_core_scale"]
+    )
 
 
 def test_summary_never_marks_cohorts_tau_eligible():
