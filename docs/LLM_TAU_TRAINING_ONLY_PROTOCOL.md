@@ -120,13 +120,21 @@ Each equation record should include at least:
 
 Never store API keys, credentials, or other secrets in artifacts.
 
-## 8. Preflight checklist and authorization boundary
+## 8. Cohort feasibility and evaluation precision
+
+The offline repository inventory is recorded in [LLM tau calibration cohort feasibility audit](LLM_TAU_COHORT_FEASIBILITY_AUDIT.md). It found no currently available, unused, provenance-pinned registry large enough to satisfy the approved independent-unit requirements. Do not populate the manifest by combining registry row counts without canonical equation-family adjudication, and do not reuse the historical 74-case calibration cohort.
+
+The exact zero-failure sample minimum of 59 applies to the calibration category and, for an independent evaluation claim at the same 5% risk target and one-sided 95% confidence, to the number of **accepted/evaluable independent evaluation units per category**. Assigned evaluation equations must be increased to account for abstentions, invalid formulas, generation failures, and undefined scores. If there are bad accepted routes, compute the exact one-sided bound using the observed failures; 59 is not sufficient in that case. The evaluation manifest must be disjoint from calibration, Core-15, and all families in the historical 74-case LLM calibration artifact.
+
+A future evaluation validator must enforce this accepted-route precision requirement as well as manifest disjointness. A calibration manifest passing `--require-ready` alone does not establish evaluation readiness.
+
+## 9. Preflight checklist and authorization boundary
 
 A future run is blocked until all of the following are true:
 
 - [x] Repository-approved edge-fit, relative-margin, risk, confidence, and minimum calibration sample-size constants are pinned to the validator/manifest.
 - [ ] Candidate tau values, category list, independent equation/family IDs, source/formula/training-data hashes, edge evaluator, and calibration data-manifest hash are populated and pass `scripts/validate_tau_calibration_manifest.py --require-ready`.
-- [ ] Independent evaluation cohort and its precision/sample-size plan are frozen.
+- [ ] Independent evaluation cohort is disjoint from calibration, Core-15, and the historical 74-case cohort; its accepted-route precision plan is frozen and validated.
 - [ ] Calibration and independent evaluation equation manifests are frozen and disjoint.
 - [ ] Sample-size/precision analysis is approved.
 - [ ] Prompt/template and model/provider settings are frozen.
@@ -137,7 +145,7 @@ A future run is blocked until all of the following are true:
 
 This document does not authorize any provider calls or workflow dispatch. Until the manifest passes `--require-ready`, the independent evaluation design is frozen, and the run-specific cost/call cap is explicitly approved, do not run calibration, do not spend API credits, and do not modify routing configuration. Keep `config/fresh_rerun.yaml` at `degradation_tau: null`.
 
-## 9. Relationship to existing diagnostics
+## 10. Relationship to existing diagnostics
 
 The existing NN-derived `_extrapolation_probe` remains a separate NN robustness diagnostic. Its delta must not be substituted for `delta_llm`. The LLM-specific formula diagnostic API now provides categorized parse/execution/output failures while preserving the legacy evaluator contract; use that API for all future calibration scoring.
 
