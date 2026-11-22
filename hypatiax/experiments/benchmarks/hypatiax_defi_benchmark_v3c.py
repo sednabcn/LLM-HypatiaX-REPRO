@@ -1715,7 +1715,8 @@ def _generate_report(results: list):
         print(f"\n── Intractable cases ({len(intractable)}) ─────────────────────────────────────")
         for r in intractable:
             hy = r["results"].get("hybrid", {}).get("test_r2")
-            print(f"  {r['test_case'][:55]:<55}  hybrid test R² = "
+            case_name = str(r.get("equation_id", r.get("test_case", "<unknown>")))
+            print(f"  {case_name[:55]:<55}  hybrid test R² = "
                   f"{'nan' if hy is None or (isinstance(hy, float) and np.isnan(hy)) else f'{hy:.4f}'}")
 
     # By-difficulty breakdown
