@@ -372,33 +372,6 @@ def _feature_augmentation_schema(X: np.ndarray) -> tuple[tuple[bool, ...], tuple
     )
 
 
-def _directional_edge_split_indices(
-    X: np.ndarray, feature_idx: int = 0, direction: str = "high",
-    edge_fraction: float = 0.2,
-) -> tuple[np.ndarray, np.ndarray]:
-    """Split off the outer edge in the benchmark's primary-feature direction."""
-    X = np.asarray(X, dtype=float)
-    if X.ndim != 2 or X.shape[0] < 8 or X.shape[1] < 1:
-        raise ValueError("X must be 2-D with at least 8 rows and one feature")
-    if not np.isfinite(X).all():
-        raise ValueError("X must contain only finite values")
-    if not 0 <= int(feature_idx) < X.shape[1]:
-        raise ValueError("validation feature index is out of range")
-    if direction not in ("high", "low"):
-        raise ValueError("validation direction must be 'high' or 'low'")
-    if not 0.1 <= float(edge_fraction) <= 0.4:
-        raise ValueError("edge_fraction must be between 0.1 and 0.4")
-    order = np.argsort(X[:, int(feature_idx)], kind="mergesort")
-    n_edge = max(2, int(np.ceil(len(order) * float(edge_fraction))))
-    if len(order) - n_edge < 5:
-        raise ValueError("directional edge split leaves too few fit rows")
-    if direction == "high":
-        fit_idx, edge_idx = order[:-n_edge], order[-n_edge:]
-    else:
-        fit_idx, edge_idx = order[n_edge:], order[:n_edge]
-    return fit_idx.astype(int), edge_idx.astype(int)
-
-
 def _augment_features(
     X: np.ndarray,
     schema: tuple[tuple[bool, ...], tuple[bool, ...]] | None = None,
@@ -440,15 +413,11 @@ def _train_and_eval_nn(
     augment: bool = True,
     patience: int = 30,
     min_delta: float = 1e-6,
-    validation_feature_idx: int = 0,
-    validation_direction: str = "high",
-    validation_fraction: float = 0.2,
 ) -> dict:
     """
-    Train an MLP with a deterministic one-sided edge validation split drawn
-    ONLY from the outer training partition. The edge is held out in the same
-    primary-feature direction as the benchmark's outer extrapolation split.
-    The outer test partition is evaluated once after model selection.
+    Train an MLP with a deterministic validation split drawn ONLY from the
+    outer training partition. The extrapolation test partition is evaluated
+    once, after model selection, and is never used for early stopping.
 
     A wall-clock timeout is a failed/incomplete fit (success=False), even when
     a usable best-so-far checkpoint exists. This keeps partial runs out of the
@@ -476,18 +445,19 @@ def _train_and_eval_nn(
                 and np.isfinite(X_test).all() and np.isfinite(y_test).all()):
             raise ValueError("nonfinite_nn_input")
 
-        # Preserve the benchmark's established per-case RNG reset. Validation
-        # is the edge of the primary split feature, not a random IID sample.
+        # Preserve the benchmark's established per-case RNG reset while
+        # using a local RandomState below for the validation partition.
         torch.manual_seed(seed)
         np.random.seed(seed)
         hidden = hidden or [128, 64, 32]
-        fit_idx, val_idx = _directional_edge_split_indices(
-            X_train, feature_idx=validation_feature_idx,
-            direction=validation_direction, edge_fraction=validation_fraction,
-        )
-        X_fit_raw, y_fit = X_train[fit_idx], y_train[fit_idx]
-        X_val_raw, y_val = X_train[val_idx], y_train[val_idx]
-        X_fit, X_val = X_fit_raw, X_val_raw
+        # Local RNG: deterministic validation rows without perturbing the
+        # benchmark's global NumPy RNG stream.
+        order = np.random.RandomState(seed).permutation(len(X_train))
+        n_val = max(2, int(round(0.2 * len(X_train))))
+        n_val = min(n_val, len(X_train) - 3)
+        val_idx, fit_idx = order[:n_val], order[n_val:]
+        X_fit, y_fit = X_train[fit_idx], y_train[fit_idx]
+        X_val, y_val = X_train[val_idx], y_train[val_idx]
 
         if augment:
             augmentation_schema = _feature_augmentation_schema(X_fit)
@@ -559,25 +529,12 @@ def _train_and_eval_nn(
         result["best_epoch"] = int(best_epoch)
         result["validation_loss"] = float(best_loss)
 
-        # Score the selected checkpoint on the directional edge. These scores
-        # and baselines are training-only; outer test labels never gate routing.
-        model.eval()
-        with torch.no_grad():
-            raw_val = model(Xv).cpu().numpy().reshape(-1)
-        yp_val = sy.inverse_transform(raw_val.reshape(-1, 1)).reshape(-1)
-        validation_r2 = float(_r2_checked(y_val, yp_val)[0])
-        mean_baseline_r2 = float(_r2_checked(
-            y_val, np.full(len(y_val), float(np.mean(y_fit)))
-        )[0])
-        linear_fit = np.column_stack([np.ones(len(X_fit_raw)), X_fit_raw])
-        linear_edge = np.column_stack([np.ones(len(X_val_raw)), X_val_raw])
-        linear_coef, *_ = np.linalg.lstsq(linear_fit, y_fit, rcond=None)
-        linear_baseline_r2 = float(_r2_checked(y_val, linear_edge @ linear_coef)[0])
-
-        # Inference uses the same fit-subset scaler and feature schema that
-        # produced the selected checkpoint.
+        # Refit the feature scaler using the complete outer training partition;
+        # retain the model's fit-subset scaler for inference to avoid changing
+        # the coordinate system in which the selected weights were learned.
         Xtr_eval = torch.as_tensor(sx.transform(X_train_eval), dtype=torch.float32)
         Xte_eval = torch.as_tensor(sx.transform(X_test_eval), dtype=torch.float32)
+        model.eval()
         with torch.no_grad():
             raw_train = model(Xtr_eval).cpu().numpy().reshape(-1)
             raw_test = model(Xte_eval).cpu().numpy().reshape(-1)
@@ -591,20 +548,10 @@ def _train_and_eval_nn(
         test_r2 = float(_r2_checked(y_test, yp_test)[0])
         result.update({
             "train_r2": train_r2, "test_r2": test_r2,
-            # Execution success is independent of a degenerate outer test R².
-            "success": bool(np.isfinite(train_r2)),
-            "validation_r2": validation_r2,
-            "baseline_mean_validation_r2": mean_baseline_r2,
-            "baseline_linear_validation_r2": linear_baseline_r2,
-            "validation_protocol": {
-                "kind": "one_sided_primary_feature_edge",
-                "feature_idx": int(validation_feature_idx),
-                "direction": validation_direction,
-                "fraction": float(validation_fraction),
-                "fit_rows": int(len(fit_idx)), "edge_rows": int(len(val_idx)),
-            },
+            "success": bool(np.isfinite(train_r2) and np.isfinite(test_r2)),
             "y_pred_train": yp_train, "y_pred_test": yp_test,
-            "failure_reason": None if np.isfinite(train_r2) else "undefined_training_metric",
+            "failure_reason": None if (np.isfinite(train_r2) and np.isfinite(test_r2))
+                              else "undefined_train_or_test_metric",
         })
         return result
     except Exception as exc:
@@ -743,13 +690,13 @@ def _eval_formula_r2(
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _extrapolation_probe(
-    X_train: np.ndarray, y_train: np.ndarray, probe_frac: float | None = None,
-    feature_idx: int = 0, direction: str = "high",
+    X_train: np.ndarray, y_train: np.ndarray, probe_frac: float | None = None
 ) -> dict:
-    """Probe the benchmark-aligned one-sided primary-feature edge.
+    """Train on the central training region and probe both training-set tails.
 
-    The split, NN fit and both R² scores use only the outer training partition.
-    No outer test/query covariates or labels are accepted.
+    The PCA axis, split, NN fit and both R² scores use only the outer training
+    partition. probe_frac is the total fraction assigned to the two edge tails.
+    No held-out/query covariates or labels are accepted.
     """
     X_train = np.asarray(X_train, dtype=float)
     y_train = np.asarray(y_train, dtype=float).reshape(-1)
@@ -771,10 +718,7 @@ def _extrapolation_probe(
         return {"status": "insufficient_or_nonfinite_training_data", "delta": None,
                 "r2_train": None, "r2_edge": None, "n_fit": 0, "n_edge": 0}
     try:
-        core_idx, edge_idx = _directional_edge_split_indices(
-            X_train, feature_idx=feature_idx, direction=direction,
-            edge_fraction=probe_frac,
-        )
+        core_idx, edge_idx = training_edge_split_indices(X_train, probe_frac)
     except ValueError:
         return {"status": "insufficient_core_rows", "delta": None,
                 "r2_train": None, "r2_edge": None, "n_fit": 0, "n_edge": 0}
@@ -786,8 +730,7 @@ def _extrapolation_probe(
     Xp, yp = X_train[edge_idx], y_train[edge_idx]
     try:
         probe_result = _train_and_eval_nn(
-            Xf, yf, Xp, yp, epochs=200, hidden=[64, 32], seed=_NN_SEED,
-            validation_feature_idx=feature_idx, validation_direction=direction,
+            Xf, yf, Xp, yp, epochs=200, hidden=[64, 32], seed=_NN_SEED
         )
         r2_train = float(probe_result["train_r2"])
         r2_edge = float(probe_result["test_r2"])
@@ -800,52 +743,13 @@ def _extrapolation_probe(
             "delta": float(r2_train - r2_edge),
             "n_fit": int(len(Xf)), "n_edge": int(len(Xp)),
             "probe_fraction": float(probe_frac),
-            "edge_sides": 1, "feature_idx": int(feature_idx),
-            "direction": direction,
+            "edge_sides": 2,
         }
     except Exception as exc:
         _m5_record_failure("_extrapolation_probe", exc)
         return {"status": "error", "delta": None,
                 "r2_train": None, "r2_edge": None,
                 "n_fit": int(len(Xf)), "n_edge": int(len(Xp))}
-
-
-def _nn_quality_gate(candidate: dict) -> dict:
-    """Require a calibrated edge-R² floor and beat training-only baselines.
-
-    Set HYPATIAX_NN_EDGE_MIN_R2 only after calibration on development data.
-    An absent or invalid threshold fails closed: the NN is not selected.
-    """
-    raw = os.environ.get("HYPATIAX_NN_EDGE_MIN_R2", "").strip()
-    if not raw:
-        return {"passed": False, "reason": "nn_edge_threshold_not_configured"}
-    try:
-        threshold = float(raw)
-    except ValueError:
-        return {"passed": False, "reason": "invalid_nn_edge_threshold"}
-    if not np.isfinite(threshold):
-        return {"passed": False, "reason": "invalid_nn_edge_threshold"}
-    try:
-        edge_r2 = float(candidate.get("validation_r2"))
-        baselines = [
-            float(candidate.get("baseline_mean_validation_r2")),
-            float(candidate.get("baseline_linear_validation_r2")),
-        ]
-    except (TypeError, ValueError, OverflowError):
-        return {"passed": False, "reason": "missing_edge_or_baseline_metrics"}
-    if not np.isfinite(edge_r2):
-        return {"passed": False, "reason": "nonfinite_nn_edge_validation"}
-    finite_baselines = [value for value in baselines if np.isfinite(value)]
-    if not finite_baselines:
-        return {"passed": False, "reason": "no_finite_training_baseline"}
-    best_baseline = max(finite_baselines)
-    passed = edge_r2 >= threshold and edge_r2 >= best_baseline
-    return {
-        "passed": bool(passed),
-        "reason": "edge_threshold_and_baseline_passed" if passed else "edge_quality_below_gate",
-        "validation_r2": edge_r2, "best_baseline_validation_r2": best_baseline,
-        "minimum_validation_r2": threshold,
-    }
 
 
 def _routing_delta_tau() -> float | None:
@@ -1035,8 +939,6 @@ def _hybrid_predict_and_eval(
     var_names: list[str], metadata: dict,
     llm_attempt_state: dict | None = None,
     nn_result: dict | None = None,
-    nn_validation_feature_idx: int = 0,
-    nn_validation_direction: str = "high",
 ) -> dict:
     """Run the Exp1 LLM/NN route and report metrics for the predictor used."""
     llm_result = _generate_llm_formula(description, domain, var_names, metadata)
@@ -1065,10 +967,7 @@ def _hybrid_predict_and_eval(
     structural_tokens = structural_risk_tokens(llm_code)
     structural_risk_flag = bool(structural_tokens)
     degradation_probe = (
-        _extrapolation_probe(
-            X_train, y_train, feature_idx=nn_validation_feature_idx,
-            direction=nn_validation_direction,
-        )
+        _extrapolation_probe(X_train, y_train)
         if llm_trustworthy else
         {"status": "trust_gate_failed", "delta": None, "r2_train": None, "r2_edge": None}
     )
@@ -1115,6 +1014,7 @@ def _hybrid_predict_and_eval(
                 and pred_test.shape == np.asarray(y_test).reshape(-1).shape
                 and np.isfinite(pred_train).all() and np.isfinite(pred_test).all()
                 and np.isfinite(_metric(candidate.get("train_r2")))
+                and np.isfinite(_metric(candidate.get("test_r2")))
             )
         except (TypeError, ValueError):
             return False
@@ -1124,30 +1024,20 @@ def _hybrid_predict_and_eval(
         if _valid_nn_result(nn_result):
             return nn_result
         t0 = time.time()
-        trained = _train_and_eval_nn(
-            X_train, y_train, X_test, y_test,
-            validation_feature_idx=nn_validation_feature_idx,
-            validation_direction=nn_validation_direction,
-        )
+        trained = _train_and_eval_nn(X_train, y_train, X_test, y_test)
         nn_rerun_time_s += time.time() - t0
         return trained
 
-    nn_quality_gate = {"passed": False, "reason": "not_evaluated"}
-
     def _use_nn_fallback(nn_result, reason):
         nonlocal selected_train_r2, train_r2_source, test_r2
-        nonlocal decision, route_reason, route_execution_status, nn_quality_gate
-        structurally_valid = _valid_nn_result(nn_result)
-        nn_quality_gate = _nn_quality_gate(nn_result) if structurally_valid else {
-            "passed": False, "reason": "invalid_nn_result"
-        }
-        valid = structurally_valid and nn_quality_gate.get("passed", False)
+        nonlocal decision, route_reason, route_execution_status
+        valid = _valid_nn_result(nn_result)
         selected_train_r2 = _metric(nn_result.get("train_r2")) if valid else float("nan")
         test_r2 = _metric(nn_result.get("test_r2")) if valid else float("nan")
         train_r2_source = "nn_fallback"
         decision = "nn_fallback" if valid else "nn_unavailable"
-        route_reason = reason if valid else f"{reason}:{nn_quality_gate.get('reason')}"
-        route_execution_status = "nn_fallback_executed" if valid else "nn_quality_gate_failed"
+        route_reason = reason
+        route_execution_status = "nn_fallback_executed" if valid else "nn_fallback_failed"
 
     if decision == "llm":
         selected_train_r2 = _metric(llm_train_r2)
@@ -1168,12 +1058,9 @@ def _hybrid_predict_and_eval(
         llm_test_preds = _execute_formula(llm_code, X_test, constants=constants)
         nn_m = _raw_nn()
         llm_train_preds = _execute_formula(llm_code, X_train, constants=constants)
-        nn_quality_gate = _nn_quality_gate(nn_m) if _valid_nn_result(nn_m) else {
-            "passed": False, "reason": "invalid_nn_result"
-        }
         if (llm_test_preds is None or llm_train_preds is None
                 or nn_m.get("y_pred_test") is None or nn_m.get("y_pred_train") is None
-                or not _valid_nn_result(nn_m) or not nn_quality_gate.get("passed", False)):
+                or not _valid_nn_result(nn_m)):
             _use_nn_fallback(
                 nn_m, "ensemble_inputs_unavailable_nn_fallback"
                 if _valid_nn_result(nn_m)
@@ -1209,8 +1096,6 @@ def _hybrid_predict_and_eval(
                     nn_m = _train_and_eval_nn(
                         np.column_stack([X_train, llm_train_preds]), y_train,
                         np.column_stack([X_test, llm_test_preds]), y_test,
-                        validation_feature_idx=nn_validation_feature_idx,
-                        validation_direction=nn_validation_direction,
                     )
                     nn_rerun_time_s += time.time() - t0
                     if not _valid_nn_result(nn_m):
@@ -1221,20 +1106,11 @@ def _hybrid_predict_and_eval(
                 nn_m = _raw_nn()
         else:
             nn_m = _raw_nn()
-        structurally_valid_nn = _valid_nn_result(nn_m)
-        nn_quality_gate = _nn_quality_gate(nn_m) if structurally_valid_nn else {
-            "passed": False, "reason": "invalid_nn_result"
-        }
-        valid_nn = structurally_valid_nn and nn_quality_gate.get("passed", False)
+        valid_nn = _valid_nn_result(nn_m)
         selected_train_r2 = _metric(nn_m.get("train_r2")) if valid_nn else float("nan")
         test_r2 = _metric(nn_m.get("test_r2")) if valid_nn else float("nan")
         train_r2_source = "nn_route"
-        if valid_nn:
-            route_execution_status = "nn_executed"
-        else:
-            decision = "nn_unavailable"
-            route_reason = f"{route_reason}:{nn_quality_gate.get('reason')}"
-            route_execution_status = "nn_quality_gate_failed"
+        route_execution_status = "nn_executed" if valid_nn else "nn_training_failed_or_metrics_undefined"
 
     y_test_arr = np.asarray(y_test, dtype=float).reshape(-1)
     if y_test_arr.size == 0 or not np.isfinite(y_test_arr).all():
@@ -1257,7 +1133,6 @@ def _hybrid_predict_and_eval(
         "structural_risk_flag": structural_risk_flag,
         "structural_risk_tokens": structural_tokens,
         "degradation_probe": degradation_probe, "degradation_tau": degradation_tau,
-        "nn_quality_gate": nn_quality_gate,
         "ood_diagnostic": ood_diagnostic,
         "ood_covariate_protocol": {
             "density_fit_rows": "X_train", "query_rows": "X_test",
@@ -1278,23 +1153,6 @@ def _hybrid_predict_and_eval(
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 6 — Data splitting
 # ─────────────────────────────────────────────────────────────────────────────
-
-def _effective_split_feature_index(X: np.ndarray, configured_index: int) -> int:
-    """Resolve a configured primary feature safely against the actual input width.
-
-    Some protocol cases expose fewer features than their historical split
-    configuration. In that case use column zero consistently for splitting,
-    NN validation, and routing rather than passing an invalid index downstream.
-    """
-    X = np.asarray(X)
-    try:
-        index = int(configured_index)
-    except (TypeError, ValueError, OverflowError):
-        return 0
-    if X.ndim != 2 or X.shape[1] == 0 or not 0 <= index < X.shape[1]:
-        return 0
-    return index
-
 
 def _aggressive_split(
     X: np.ndarray, y: np.ndarray, config: dict, return_metadata: bool = False
@@ -1778,15 +1636,10 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
             })
             tc.setdefault("description", desc)
 
-            requested_split_var_idx = tc["config"].get("split_var_idx", 0)
-            split_var_idx = _effective_split_feature_index(X_full, requested_split_var_idx)
-            split_config = dict(tc["config"])
-            split_config["split_var_idx"] = split_var_idx
             X_tr, y_tr, X_te, y_te, split_details = _aggressive_split(
-                X_full, y_full, split_config, return_metadata=True
+                X_full, y_full, tc["config"], return_metadata=True
             )
-            split_details["requested_split_var_idx"] = requested_split_var_idx
-            split_details["split_var_idx"] = split_var_idx
+            split_var_idx = tc["config"].get("split_var_idx", 0)
             split_details["split_var_name"] = (
                 var_names[split_var_idx]
                 if 0 <= split_var_idx < len(var_names) else None
@@ -1808,11 +1661,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
             }
             try:
                 _t0_nn = time.time()
-                nn_m = _train_and_eval_nn(
-                    X_tr, y_tr, X_te, y_te,
-                    validation_feature_idx=split_var_idx,
-                    validation_direction=split_details["split_type"],
-                )
+                nn_m = _train_and_eval_nn(X_tr, y_tr, X_te, y_te)
                 case_results["neural_network"] = {
                     "train_r2":    nn_m["train_r2"] if np.isfinite(nn_m["train_r2"]) else None,
                     "test_r2":     nn_m["test_r2"] if np.isfinite(nn_m["test_r2"]) else None,
@@ -1821,10 +1670,6 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "epochs_completed": nn_m.get("epochs_completed"),
                     "best_epoch": nn_m.get("best_epoch"),
                     "validation_loss": nn_m.get("validation_loss"),
-                    "validation_r2": nn_m.get("validation_r2"),
-                    "baseline_mean_validation_r2": nn_m.get("baseline_mean_validation_r2"),
-                    "baseline_linear_validation_r2": nn_m.get("baseline_linear_validation_r2"),
-                    "validation_protocol": nn_m.get("validation_protocol"),
                     "training_time_s": nn_m.get("training_time_s"),
                     "failure_reason": nn_m.get("failure_reason"),
                     "time_s":      round(time.time() - _t0_nn, 3),
@@ -1845,8 +1690,6 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     desc, tc["domain"], X_tr, y_tr, X_te, y_te, var_names, metadata,
                     llm_attempt_state=hybrid_llm_state,
                     nn_result=nn_m,
-                    nn_validation_feature_idx=split_var_idx,
-                    nn_validation_direction=split_details["split_type"],
                 )
                 _hyb_wall = round(time.time() - _t0_hyb, 3)
 
@@ -1872,7 +1715,6 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "structural_risk_tokens": hy_m.get("structural_risk_tokens"),
                     "degradation_probe": hy_m.get("degradation_probe"),
                     "degradation_tau": hy_m.get("degradation_tau"),
-                    "nn_quality_gate": hy_m.get("nn_quality_gate"),
                     "ood_diagnostic": hy_m.get("ood_diagnostic"),
                     "ood_covariate_protocol": hy_m.get("ood_covariate_protocol"),
                     "blend_weights": hy_m.get("blend_weights"),

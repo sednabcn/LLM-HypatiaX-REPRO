@@ -19,11 +19,6 @@ def _inputs():
 
 
 def _common(monkeypatch, route):
-    # Existing route-accounting tests isolate routing from calibration policy.
-    monkeypatch.setattr(
-        bench, "_nn_quality_gate",
-        lambda candidate: {"passed": True, "reason": "test_fixture_pass"},
-    )
     monkeypatch.setattr(
         bench, "_generate_llm_formula",
         lambda *a, **k: {
@@ -206,13 +201,6 @@ def test_exp1_provider_failure_after_request_entry_keeps_attempt_provenance(monk
     assert "simulated provider timeout" in result["error"]
 
 
-def test_exp1_invalid_split_feature_index_falls_back_to_first_real_feature():
-    X = np.arange(40, dtype=float).reshape(20, 2)
-    assert bench._effective_split_feature_index(X, 7) == 0
-    assert bench._effective_split_feature_index(X, 1) == 1
-    assert bench._effective_split_feature_index(X, None) == 0
-
-
 def test_exp1_split_metadata_discloses_row_index_fallback():
     X = np.ones((100, 1), dtype=float)
     y = np.arange(100, dtype=float)
@@ -329,81 +317,7 @@ def test_exp1_hybrid_rejects_invalid_nn_fallback_predictions(monkeypatch):
         nn_result=invalid_nn,
     )
 
-    assert result["route_execution_status"] == "nn_quality_gate_failed"
-    assert result["decision"] == "nn_unavailable"
+    assert result["route_execution_status"] == "nn_fallback_failed"
     assert result["success"] is False
     assert np.isnan(result["train_r2"])
     assert np.isnan(result["test_r2"])
-
-
-def test_directional_nn_validation_split_matches_outer_split_direction():
-    X = np.arange(100, dtype=float).reshape(-1, 1)
-    fit_hi, edge_hi = bench._directional_edge_split_indices(
-        X, feature_idx=0, direction="high", edge_fraction=0.2
-    )
-    fit_lo, edge_lo = bench._directional_edge_split_indices(
-        X, feature_idx=0, direction="low", edge_fraction=0.2
-    )
-    assert X[edge_hi, 0].min() > X[fit_hi, 0].max()
-    assert X[edge_lo, 0].max() < X[fit_lo, 0].min()
-
-
-def test_nn_quality_gate_fails_closed_without_calibrated_threshold(monkeypatch):
-    monkeypatch.delenv("HYPATIAX_NN_EDGE_MIN_R2", raising=False)
-    result = bench._nn_quality_gate({
-        "validation_r2": 0.9,
-        "baseline_mean_validation_r2": 0.1,
-        "baseline_linear_validation_r2": 0.2,
-    })
-    assert result["passed"] is False
-    assert result["reason"] == "nn_edge_threshold_not_configured"
-
-
-def test_nn_quality_gate_requires_beating_training_baselines(monkeypatch):
-    monkeypatch.setenv("HYPATIAX_NN_EDGE_MIN_R2", "0.5")
-    good = bench._nn_quality_gate({
-        "validation_r2": 0.7,
-        "baseline_mean_validation_r2": 0.1,
-        "baseline_linear_validation_r2": 0.6,
-    })
-    bad = bench._nn_quality_gate({
-        "validation_r2": 0.55,
-        "baseline_mean_validation_r2": 0.1,
-        "baseline_linear_validation_r2": 0.6,
-    })
-    assert good["passed"] is True
-    assert bad["passed"] is False
-
-
-
-def test_hybrid_nn_fallback_fails_closed_when_quality_gate_rejects(monkeypatch):
-    _common(monkeypatch, "fitted_llm")
-    Xtr, ytr, Xte, yte = _inputs()
-
-    def eval_formula(code, X, y, constants=None):
-        return (0.8, True) if len(y) == len(ytr) else (float("nan"), False)
-
-    nn_result = {
-        "train_r2": 0.8, "test_r2": -2.0, "success": True,
-        "validation_r2": 0.1,
-        "baseline_mean_validation_r2": -0.1,
-        "baseline_linear_validation_r2": 0.2,
-        "y_pred_train": np.full(len(ytr), 0.4),
-        "y_pred_test": np.full(len(yte), 0.4),
-    }
-    monkeypatch.setattr(bench, "_eval_formula_r2", eval_formula)
-    monkeypatch.setattr(
-        bench, "_nn_quality_gate",
-        lambda candidate: {"passed": False, "reason": "edge_quality_below_gate"},
-    )
-
-    result = bench._hybrid_predict_and_eval(
-        "fixture", "defi", Xtr, ytr, Xte, yte, ["x"], {},
-        nn_result=nn_result,
-    )
-
-    assert result["decision"] == "nn_unavailable"
-    assert result["route_execution_status"] == "nn_quality_gate_failed"
-    assert result["success"] is False
-    assert np.isnan(result["test_r2"])
-    assert result["nn_quality_gate"]["passed"] is False

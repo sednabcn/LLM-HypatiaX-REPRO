@@ -189,9 +189,6 @@ env:
   # exp1_ablation: run the third (no-LLM) arm. Ignored by every other experiment.
   HYPATIAX_NOLLM_ARM: "1"
   HYPATIAX_HOLDOUT: "1"   # L06: held-out llm/nn/blend R2 (extra NN fit per case)
-  # Exp1 NN fallback: require non-negative directional edge R2 AND beat the
-  # stronger training-only mean/linear baseline. No held-out labels are used.
-  HYPATIAX_NN_EDGE_MIN_R2: "0.0"
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   JOB_DEADLINE:        "19800"
   PYSR_GENERATIONS:    "${{ github.event.inputs.pysr_generations || '1000' }}"
