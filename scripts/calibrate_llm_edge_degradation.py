@@ -106,25 +106,45 @@ def formula({variables}):
     return <expression>
 """
     start = time.monotonic()
-    response = create_message(
-        client, model=MODEL, max_tokens=1000,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    info = last_call_info()
-    code = response.content[0].text.strip()
-    if "```" in code:
-        code = "\n".join(line for line in code.splitlines()
-                          if not line.strip().startswith("```")).strip()
-    return {
-        "formula": code if "def formula" in code else None,
-        "llm_called": True,
-        "llm_source": "live_anthropic",
-        "model": MODEL,
-        "temperature_requested": info.get("temperature_requested"),
-        "temperature_sent": info.get("temperature_sent", False),
-        "generation_time_s": round(time.monotonic() - start, 3),
-        "error": None if "def formula" in code else "response_missing_formula_function",
-    }
+    attempted = False
+    info = {}
+    try:
+        attempted = True
+        response = create_message(
+            client, model=MODEL, max_tokens=1000,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        info = last_call_info()
+        code = response.content[0].text.strip()
+        fence = chr(96) * 3
+        if fence in code:
+            code = "\n".join(line for line in code.splitlines()
+                              if not line.strip().startswith(fence)).strip()
+        return {
+            "formula": code if "def formula" in code else None,
+            "llm_called": True,
+            "llm_source": "live_anthropic",
+            "model": MODEL,
+            "temperature_requested": info.get("temperature_requested"),
+            "temperature_sent": info.get("temperature_sent", False),
+            "generation_time_s": round(time.monotonic() - start, 3),
+            "error": None if "def formula" in code else "response_missing_formula_function",
+        }
+    except Exception as exc:
+        try:
+            info = last_call_info()
+        except Exception:
+            pass
+        return {
+            "formula": None,
+            "llm_called": attempted,
+            "llm_source": "live_anthropic_failed" if attempted else "not_started",
+            "model": MODEL,
+            "temperature_requested": info.get("temperature_requested"),
+            "temperature_sent": info.get("temperature_sent", False),
+            "generation_time_s": round(time.monotonic() - start, 3),
+            "error": f"{type(exc).__name__}: {exc}",
+        }
 
 
 def _atomic_save(path: Path, records: list[dict]) -> None:
