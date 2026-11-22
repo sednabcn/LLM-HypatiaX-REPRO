@@ -1,8 +1,10 @@
 # LLM-specific training-only degradation-tau calibration protocol
 
-**Status: protocol specification only — not executed.**  
+**Status: numerical acceptance criteria preregistered; protocol not executed.**  
 **Policy state: `degradation_tau: null`; pure-LLM routing remains fail-closed.**  
 **Cost boundary: no LLM/provider calls, paid calibration, or workflow dispatch is authorized by this document.**
+
+The numerical criteria below are conservative operational design choices adopted before any new calibration observations. They are not empirically validated guarantees. They must be treated as fixed for the planned study; changing them requires a new versioned protocol before data collection.
 
 ## 1. Purpose and estimand
 
@@ -48,7 +50,7 @@ The edge covariates may be used by the evaluator to produce predictions after fo
 
 The previous 44/30 split is too small and its saved artifact is already inspected; it must not be recycled as a fresh untouched calibration/evaluation split.
 
-**Planning floor (proposed, not yet approved):** target at least 100 equations in the calibration cohort and 100 in the independent evaluation cohort, with at least 30 per reported primary difficulty stratum where the catalogue permits. If the available catalogue cannot meet these counts, report the shortfall and treat the study as exploratory; do not relax criteria after seeing outcomes. A formal power/precision analysis should be completed against the expected bad-route prevalence before committing spend.
+**Preregistered planning floor:** target at least 100 equations in the calibration cohort and 100 in the independent evaluation cohort, with at least 30 equations in each primary difficulty stratum in each cohort. The 100-per-cohort target is a floor, not a substitute for the precision check: before spending, calculate the attainable one-sided confidence-bound precision under the fixed risk target and the actual number of candidate thresholds. If the catalogue cannot meet the stratum counts or the precision target, report the shortfall and classify the study as exploratory; do not relax criteria after seeing outcomes.
 
 ## 4. Predeclared formula-quality and bad-route definitions
 
@@ -57,17 +59,25 @@ A degradation threshold is meaningful only among formulas that are usable on the
 - **Formula-generation/execution coverage:** proportion of all assigned equations for which a formula is generated and both core and edge predictions are valid under the frozen evaluator.
 - **Bad accepted route:** an equation that the proposed pure-LLM rule would accept but whose frozen formula fails the predeclared edge-quality criteria.
 
-Before any generation, the study owner must ratify and record numeric cutoffs for:
+The following numeric criteria are fixed for the planned protocol, before any new observations:
 
-- minimum acceptable core fit (R² and/or core-scale NRMSE);
-- minimum acceptable edge fit (R² and/or core-scale NRMSE);
-- maximum acceptable edge error increase;
-- maximum acceptable bad-route risk and confidence level;
-- minimum overall and per-stratum coverage.
+| Criterion | Preregistered cutoff |
+|---|---:|
+| Core fit eligibility | R² ≥ 0.95 **and** core-scale NRMSE ≤ 0.25 |
+| Edge fit eligibility | R² ≥ 0.90 **and** edge core-scale NRMSE ≤ 0.35 |
+| Maximum edge error increase | `delta_nrmse` ≤ 0.10 |
+| Maximum bad-route risk | 10% |
+| Confidence requirement | One-sided 95% upper confidence bound below 10% |
+| Valid formula/scoring coverage | ≥ 70% overall and ≥ 60% in every primary difficulty stratum |
+| Cohort size planning floor | ≥ 100 assigned equations in each cohort; ≥ 30 per primary difficulty stratum in each cohort |
 
-Do not infer these cutoffs from the observed calibration distribution. The existing routing values `pure_llm_train_r2_min = 0.95` and `trust_gate_r2_min = 0.5` are current policy settings, not evidence that a particular edge-fit cutoff is scientifically acceptable.
+A formula is **quality-eligible** only if it passes every core and edge fit/error criterion above. A **bad accepted route** is any accepted formula that fails one or more of those criteria when evaluated on edge labels. Formula generation failures, execution failures, undefined metrics, and formulas failing core eligibility are not safe outcomes: they remain in the assigned-equation denominator and count against valid-scoring coverage. They cannot be admitted to the pure-LLM route.
 
-**Operational recommendation for the risk constraint:** define the maximum tolerated bad-route probability as a policy-level target (for example, 10%) and require a one-sided 95% upper confidence bound to remain below it. The 10% value is a proposal for explicit owner approval, not an approved scientific fact. The edge-quality definition and risk target must be frozen together.
+The 0.95 core R² threshold is aligned with the existing `pure_llm_train_r2_min = 0.95`; the 0.90 edge R², NRMSE limits, 0.10 error-increase margin, 10% risk target, and coverage minima are conservative operational design choices for this study, not values inferred from the existing 74-case artifact or established scientific constants. The existing `trust_gate_r2_min = 0.5` remains an independent existing gate; it does not relax these stricter formula-quality criteria.
+
+For threshold selection across the preregistered candidate grid `[-1, -0.5, -0.25, 0, 0.05, 0.1, 0.2, 0.3, 0.5, 1]`, compute a one-sided exact binomial upper bound for the bad-route proportion at each candidate threshold, with Bonferroni adjustment across all 10 candidates (family-wise confidence at least 95%). Select the largest threshold whose adjusted upper bound is strictly below 10%, while satisfying the coverage minima. If no threshold qualifies, select none and keep `tau = null`. The candidate grid and adjustment must not be changed after calibration data are observed.
+
+These cutoffs are not to be inferred, relaxed, or optimized from the observed calibration distribution. If the planning-floor cohort size cannot deliver the required confidence-bound precision, increase the sample size before generation or classify the study as exploratory and do not deploy a threshold.
 
 A formula that is poor on core and edge is a formula-quality failure, not a useful positive or negative degradation observation. Preserve its metrics, count it against coverage, and do not use its delta to justify accepting the route. Undefined scores and generation failures also count against coverage and are never treated as safe.
 
@@ -95,7 +105,7 @@ Apply the frozen threshold and all frozen gates unchanged to the independent eva
 - confidence intervals using equations as the resampling unit;
 - exact manifests, hashes, prompts/templates, model/provider provenance, and code/config versions.
 
-**Go** only if the independently evaluated bad-route upper confidence bound satisfies the ratified risk target, coverage meets its predeclared minimum overall and in required strata, and no predeclared integrity or leakage check fails.
+**Go** only if the independently evaluated one-sided 95% bad-route upper confidence bound is below 10%, valid-scoring coverage is at least 70% overall and 60% in every primary difficulty stratum, and no predeclared integrity or leakage check fails. Evaluation uses the single frozen tau selected on calibration; do not retune it on evaluation.
 
 **No-go** if any condition fails, if sample counts are inadequate, if confidence bounds are too wide, or if a required stratum is underpowered. A no-go leaves `tau = null` and the fail-closed ensemble route unchanged. Do not repair the result by dropping difficult equations, changing cutoffs, or recalibrating on the evaluation cohort.
 
@@ -118,7 +128,7 @@ Never store API keys, credentials, or other secrets in artifacts.
 
 A future run is blocked until all of the following are true:
 
-- [ ] Numeric core-fit, edge-fit, error-increase, risk, and coverage criteria are ratified and versioned.
+- [x] Numeric core-fit, edge-fit, error-increase, risk, coverage, and candidate-threshold criteria are preregistered in this protocol.
 - [ ] Calibration and independent evaluation equation manifests are frozen and disjoint.
 - [ ] Sample-size/precision analysis is approved.
 - [ ] Prompt/template and model/provider settings are frozen.
