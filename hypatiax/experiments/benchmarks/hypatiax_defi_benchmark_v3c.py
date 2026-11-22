@@ -565,9 +565,12 @@ def _train_and_eval_nn(
         train_r2 = float(_r2_checked(y_train, yp_train)[0])
         test_r2 = float(_r2_checked(y_test, yp_test)[0])
         # Score the NN on the same directional edge used for model selection.
-        edge_pred_scaled = torch.as_tensor(sx.transform(
-            _augment_features(X_val, schema=augmentation_schema) if augment else X_val
-        ), dtype=torch.float32)
+        # X_val is already augmented above using the training-fitted schema.
+        # Applying _augment_features a second time changes its width and raises
+        # a schema/input-width mismatch for every default (augment=True) fit.
+        edge_pred_scaled = torch.as_tensor(
+            sx.transform(X_val), dtype=torch.float32
+        )
         with torch.no_grad():
             edge_raw = model(edge_pred_scaled).cpu().numpy().reshape(-1)
         edge_pred = sy.inverse_transform(edge_raw.reshape(-1, 1)).reshape(-1)
