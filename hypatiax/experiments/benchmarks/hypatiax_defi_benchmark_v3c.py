@@ -1734,9 +1734,10 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 continue
 
             desc, X_full, y_full, var_names, metadata = match
+            _is_il_breakeven = "impermanent loss breakeven" in tc["name"].lower()
             metadata.update({
-                "extrapolation_test": bool(metadata.get("extrapolation_test", True)),
-                "extrapolation_intractable": bool(tc.get("extrapolation_intractable", False)),
+                "extrapolation_test": False if _is_il_breakeven else bool(metadata.get("extrapolation_test", True)),
+                "extrapolation_intractable": bool(_is_il_breakeven or tc.get("extrapolation_intractable", False)),
                 "difficulty":         tc["difficulty"],
                 "formula_type":       tc["formula_type"],
             })
@@ -1767,7 +1768,9 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
             }
             try:
                 _t0_nn = time.time()
-                nn_m = _train_and_eval_nn(X_tr, y_tr, X_te, y_te)
+                nn_m = _train_and_eval_nn(
+                    X_tr, y_tr, X_te, y_te, split_metadata=split_details
+                )
                 case_results["neural_network"] = {
                     "train_r2":    nn_m["train_r2"] if np.isfinite(nn_m["train_r2"]) else None,
                     "test_r2":     nn_m["test_r2"] if np.isfinite(nn_m["test_r2"]) else None,
