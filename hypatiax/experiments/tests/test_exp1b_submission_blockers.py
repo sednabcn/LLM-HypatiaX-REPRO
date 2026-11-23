@@ -7,6 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 RUNNER = ROOT / "run_all.sh"
 BENCHMARK = ROOT / "hypatiax/experiments/benchmarks/portfolio_variance_v3c2.py"
+WORKFLOW = ROOT / ".github/workflows/ci_runner_repro.yml"
 
 
 def test_exp1b_benchmark_uses_its_declared_portfolio_case_filter():
@@ -15,9 +16,11 @@ def test_exp1b_benchmark_uses_its_declared_portfolio_case_filter():
     end = source.index('\nrun portfolio "', start)
     block = source[start:end]
 
-    assert 'DEFI_TASK_FILTER="Portfolio"' in block
-    assert 'DEFI_SEEDS="\${_SHARD_SEEDS}"' in block
-    assert 'PYSR_SEED="\${_SEEDS[0]}"' in block
+    quote = chr(34)
+    escaped_var = chr(92) + chr(36)
+    assert 'DEFI_TASK_FILTER=' + quote + 'Portfolio' + quote in block
+    assert 'DEFI_SEEDS=' + quote + escaped_var + '{_SHARD_SEEDS}' + quote in block
+    assert 'PYSR_SEED=' + quote + escaped_var + '{_SEEDS[0]}' + quote in block
 
 
 def test_exp1b_sweep_only_does_not_run_the_seed42_single_case_twice():
@@ -73,14 +76,14 @@ def test_exp1b_default_split_is_not_silently_relabelled_as_pca():
     assert "'v3c3-pca' if PCA_PORTFOLIO_SWEEP else 'v3c3'" in source
 
 
-def test_exp1b_workflow_restores_canonical_seed_and_publishes_shard_copy():
-    workflow = (ROOT / ".github/workflows/ci_runner_repro.yml").read_text()
-    assert 'exp1b isolated benchmark:' in workflow
-    assert 'hypatiax_defi_benchmark_v3_results_seed${_seed}_shard${SHARD_INDEX}.json' in workflow
-    assert 'git checkout -- "${_canonical}"' in workflow
-    assert 'portfolio_variance_defi_seed_sweep_seed${_seed}_shard${SHARD_INDEX}.json' in workflow
-    assert 'if [[ "$fname" == "portfolio_variance_defi_seed_sweep_seed${_seed}_shard${SHARD_INDEX}.json" ]]; then' in workflow
-    assert 'REPLACE: refreshing tracked exp1b per-seed portfolio artifact' not in workflow
+def test_exp1b_workflow_requires_fresh_shard_benchmark_and_portfolio_outputs():
+    workflow = WORKFLOW.read_text()
+    assert "exp1b fresh benchmark output missing" in workflow
+    assert "Never replace it with the old canonical seed file." in workflow
+    assert "hypatiax_defi_benchmark_v3_results_seed" + '$' + "{_seed}_shard" + '$' + "{SHARD_INDEX}.json" in workflow
+    assert "portfolio_variance_defi_seed_sweep_seed" + '$' + "{_seed}_shard" + '$' + "{SHARD_INDEX}.json" in workflow
+    assert "REFRESH: published fresh" in workflow
+    assert 'git checkout -- "' + '$' + '{_canonical}"' not in workflow
 
 
 def test_exp1b_sweep_records_selected_route_and_explicit_nn_seed():
@@ -94,3 +97,87 @@ def test_exp1b_sweep_records_selected_route_and_explicit_nn_seed():
     ):
         assert field in source
 
+
+def test_exp1b_runtime_output_paths_are_expanded_not_literal_directory_names():
+    source = RUNNER.read_text()
+    start = source.index('run exp1b "')
+    end = source.index('\nrun portfolio "', start)
+    block = source[start:end]
+
+    quote = chr(34)
+    escaped_var = chr(92) + chr(36)
+    assert 'dest15=' + quote + escaped_var + '{RESULTS_DIR}/comparison_results/noise-noiseless/15' + quote in block
+    assert '_PVA_DIR=' + quote + escaped_var + '{RESULTS_DIR}/portfolio_variance_audit' + quote in block
+    assert "dest15='" + escaped_var + '{RESULTS_DIR}' not in block
+    assert "_PVA_DIR='" + escaped_var + '{RESULTS_DIR}' not in block
+
+
+def test_exp1b_store_step_requires_fresh_benchmark_and_refreshes_tracked_sweep():
+    workflow = WORKFLOW.read_text()
+    store_start = workflow.index("- name: Store results in canonical RESULT_SUBDIR")
+    store_end = workflow.index("\n      - name:", store_start + 10)
+    store = workflow[store_start:store_end]
+    pva_start = store.index('PVA_DIR="')
+    pva_end = store.index('if [[ "' + '$' + '{EXP:-}" == "exp1b_seeds"', pva_start)
+    pva = store[pva_start:pva_end]
+
+    assert "exp1b fresh benchmark output missing" in store
+    assert "Never replace it with the old canonical seed file." in store
+    assert 'cp -f "' + '$' + '{src}" "' + '$' + '{dest_f}"' in pva
+    assert "REFRESH: published fresh" in pva
+    assert "SKIP:" not in pva
+
+
+def test_exp1b_verification_checks_fresh_seed_and_portfolio_provenance():
+    workflow = WORKFLOW.read_text()
+    start = workflow.index("- name: Verify exp1b output files exist")
+    end = workflow.index("\n      - name:", start + 10)
+    verify = workflow[start:end]
+
+    for token in (
+        r"portfolio_seed(\d+)",
+        "portfolio_variance_defi_seed_sweep_seed",
+        '"seeds_run"',
+        '"nn_seed"',
+        '"test_r2"',
+        '"far_r2"',
+        '"route_execution_status"',
+        '"score_semantics"',
+        "far_r2 must remain an alias of test_r2",
+    ):
+        assert token in verify
+
+
+def test_exp1b_seeds_planner_uses_one_worker_per_configured_seed():
+    workflow = WORKFLOW.read_text()
+    assert "DEFAULT_SEEDS" in workflow and "99,123,777,2024" in workflow
+    assert "N_SHARDS = max(1, len(SEEDS))" in workflow
+    assert '"exp1b_seeds":       [f"{d}_seed{s}" for s in SEEDS for d in DEFI_TASKS]' in workflow
+
+
+def test_exp1b_clears_only_its_own_shard_outputs_before_rerun():
+    source = RUNNER.read_text()
+    start = source.index('run exp1b "')
+    end = source.index('\nrun portfolio "', start)
+    block = source[start:end]
+
+    quote = chr(34)
+    escaped_quote = chr(92) + chr(34)
+    escaped_var = chr(92) + chr(36)
+    assert '_SHARD=' + escaped_var + '{SHARD_INDEX:-0}' in block
+    assert 'rm -f ' + quote + escaped_var + '{_OLD_BENCH_PUBLISH}' + quote in block
+    assert 'rm -f ' + escaped_quote + escaped_var + '{_PV_PUBLISH}' + escaped_quote in block
+
+
+def test_exp1b_store_and_upload_are_gated_on_successful_worker_execution():
+    workflow = WORKFLOW.read_text()
+    assert "id: run_experiment" in workflow
+    assert "id: store_results" in workflow
+    assert "steps.run_experiment.outcome == 'success'" in workflow
+    store_start = workflow.index("- name: Store results in canonical RESULT_SUBDIR")
+    store_end = workflow.index("\n      - name:", store_start + 10)
+    upload_start = workflow.index("- name: Upload shard results artifact")
+    upload_end = workflow.index("\n      - name:", upload_start + 10)
+    assert "steps.run_experiment.outcome == 'success'" in workflow[store_start:store_end]
+    assert "steps.run_experiment.outcome == 'success'" in workflow[upload_start:upload_end]
+    assert "steps.store_results.outcome == 'success'" in workflow[upload_start:upload_end]

@@ -1540,6 +1540,7 @@ jobs:
           PYEOF
 
       - name: Run experiment tasks
+        id: run_experiment
         if: ${{ steps.resolve_ids.outputs.has_work == 'true' }}
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -2046,7 +2047,8 @@ jobs:
           PYEOF
 
       - name: Store results in canonical RESULT_SUBDIR
-        if: always()
+        id: store_results
+        if: ${{ always() && (needs.plan.outputs.exp_id != 'exp1b' || steps.run_experiment.outcome == 'success') }}
         env:
           RESULTS_DIR:   ${{ env.OUT_BASE }}
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
@@ -2057,22 +2059,25 @@ jobs:
           DEST="${RESULTS_DIR}/${RESULT_SUBDIR}"
           mkdir -p "${DEST}"
 
-          # exp1b computes one Portfolio seed per worker. Preserve the committed
-          # canonical seed file and publish this attempt under an explicit shard tag.
+          # run_all.sh publishes the fresh, shard-suffixed benchmark JSON directly
+          # into DEST. Never replace it with the old canonical seed file.
           if [[ "${EXP:-}" == "exp1b" ]]; then
             _EXP1B_SEEDS="$(echo "${SHARD_IDS:-[]}" | grep -oE 'portfolio_seed[0-9]+' | sed 's/portfolio_seed//' | sort -u)"
+            if [[ -z "${_EXP1B_SEEDS}" || "$(printf '%s\n' ${_EXP1B_SEEDS} | wc -l)" -ne 1 ]]; then
+              echo "::error::exp1b shard must own exactly one portfolio_seedNN task; got '${_EXP1B_SEEDS}'"
+              exit 1
+            fi
             for _seed in ${_EXP1B_SEEDS}; do
-              _canonical="${DEST}/hypatiax_defi_benchmark_v3_results_seed${_seed}.json"
-              if [[ -s "${_canonical}" ]]; then
+              if [[ "${_seed}" == "42" ]]; then
+                _isolated="${DEST}/hypatiax_defi_benchmark_v3_results_shard${SHARD_INDEX}.json"
+              else
                 _isolated="${DEST}/hypatiax_defi_benchmark_v3_results_seed${_seed}_shard${SHARD_INDEX}.json"
-                cp -f "${_canonical}" "${_isolated}"
-                if git ls-files --error-unmatch "${_canonical}" >/dev/null 2>&1; then
-                  git checkout -- "${_canonical}"
-                else
-                  rm -f "${_canonical}"
-                fi
-                echo "  exp1b isolated benchmark: $(basename "${_isolated}")"
               fi
+              if [[ ! -s "${_isolated}" ]]; then
+                echo "::error::exp1b fresh benchmark output missing: ${_isolated}"
+                exit 1
+              fi
+              echo "  exp1b fresh benchmark verified: $(basename "${_isolated}")"
             done
           fi
 
@@ -2121,54 +2126,31 @@ jobs:
 
           if [[ "${EXP:-}" == "exp1b" ]]; then
             PVA_DIR="${RESULTS_DIR}/portfolio_variance_audit"
-            if [[ -d "${PVA_DIR}" ]]; then
-              pva_copied=0
-              while IFS= read -r f; do
-                [[ -e "$f" ]] || continue
-                fname=$(basename "$f")
-                [[ "$fname" == _merged* || "$fname" == _stats* || "$fname" == _checkpoint* ]] && continue
-                if [[ "${EXP:-}" == "exp1b" ]]; then
-                  _matched_seed=false
-                  for _seed in ${_EXP1B_SEEDS:-}; do
-                    if [[ "$fname" == "portfolio_variance_defi_seed_sweep_seed${_seed}_shard${SHARD_INDEX}.json" ]]; then
-                      _matched_seed=true
-                      dest_f="${DEST}/${fname}"
-                      break
-                    fi
-                  done
-                  [[ "$_matched_seed" == "true" ]] || continue
-                else
-                  dest_f="${DEST}/${fname}"
-                fi
-                if [[ "$fname" == "contradiction_audit_report.json" || "$fname" == "fixc3_baseline.json" ]]; then
-                  stem="${fname%.*}"; ext="${fname##*.}"
-                  dest_f="${DEST}/${stem}_shard${SHARD_INDEX}.${ext}"
-                fi
-                if [[ -e "$dest_f" ]]; then
-                  if git ls-files --error-unmatch "${dest_f}" >/dev/null 2>&1; then
-                    echo "  SKIP: ${fname} is git-tracked in dest — committed prior result, skipping."
-                    continue
-                  fi
-                  stem="${fname%.*}"; ext="${fname##*.}"
-                  if [[ "$stem" == "$fname" ]]; then
-                    dest_f="${DEST}/${fname}_shard${SHARD_INDEX}_run${{ github.run_id }}"
-                  else
-                    dest_f="${DEST}/${stem}_shard${SHARD_INDEX}_run${{ github.run_id }}.${ext}"
-                  fi
-                  echo "  COLLISION: ${fname} already in dest — storing as $(basename "$dest_f")"
-                fi
-                cp -v "$f" "${dest_f}"
-                # Restore any tracked canonical seed artifact after taking the shard copy.
-                if git ls-files --error-unmatch "$f" >/dev/null 2>&1; then
-                  git checkout -- "$f"
-                fi
-                pva_copied=$((pva_copied + 1))
-              done < <(find "${PVA_DIR}" -type f \( -name "*.json" -o -name "*.csv" \))
-              if [[ $pva_copied -gt 0 ]]; then
-                echo "Store results: ${pva_copied} file(s) rescued from portfolio_variance_audit/ → ${DEST}"
-              else
-                echo "Store results: portfolio_variance_audit/ exists but contained no JSON/CSV files."
+            if [[ ! -d "${PVA_DIR}" ]]; then
+              echo "::error::exp1b portfolio output directory missing: ${PVA_DIR}"
+              exit 1
+            fi
+            pva_copied=0
+            for _seed in ${_EXP1B_SEEDS:-}; do
+              fname="portfolio_variance_defi_seed_sweep_seed${_seed}_shard${SHARD_INDEX}.json"
+              src="${PVA_DIR}/${fname}"
+              dest_f="${DEST}/${fname}"
+              if [[ ! -s "${src}" ]]; then
+                echo "::error::exp1b fresh portfolio sweep missing or empty: ${src}"
+                exit 1
               fi
+              # A tracked shard path is a previous run's result, not a reason
+              # to skip this fresh output; this worker owns this shard suffix.
+              cp -f "${src}" "${dest_f}"
+              if git ls-files --error-unmatch "${src}" >/dev/null 2>&1; then
+                git checkout -- "${src}"
+              fi
+              echo "  REFRESH: published fresh ${fname} -> ${DEST}"
+              pva_copied=$((pva_copied + 1))
+            done
+            if [[ "${pva_copied}" -ne 1 ]]; then
+              echo "::error::exp1b expected one fresh portfolio sweep publication; copied ${pva_copied}"
+              exit 1
             fi
           fi
 
@@ -2293,35 +2275,69 @@ jobs:
       - name: Verify exp1b output files exist
         if: ${{ needs.plan.outputs.exp_id == 'exp1b' && steps.resolve_ids.outputs.has_work == 'true' }}
         env:
-          RESULTS_ROOT: ${{ github.workspace }}/hypatiax/data/results
+          TARGET: ${{ github.workspace }}/hypatiax/data/results/comparison_results/noise-noiseless/15
+          SHARD_INDEX: ${{ matrix.shard }}
         run: |
           set -euo pipefail
-          TARGET="${RESULTS_ROOT}/comparison_results/noise-noiseless/15"
-          COUNT_BENCHMARK=$(find "${TARGET}" -name "hypatiax_defi_benchmark*results*.json" 2>/dev/null | wc -l)
-          COUNT_FIXED=$(find "${TARGET}" -name "comparison_FIXED_*.json" 2>/dev/null | wc -l)
-          COUNT_DEFI=$(find  "${TARGET}" -name "defi_v4_*.json"          2>/dev/null | wc -l)
-          COUNT_PORT=$(find  "${TARGET}" -name "*portfolio*variance*.json" 2>/dev/null | wc -l)
-          COUNT_TOTAL=$(( COUNT_BENCHMARK + COUNT_FIXED + COUNT_DEFI + COUNT_PORT ))
-          echo "=== exp1b output verification ==="
-          echo "  Target dir                              : ${TARGET}"
-          echo "  hypatiax_defi_benchmark*results*.json: ${COUNT_BENCHMARK}"
-          echo "  comparison_FIXED_*.json                 : ${COUNT_FIXED}"
-          echo "  defi_v4_*.json                          : ${COUNT_DEFI}"
-          echo "  *portfolio*variance*.json               : ${COUNT_PORT}"
-          echo "  Total                                   : ${COUNT_TOTAL}"
-          echo "--- Directory listing ---"
-          find "${TARGET}" -type f 2>/dev/null | sort || true
-          if [[ "${COUNT_TOTAL}" -eq 0 ]]; then
-            echo "::error::exp1b produced NO output files in '${TARGET}'."
-            echo "  Expected: hypatiax_defi_benchmark*results*.json, comparison_FIXED_*.json,"
-            echo "            defi_v4_*.json, or *portfolio*variance*.json"
-            echo "  The script may have written to a different path.  Check:"
-            echo "    1. 'exp1b post-run file scan' in the Run experiment tasks log"
-            echo "    2. 'Move results to RESULTS_DIR' step log for exp1b"
-            echo "  Also confirm RESULTS_DIR env was set to $(pwd)/${OUT_BASE} (absolute)."
-            exit 1
-          fi
-          echo "  OK exp1b output files present in canonical path."
+          python3 - <<'PYEOF'
+          import json, math, os, re
+          from pathlib import Path
+
+          target = Path(os.environ["TARGET"])
+          shard = os.environ["SHARD_INDEX"]
+          shard_ids = json.loads(os.environ["SHARD_IDS"])
+          seeds = sorted({int(m.group(1)) for task in shard_ids
+                          if (m := re.fullmatch(r"portfolio_seed(\d+)", task))})
+          if len(seeds) != 1:
+              raise SystemExit(f"::error::exp1b shard must own exactly one seed; got {seeds}")
+          seed = seeds[0]
+          benchmark_name = (
+              f"hypatiax_defi_benchmark_v3_results_shard{shard}.json"
+              if seed == 42 else
+              f"hypatiax_defi_benchmark_v3_results_seed{seed}_shard{shard}.json"
+          )
+          benchmark_path = target / benchmark_name
+          if not benchmark_path.is_file() or benchmark_path.stat().st_size == 0:
+              raise SystemExit(f"::error::missing fresh exp1b benchmark output: {benchmark_path}")
+
+          portfolio_path = target / f"portfolio_variance_defi_seed_sweep_seed{seed}_shard{shard}.json"
+          if not portfolio_path.is_file() or portfolio_path.stat().st_size == 0:
+              raise SystemExit(f"::error::missing fresh exp1b portfolio sweep: {portfolio_path}")
+          data = json.loads(portfolio_path.read_text(encoding="utf-8"))
+          if data.get("seeds_run") != [seed]:
+              raise SystemExit(f"::error::wrong seed provenance in {portfolio_path}: {data.get('seeds_run')!r}")
+          rows = data.get("results")
+          if not isinstance(rows, list) or len(rows) != 1:
+              raise SystemExit(f"::error::expected exactly one result row in {portfolio_path}")
+          row = rows[0]
+          required = {
+              "seed", "nn_seed", "test_r2", "far_r2", "train_r2_source",
+              "train_r2_status", "test_r2_status", "route_reason",
+              "route_execution_status", "nn_abstained", "nn_selected_model",
+              "nn_edge_r2", "ridge_edge_r2", "blend_weights",
+          }
+          missing = sorted(required - row.keys())
+          if missing:
+              raise SystemExit(f"::error::missing PR #325 provenance fields in {portfolio_path}: {missing}")
+          if int(row["seed"]) != seed:
+              raise SystemExit(f"::error::row seed mismatch: expected {seed}, got {row['seed']!r}")
+          if int(row["nn_seed"]) != 2024 + (seed - 42):
+              raise SystemExit(f"::error::NN seed mismatch for seed {seed}: {row['nn_seed']!r}")
+          test_r2, far_r2 = float(row["test_r2"]), float(row["far_r2"])
+          if math.isfinite(test_r2) and math.isfinite(far_r2):
+              if not math.isclose(test_r2, far_r2, rel_tol=1e-12, abs_tol=1e-12):
+                  raise SystemExit("::error::far_r2 must remain an alias of test_r2")
+          elif not (math.isnan(test_r2) and math.isnan(far_r2)):
+              raise SystemExit("::error::test_r2/far_r2 missing or inconsistent")
+          if row.get("success") and not (math.isfinite(test_r2) and test_r2 > 0.99):
+              raise SystemExit("::error::success=true requires finite selected-predictor test_r2 > 0.99")
+          if not isinstance(data.get("score_semantics"), dict):
+              raise SystemExit("::error::score_semantics missing from fresh portfolio output")
+          print(f"Verified fresh exp1b seed={seed} shard={shard}:")
+          print(f"  benchmark: {benchmark_path}")
+          print(f"  portfolio: {portfolio_path}")
+          print(f"  test_r2={test_r2!r}, success={row.get('success')!r}, decision={row.get('decision')!r}")
+          PYEOF
 
       - name: Verify portfolio output (this shard's seed sweep file exists)
         if: ${{ needs.plan.outputs.exp_id == 'portfolio' && steps.resolve_ids.outputs.has_work == 'true' }}
@@ -3379,7 +3395,7 @@ jobs:
             echo "Seed42 alias is absent or changed; preserving artifact contents."
           fi
       - name: Upload shard results artifact
-        if: always()
+        if: ${{ always() && (needs.plan.outputs.exp_id != 'exp1b' || steps.run_experiment.outcome == 'success' && steps.store_results.outcome == 'success') }}
         uses: actions/upload-artifact@v4.3.6
         with:
           name: results-${{ github.event.inputs.experiment }}-shard${{ matrix.shard }}
