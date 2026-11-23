@@ -557,7 +557,7 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
     RERUN_STRATEGY=A \
     PV_SWEEP_ONLY=1 \
     DEFI_SEEDS=\"\${_SHARD_SEEDS}\" \
-    HYPATIAX_RESULTS_DIR=\"\${_PVA_DIR}\" \
+    HYPATIAX_RESULTS_DIR=\"\${_PVA_TMP}\" \
       python3 '${EXPERIMENTS_DIR}/portfolio_variance_v3c2.py' \
         2>&1 | tee -a '${RESULTS_DIR}'/exp1b_run.log
   )
