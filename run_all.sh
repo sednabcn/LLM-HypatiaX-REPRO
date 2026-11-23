@@ -526,9 +526,9 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
   rm -rf "\${_EXP1B_TMP}"
   mkdir -p "\${_BENCH_TMP}" "\${_PVA_TMP}"
   PYSR_SEED="\${_SEEDS[0]}" DEFI_TASK_FILTER="Portfolio" DEFI_SEEDS="\${_SHARD_SEEDS}" \
-    python3 '\${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v3c.py' \
+    python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v3c.py' \
       --output-dir "\${_BENCH_TMP}" \
-      2>&1 | tee '\${RESULTS_DIR}'/exp1b_run.log
+      2>&1 | tee '${RESULTS_DIR}/exp1b_run.log'
   for _SEED in "\${_SEEDS[@]}"; do
     _TAG=''; [[ "\${_SEED}" == '42' ]] || _TAG="_seed\${_SEED}"
     _BENCH="\${_BENCH_TMP}/hypatiax_defi_benchmark_v3_results\${_TAG}.json"
