@@ -516,7 +516,7 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
   fi
 
   # Worker-private scratch prevents writes to tracked canonical seed files.
-  dest15='\${RESULTS_DIR}/comparison_results/noise-noiseless/15'
+  dest15="\${RESULTS_DIR}/comparison_results/noise-noiseless/15"
   mkdir -p "\${dest15}"
   IFS=',' read -r -a _SEEDS <<< "\${_SHARD_SEEDS}"
   _SHARD=\${SHARD_INDEX:-0}
@@ -545,7 +545,7 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
   #  Strategy A (one Portfolio Variance case per seed) does not need the benchmark JSON.
   #  PV_SWEEP_ONLY=1 writes one seed-tagged JSON per shard (no cross-shard filename clash).
   #  Tables and paper numbers need all seeds at once, so they come from the portfolio step.
-  _PVA_DIR='${RESULTS_DIR}/portfolio_variance_audit'
+  _PVA_DIR="\${RESULTS_DIR}/portfolio_variance_audit"
   mkdir -p \"\${_PVA_DIR}\"
   _PV_TAG=\$(echo \"\${_SHARD_SEEDS}\" | tr ',' '_')
   _PV_FILE=\"\${_PVA_TMP}/portfolio_variance_defi_seed_sweep_seed\${_PV_TAG}.json\"
@@ -672,7 +672,7 @@ run portfolio_pca_tail_error "Portfolio VaR PCA-tail NN prediction-error diagnos
 "
 run portfolio "Portfolio Variance seed sweep + tables (Tab 5 + Fig G) -- portfolio_variance_v3c2.py" bash -c "
   cd '${REPO_ROOT}'
-  _PVA_DIR='${RESULTS_DIR}/portfolio_variance_audit'
+  _PVA_DIR="\${RESULTS_DIR}/portfolio_variance_audit"
   mkdir -p \"\${_PVA_DIR}\"
 
   # CI shard mode (workflow experiment=portfolio): task IDs are portfolio_seed<N>, one seed per
