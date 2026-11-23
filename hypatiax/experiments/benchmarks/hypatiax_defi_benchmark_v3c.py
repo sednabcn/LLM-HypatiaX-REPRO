@@ -1582,17 +1582,24 @@ def _validate_result_records(
     records: list,
     require_il_record: bool = False,
     require_complete: bool = False,
+    expected_cases: list | None = None,
 ) -> None:
-    """Fail closed on malformed, duplicate, unexpected, or incomplete DeFi-74 records.
+    """Fail closed on malformed, duplicate, unexpected, or incomplete results.
 
-    Checkpoint writes may contain a valid partial subset. Final benchmark output
-    must contain every catalogue case exactly once.
+    By default, validation uses the complete DeFi-74 catalogue. Callers that
+    intentionally run a named subset may pass that exact case list; completeness
+    is then enforced against the selected scope without weakening the full-run
+    contract.
     """
     if not isinstance(records, list) or not records:
         raise ValueError("Benchmark results must be a non-empty list")
 
-    expected_ids = [tc["name"] for tc in _get_test_cases()]
+    catalogue_cases = _get_test_cases()
+    catalogue_by_id = {tc["name"]: tc for tc in catalogue_cases}
+    scope_cases = catalogue_cases if expected_cases is None else expected_cases
+    expected_ids = [tc["name"] for tc in scope_cases]
     expected_set = set(expected_ids)
+    is_full_catalogue = expected_set == set(catalogue_by_id)
     observed_ids = []
     il_records = []
     errors = []
@@ -1609,10 +1616,7 @@ def _validate_result_records(
         if equation_id not in expected_set:
             errors.append(f"{equation_id}: unexpected case ID")
 
-        expected_case = next(
-            (case for case in _get_test_cases() if case["name"] == equation_id),
-            None,
-        )
+        expected_case = catalogue_by_id.get(equation_id)
         if expected_case is not None:
             expected_intractable = _is_intractable_case(expected_case)
             if record.get("extrapolation_intractable") is not expected_intractable:
@@ -1667,13 +1671,15 @@ def _validate_result_records(
     if require_complete:
         missing = sorted(expected_set - set(observed_ids))
         if missing:
+            scope_label = "DeFi-74" if is_full_catalogue else "filtered benchmark"
             errors.append(
-                f"incomplete DeFi-74 result: expected {len(expected_ids)} unique cases, "
+                f"incomplete {scope_label} result: expected {len(expected_ids)} unique cases, "
                 f"found {len(set(observed_ids))}; missing: " + ", ".join(missing)
             )
         if len(records) != len(expected_ids):
+            scope_label = "DeFi-74" if is_full_catalogue else "filtered benchmark"
             errors.append(
-                f"incomplete DeFi-74 result: expected exactly {len(expected_ids)} records, "
+                f"incomplete {scope_label} result: expected exactly {len(expected_ids)} records, "
                 f"found {len(records)}"
             )
 
@@ -1713,8 +1719,20 @@ def _save_checkpoint(results: list):
     CHECKPOINT_FILE.write_text(json.dumps(results, indent=2, default=_default))
 
 
-def _save_final(results: list, require_il_record: bool = True):
-    _validate_result_records(results, require_il_record=require_il_record, require_complete=require_il_record)
+def _save_final(
+    results: list,
+    require_il_record: bool = True,
+    require_complete: bool | None = None,
+    expected_cases: list | None = None,
+):
+    if require_complete is None:
+        require_complete = require_il_record
+    _validate_result_records(
+        results,
+        require_il_record=require_il_record,
+        require_complete=require_complete,
+        expected_cases=expected_cases,
+    )
     def _default(obj):
         if isinstance(obj, (np.integer,)):         return int(obj)
         if isinstance(obj, (np.floating, float)):
@@ -2214,7 +2232,19 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
 
     # Final report + save
     _generate_report(all_results)
-    _save_final(all_results, require_il_record=not verify_fix5)
+    selected_requires_il = any(
+        "impermanent loss breakeven" in tc["name"].lower()
+        for tc in test_cases
+    )
+    require_complete = (
+        not verify_fix5 and os.environ.get("ONE_EQUATION") != "1"
+    )
+    _save_final(
+        all_results,
+        require_il_record=selected_requires_il,
+        require_complete=require_complete,
+        expected_cases=test_cases,
+    )
 
     # Remove checkpoint on clean completion (not on verify-fix5 partial run)
     if not verify_fix5 and CHECKPOINT_FILE.exists():
