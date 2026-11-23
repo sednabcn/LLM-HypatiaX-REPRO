@@ -151,3 +151,14 @@ def test_exp1b_seeds_planner_uses_one_worker_per_configured_seed():
     assert "DEFAULT_SEEDS" in workflow and "99,123,777,2024" in workflow
     assert "N_SHARDS = max(1, len(SEEDS))" in workflow
     assert '"exp1b_seeds":       [f"{d}_seed{s}" for s in SEEDS for d in DEFI_TASKS]' in workflow
+
+def test_exp1b_clears_only_its_own_shard_outputs_before_rerun():
+    source = RUNNER.read_text()
+    start = source.index('run exp1b "')
+    end = source.index('\nrun portfolio "', start)
+    block = source[start:end]
+
+    assert '_SHARD=' + chr(92) + '$' + '{SHARD_INDEX:-0}' in block
+    assert 'rm -f "' + chr(92) + '$' + '{_OLD_BENCH_PUBLISH}"' in block
+    assert 'rm -f "' + chr(92) + '$' + '{_PV_PUBLISH}"' in block
+
