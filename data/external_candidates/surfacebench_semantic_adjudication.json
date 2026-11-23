@@ -2636,7 +2636,7 @@
   "within_source_shared_template_group_policy": "These groups make repeated mathematical subexpressions and parameterized constructions auditable. Membership is not a canonical family assignment, independence judgment, or evidence that member equations are equivalent.",
   "within_source_family_adjudication": {
     "review_version": 2,
-    "method": "Manual symbolic-structure review of each of the eight previously enumerated shared-template groups. Distinguishes exact shared factors, transformed subexpressions, candidate parameterized extensions, and input-domain differences. This is not a proof of independence or a complete all-pairs symbolic-equivalence check.",
+    "method": "Manual symbolic-structure review of each of the eight previously enumerated shared-template groups. Distinguishes exact shared factors, transformed subexpressions, candidate parameterized extensions, and input-domain differences. This is not a proof of independence or a complete all-pairs symbolic-equivalence check. The upstream catalog's category and input-range metadata was also checked for EBS2 and PTM5; no shared generator provenance is documented.",
     "groups": [
       {
         "group_id": "SB-TEMPLATE-RADIAL-GAUSSIAN-001",
@@ -2824,21 +2824,21 @@
         "group_id": "SB-TEMPLATE-SINX-COSY-001",
         "review_status": "second_pass_reviewed",
         "candidate_family_merges": [],
-        "decision": "Potential parameterized-template relationship, not an equivalence: PTM5 = EBS2 + 0.1*x*y. Without source-generation evidence that the coefficient is a varying family parameter, keep both as distinct provisional equations and flag the pair for source-level independence review.",
+        "decision": "No whole-equation family merge. The upstream pinned catalog lists EBS2 under Elementary Bivariate Surfaces and PTM5 under Polynomial–Transcendental Mixtures, with different input ranges (EBS2: [-2pi,2pi]^2; PTM5: [-5,5]^2). Their formulas share sin(x)*cos(y), but PTM5 adds 0.1*x*y. No generator-family or coefficient-sweep provenance is present in the catalog fields reviewed. Treat this as a shared base term across distinct benchmark tasks, not evidence of one parameterized equation family.",
         "subgroups": [
           {
             "name": "base separable product",
             "ids": [
               "EBS2"
             ],
-            "status": "base_expression"
+            "status": "benchmark_task_in_elementary_bivariate_category"
           },
           {
-            "name": "base plus cross-coordinate perturbation",
+            "name": "base plus cross-coordinate polynomial term",
             "ids": [
               "PTM5"
             ],
-            "status": "candidate_parameterized_extension"
+            "status": "benchmark_task_in_polynomial_transcendental_mixtures_category"
           }
         ]
       },
@@ -2860,12 +2860,13 @@
         ]
       }
     ],
-    "global_decision": "No additional whole-equation family merges established beyond exact duplicate NACS1/TECS7. All other records retain null canonical family IDs and not_adjudicated independence status. EBS2/PTM5 is flagged as a candidate parameterized extension; source-generation provenance is required before treating as one family.",
+    "global_decision": "No additional whole-equation family merges established beyond exact duplicate NACS1/TECS7. All other records retain null canonical family IDs and not_adjudicated independence status. EBS2/PTM5 is flagged as a candidate parameterized extension; source-generation provenance is required before treating as one family. EBS2/PTM5 is now classified as a shared base subexpression across two catalog categories, not a supported parameterized family; the pinned catalog contains no generator or coefficient-sweep metadata establishing such a relation.",
     "limitations": [
       "Review is restricted to the eight pre-identified shared-template groups, not an exhaustive symbolic-equivalence proof over all 128 records.",
       "Algebraic equivalence outside these groups may remain undetected.",
       "Formula-level distinctness does not establish independent data generation or statistical independence.",
-      "Continuous and integer-grid input domains are not pooled."
+      "Continuous and integer-grid input domains are not pooled.",
+      "The upstream catalog documents category, formula, and sampling ranges but does not provide a per-equation generator lineage field for EBS2/PTM5."
     ]
   }
 }
