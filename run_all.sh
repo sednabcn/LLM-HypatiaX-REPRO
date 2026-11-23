@@ -515,28 +515,26 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
     echo \"  [exp1b] SHARD_INDEX=\${SHARD_INDEX:-0} -> seeds for this shard: \${_SHARD_SEEDS}\"
   fi
 
-  # FIX-exp1b-OUTPUT-DIR: write straight into the exp1b/portfolio result dir
-  # (comparison_results/noise-noiseless/15), not into exp1's own
-  # noiseless/defi dir. hypatiax_defi_benchmark_v3c.py supports --output-dir,
-  # so pointing it at dest15 directly means the primary results never need a
-  # post-hoc move — mirrors how exp1b_pca already uses --output-dir below.
-  dest15='${RESULTS_DIR}/comparison_results/noise-noiseless/15'
-  mkdir -p \"\${dest15}\"
-  # Remove only this shard's expected seed output/checkpoint so stale files cannot pass.
-  IFS=',' read -r -a _SEEDS <<< \"\${_SHARD_SEEDS}\"
-  for _SEED in \"\${_SEEDS[@]}\"; do
-    _TAG=''; [[ \"\${_SEED}\" == '42' ]] || _TAG=\"_seed\${_SEED}\"
-    rm -f \"\${dest15}/hypatiax_defi_benchmark_v3_checkpoint\${_TAG}.json\" \"\${dest15}/hypatiax_defi_benchmark_v3_results\${_TAG}.json\"
-  done
-
-  PYSR_SEED=\"\${_SEEDS[0]}\" DEFI_TASK_FILTER=\"Portfolio\" DEFI_SEEDS=\"\${_SHARD_SEEDS}\" \
-    python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v3c.py' \
-      --output-dir \"\${dest15}\" \
-      2>&1 | tee '${RESULTS_DIR}'/exp1b_run.log
-  for _SEED in \"\${_SEEDS[@]}\"; do
-    _TAG=''; [[ \"\${_SEED}\" == '42' ]] || _TAG=\"_seed\${_SEED}\"
-    _BENCH=\"\${dest15}/hypatiax_defi_benchmark_v3_results\${_TAG}.json\"
-    [[ -s \"\${_BENCH}\" ]] || { echo \"::error::exp1b missing benchmark JSON for seed \${_SEED}\"; exit 1; }
+  # Worker-private scratch prevents writes to tracked canonical seed files.
+  dest15='\${RESULTS_DIR}/comparison_results/noise-noiseless/15'
+  mkdir -p "\${dest15}"
+  IFS=',' read -r -a _SEEDS <<< "\${_SHARD_SEEDS}"
+  _SHARD=\${SHARD_INDEX:-0}
+  _EXP1B_TMP="\${RUNNER_TEMP:-/tmp}/hypatiax-exp1b-\${GITHUB_RUN_ID:-local}-shard\${_SHARD}"
+  _BENCH_TMP="\${_EXP1B_TMP}/benchmark"
+  _PVA_TMP="\${_EXP1B_TMP}/portfolio_variance_audit"
+  rm -rf "\${_EXP1B_TMP}"
+  mkdir -p "\${_BENCH_TMP}" "\${_PVA_TMP}"
+  PYSR_SEED="\${_SEEDS[0]}" DEFI_TASK_FILTER="Portfolio" DEFI_SEEDS="\${_SHARD_SEEDS}" \
+    python3 '\${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v3c.py' \
+      --output-dir "\${_BENCH_TMP}" \
+      2>&1 | tee '\${RESULTS_DIR}'/exp1b_run.log
+  for _SEED in "\${_SEEDS[@]}"; do
+    _TAG=''; [[ "\${_SEED}" == '42' ]] || _TAG="_seed\${_SEED}"
+    _BENCH="\${_BENCH_TMP}/hypatiax_defi_benchmark_v3_results\${_TAG}.json"
+    [[ -s "\${_BENCH}" ]] || { echo "::error::exp1b missing benchmark JSON for seed \${_SEED}"; exit 1; }
+    _PUBLISH="\${dest15}/hypatiax_defi_benchmark_v3_results\${_TAG}_shard\${_SHARD}.json"
+    cp -f "\${_BENCH}" "\${_PUBLISH}"
   done
 
   # FIX-exp1b-PORTFOLIO-RUN: run the portfolio sweep for THIS shard's seed(s) only.
