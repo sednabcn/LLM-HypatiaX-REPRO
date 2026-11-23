@@ -156,7 +156,7 @@ on:
         default: "false"
 
       fresh_mode:
-        description: "Artifact-only fresh mode, currently restricted to exp1-provenance. Uses run/attempt-isolated results, disables checkpoint reuse/resume and skips all result commits."
+        description: "Artifact-only fresh mode for exp1-provenance and exp1b. Uses run/attempt-isolated results, disables checkpoint reuse/resume and skips all result commits."
         required: false
         type: choice
         options:
@@ -264,8 +264,8 @@ jobs:
 
           if [[ "$FRESH_MODE" == "true" ]]; then
             for ID in $IDS; do
-              if [[ "$ID" != "exp1-provenance" ]]; then
-                echo "::error::fresh_mode currently supports only exp1-provenance; refusing unsupported experiment $ID."
+              if [[ "$ID" != "exp1-provenance" && "$ID" != "exp1b" ]]; then
+                echo "::error::fresh_mode currently supports only exp1-provenance and exp1b; refusing unsupported experiment $ID."
                 exit 1
               fi
             done
@@ -386,8 +386,8 @@ jobs:
           EXP: ${{ github.event.inputs.experiment }}
         run: |
           set -euo pipefail
-          if [[ "$EXP" != "exp1-provenance" ]]; then
-            echo "::error::fresh_mode currently supports only exp1-provenance; got $EXP."
+          if [[ "$EXP" != "exp1-provenance" && "$EXP" != "exp1b" ]]; then
+            echo "::error::fresh_mode currently supports only exp1-provenance and exp1b; got $EXP."
             exit 1
           fi
           echo "Fresh mode: planner and five seed-sharded workers retained; outputs are artifact-only."
