@@ -620,18 +620,38 @@ if RERUN_STRATEGY == 'A' and HYPATIA_AVAILABLE:
     for seed in SEEDS:
         print(f'-- Seed {seed} --')
         set_all_seeds(seed)
+        nn_seed = 2024 + (int(seed) - 42)
         t0 = time.time()
         hybrid = _hybrid_predict_and_eval(
             case_cfg['description'], case_cfg.get('domain', 'DeFi'),
             X_train, y_train, X_test, y_test,
-            case_cfg['variables'], case_cfg.get('metadata', {}))
+            case_cfg['variables'], case_cfg.get('metadata', {}),
+            nn_seed=nn_seed)
         dt = time.time() - t0
+        test_r2 = float(hybrid.get('test_r2', float('nan')))
         row = {
             'seed': int(seed),
+            'nn_seed': int(nn_seed),
             'train_r2': hybrid['train_r2'],
-            'far_r2': hybrid['test_r2'],
+            # Keep far_r2 for compatibility; test_r2 is the unambiguous name.
+            'far_r2': test_r2,
+            'test_r2': test_r2,
             'decision': hybrid['decision'],
-            'success': bool(hybrid['test_r2'] > 0.99),
+            'train_r2_source': hybrid.get('train_r2_source'),
+            'train_r2_status': hybrid.get('train_r2_status'),
+            'test_r2_status': hybrid.get('test_r2_status'),
+            'route_reason': hybrid.get('route_reason'),
+            'route_execution_status': hybrid.get('route_execution_status'),
+            'nn_abstained': hybrid.get('nn_abstained'),
+            'nn_selected_model': hybrid.get('nn_selected_model'),
+            'nn_edge_r2': hybrid.get('nn_edge_r2'),
+            'ridge_edge_r2': hybrid.get('ridge_edge_r2'),
+            'blend_weights': hybrid.get('blend_weights'),
+            'success': bool(
+                hybrid.get('success', False)
+                and np.isfinite(test_r2)
+                and test_r2 > 0.99
+            ),
             'llm_train_r2': hybrid.get('llm_train_r2', float('nan')),
             'time_s': dt,
             'llm_code': hybrid.get('llm_code'),
@@ -681,6 +701,13 @@ if RERUN_STRATEGY == 'A' and HYPATIA_AVAILABLE:
                 'y_test': np.asarray(y_test).reshape(-1).tolist(),
             },
             'seeds_run': [int(seed) for seed in SEEDS],
+            'score_semantics': {
+                'train_r2': 'Outer-training R2 for the selected predictor; see train_r2_source.',
+                'llm_train_r2': 'LLM-formula-only training R2; not the selected predictor score unless train_r2_source is llm_formula.',
+                'test_r2': 'Held-out test R2 for the selected predictor.',
+                'far_r2': 'Legacy alias of test_r2; split protocol is recorded separately.',
+                'success': 'Hybrid metric computation succeeded and selected-predictor test_r2 > 0.99.',
+            },
             'results': defi_sweep_results,
             'summary': {'n_seeds': len(SEEDS), 'n_success': n_ok,
                         'success_rate': n_ok/len(SEEDS)}
