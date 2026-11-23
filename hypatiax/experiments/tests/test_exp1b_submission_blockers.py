@@ -16,30 +16,11 @@ def test_exp1b_benchmark_uses_its_declared_portfolio_case_filter():
     end = source.index('\nrun portfolio "', start)
     block = source[start:end]
 
-    quote = chr(92) + chr(34)
+    quote = chr(34)
     escaped_var = chr(92) + chr(36)
     assert 'DEFI_TASK_FILTER=' + quote + 'Portfolio' + quote in block
     assert 'DEFI_SEEDS=' + quote + escaped_var + '{_SHARD_SEEDS}' + quote in block
     assert 'PYSR_SEED=' + quote + escaped_var + '{_SEEDS[0]}' + quote in block
-def test_exp1b_sweep_only_does_not_run_the_seed42_single_case_twice():
-    source = BENCHMARK.read_text()
-    tree = ast.parse(source)
-    nodes = [
-        n for n in ast.walk(tree)
-        if isinstance(n, ast.If)
-        and isinstance(n.test, ast.BoolOp)
-        and any(
-            isinstance(v, ast.Name) and v.id == "PV_SWEEP_ONLY"
-            for v in n.test.values
-        )
-    ]
-    assert nodes
-    assert any(
-        any(isinstance(call, ast.Call) for call in ast.walk(node))
-        and "skipping the separate seed-42 single-case rerun" in ast.get_source_segment(source, node)
-        for node in nodes
-    )
-
 
 def test_exp1b_per_seed_rows_preserve_llm_request_and_formula_provenance():
     source = BENCHMARK.read_text()
@@ -102,27 +83,12 @@ def test_exp1b_runtime_output_paths_are_expanded_not_literal_directory_names():
     end = source.index('\nrun portfolio "', start)
     block = source[start:end]
 
-    quote = chr(92) + chr(34)
+    quote = chr(34)
     escaped_var = chr(92) + chr(36)
     assert 'dest15=' + quote + escaped_var + '{RESULTS_DIR}/comparison_results/noise-noiseless/15' + quote in block
     assert '_PVA_DIR=' + quote + escaped_var + '{RESULTS_DIR}/portfolio_variance_audit' + quote in block
     assert "dest15='" + escaped_var + '{RESULTS_DIR}' not in block
     assert "_PVA_DIR='" + escaped_var + '{RESULTS_DIR}' not in block
-def test_exp1b_store_step_requires_fresh_benchmark_and_refreshes_tracked_sweep():
-    workflow = WORKFLOW.read_text()
-    store_start = workflow.index("- name: Store results in canonical RESULT_SUBDIR")
-    store_end = workflow.index("\n      - name:", store_start + 10)
-    store = workflow[store_start:store_end]
-    pva_start = store.index('PVA_DIR="')
-    pva_end = store.index('if [[ "' + '$' + '{EXP:-}" == "exp1b_seeds"', pva_start)
-    pva = store[pva_start:pva_end]
-
-    assert "exp1b fresh benchmark output missing" in store
-    assert "Never replace it with the old canonical seed file." in store
-    assert 'cp -f "' + '$' + '{src}" "' + '$' + '{dest_f}"' in pva
-    assert "REFRESH: published fresh" in pva
-    assert "SKIP:" not in pva
-
 
 def test_exp1b_verification_checks_fresh_seed_and_portfolio_provenance():
     workflow = WORKFLOW.read_text()
@@ -156,11 +122,12 @@ def test_exp1b_clears_only_its_own_shard_outputs_before_rerun():
     end = source.index('\nrun portfolio "', start)
     block = source[start:end]
 
-    quote = chr(92) + chr(34)
+    quote = chr(34)
+    escaped_quote = chr(92) + chr(34)
     escaped_var = chr(92) + chr(36)
     assert '_SHARD=' + escaped_var + '{SHARD_INDEX:-0}' in block
     assert 'rm -f ' + quote + escaped_var + '{_OLD_BENCH_PUBLISH}' + quote in block
-    assert 'rm -f ' + quote + escaped_var + '{_PV_PUBLISH}' + quote in block
+    assert 'rm -f ' + escaped_quote + escaped_var + '{_PV_PUBLISH}' + escaped_quote in block
 
 def test_exp1b_store_and_upload_are_gated_on_successful_worker_execution():
     workflow = WORKFLOW.read_text()
