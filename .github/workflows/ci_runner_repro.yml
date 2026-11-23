@@ -2130,9 +2130,9 @@ jobs:
                 if [[ "${EXP:-}" == "exp1b" ]]; then
                   _matched_seed=false
                   for _seed in ${_EXP1B_SEEDS:-}; do
-                    if [[ "$fname" == "portfolio_variance_defi_seed_sweep_seed${_seed}.json" ]]; then
+                    if [[ "$fname" == "portfolio_variance_defi_seed_sweep_seed${_seed}_shard${SHARD_INDEX}.json" ]]; then
                       _matched_seed=true
-                      dest_f="${DEST}/portfolio_variance_defi_seed_sweep_seed${_seed}_shard${SHARD_INDEX}.json"
+                      dest_f="${DEST}/${fname}"
                       break
                     fi
                   done
