@@ -548,7 +548,7 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
   _PVA_DIR='${RESULTS_DIR}/portfolio_variance_audit'
   mkdir -p \"\${_PVA_DIR}\"
   _PV_TAG=\$(echo \"\${_SHARD_SEEDS}\" | tr ',' '_')
-  _PV_FILE=\"\${_PVA_DIR}/portfolio_variance_defi_seed_sweep_seed\${_PV_TAG}.json\"
+  _PV_FILE=\"\${_PVA_TMP}/portfolio_variance_defi_seed_sweep_seed\${_PV_TAG}.json\"
   rm -f \"\${_PV_FILE}\"
   echo \"[exp1b] Running portfolio_variance_v3c2.py (Strategy A, sweep-only) for seed(s): \${_SHARD_SEEDS}\"
   (
@@ -566,6 +566,8 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
     exit 1
   fi
   echo \"[exp1b] OK portfolio sweep written: \${_PV_FILE}\"
+  _PV_PUBLISH="\${_PVA_DIR}/portfolio_variance_defi_seed_sweep_seed\${_PV_TAG}_shard\${SHARD_INDEX:-0}.json"
+  cp -f "\${_PV_FILE}" "\${_PV_PUBLISH}"
   _SHARD=\${SHARD_INDEX:-0}
   _SEED_TAG=\$(echo \"\${_SHARD_SEEDS:-42}\" | tr ',' '_')
 
