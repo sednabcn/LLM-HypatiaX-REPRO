@@ -2057,6 +2057,25 @@ jobs:
           DEST="${RESULTS_DIR}/${RESULT_SUBDIR}"
           mkdir -p "${DEST}"
 
+          # exp1b computes one Portfolio seed per worker. Preserve the committed
+          # canonical seed file and publish this attempt under an explicit shard tag.
+          if [[ "${EXP:-}" == "exp1b" ]]; then
+            _EXP1B_SEEDS="$(echo "${SHARD_IDS:-[]}" | grep -oE 'portfolio_seed[0-9]+' | sed 's/portfolio_seed//' | sort -u)"
+            for _seed in ${_EXP1B_SEEDS}; do
+              _canonical="${DEST}/hypatiax_defi_benchmark_v3_results_seed${_seed}.json"
+              if [[ -s "${_canonical}" ]]; then
+                _isolated="${DEST}/hypatiax_defi_benchmark_v3_results_seed${_seed}_shard${SHARD_INDEX}.json"
+                cp -f "${_canonical}" "${_isolated}"
+                if git ls-files --error-unmatch "${_canonical}" >/dev/null 2>&1; then
+                  git checkout -- "${_canonical}"
+                else
+                  rm -f "${_canonical}"
+                fi
+                echo "  exp1b isolated benchmark: $(basename "${_isolated}")"
+              fi
+            done
+          fi
+
           # exp1b_seeds: seeds owned by THIS shard (from "<domain>_seed<N>" IDs)
           _SHARD_SEEDS_LIST="$(echo "${SHARD_IDS:-[]}" | grep -oE '_seed[0-9]+' | sed 's/_seed//' | sort -u | tr '\n' ' ' || true)"
 
@@ -2078,12 +2097,6 @@ jobs:
               dest_f="${DEST}/${stem}_shard${SHARD_INDEX}.${ext}"
             fi
             if [[ -e "$dest_f" ]]; then
-              if [[ "${EXP:-}" == "exp1b" && "$fname" =~ ^portfolio_variance_defi_seed_sweep_seed[0-9]+\.json$ ]]; then
-                echo "  REPLACE: refreshing tracked exp1b per-seed portfolio artifact ${fname}"
-                cp -f "$f" "${dest_f}"
-                copied=$((copied + 1))
-                continue
-              fi
               if git ls-files --error-unmatch "${dest_f}" >/dev/null 2>&1; then
                 echo "  SKIP: ${fname} is git-tracked in dest — committed prior result, skipping."
                 continue
@@ -2114,18 +2127,24 @@ jobs:
                 [[ -e "$f" ]] || continue
                 fname=$(basename "$f")
                 [[ "$fname" == _merged* || "$fname" == _stats* || "$fname" == _checkpoint* ]] && continue
-                dest_f="${DEST}/${fname}"
+                if [[ "${EXP:-}" == "exp1b" ]]; then
+                  _matched_seed=false
+                  for _seed in ${_EXP1B_SEEDS:-}; do
+                    if [[ "$fname" == "portfolio_variance_defi_seed_sweep_seed${_seed}_shard${SHARD_INDEX}.json" ]]; then
+                      _matched_seed=true
+                      dest_f="${DEST}/${fname}"
+                      break
+                    fi
+                  done
+                  [[ "$_matched_seed" == "true" ]] || continue
+                else
+                  dest_f="${DEST}/${fname}"
+                fi
                 if [[ "$fname" == "contradiction_audit_report.json" || "$fname" == "fixc3_baseline.json" ]]; then
                   stem="${fname%.*}"; ext="${fname##*.}"
                   dest_f="${DEST}/${stem}_shard${SHARD_INDEX}.${ext}"
                 fi
                 if [[ -e "$dest_f" ]]; then
-                  if [[ "${EXP:-}" == "exp1b" && "$fname" =~ ^portfolio_variance_defi_seed_sweep_seed[0-9]+\.json$ ]]; then
-                    echo "  REPLACE: refreshing tracked exp1b per-seed portfolio artifact ${fname}"
-                    cp -f "$f" "${dest_f}"
-                    pva_copied=$((pva_copied + 1))
-                    continue
-                  fi
                   if git ls-files --error-unmatch "${dest_f}" >/dev/null 2>&1; then
                     echo "  SKIP: ${fname} is git-tracked in dest — committed prior result, skipping."
                     continue
@@ -2139,6 +2158,10 @@ jobs:
                   echo "  COLLISION: ${fname} already in dest — storing as $(basename "$dest_f")"
                 fi
                 cp -v "$f" "${dest_f}"
+                # Restore any tracked canonical seed artifact after taking the shard copy.
+                if git ls-files --error-unmatch "$f" >/dev/null 2>&1; then
+                  git checkout -- "$f"
+                fi
                 pva_copied=$((pva_copied + 1))
               done < <(find "${PVA_DIR}" -type f \( -name "*.json" -o -name "*.csv" \))
               if [[ $pva_copied -gt 0 ]]; then

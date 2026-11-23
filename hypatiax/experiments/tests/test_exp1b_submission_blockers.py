@@ -15,9 +15,9 @@ def test_exp1b_benchmark_uses_its_declared_portfolio_case_filter():
     end = source.index('\nrun portfolio "', start)
     block = source[start:end]
 
-    assert 'DEFI_TASK_FILTER=\\"Portfolio\\"' in block
-    assert 'DEFI_SEEDS=\\"\\${_SHARD_SEEDS}\\"' in block
-    assert 'PYSR_SEED=\\"\\${_SEEDS[0]}\\"' in block
+    assert 'DEFI_TASK_FILTER="Portfolio"' in block
+    assert 'DEFI_SEEDS="\${_SHARD_SEEDS}"' in block
+    assert 'PYSR_SEED="\${_SEEDS[0]}"' in block
 
 
 def test_exp1b_sweep_only_does_not_run_the_seed42_single_case_twice():
@@ -71,3 +71,13 @@ def test_exp1b_default_split_is_not_silently_relabelled_as_pca():
     assert "if PCA_PORTFOLIO_SWEEP:" in source
     assert "first_feature_percentile_split(X, y, return_metadata=return_metadata)" in source
     assert "'v3c3-pca' if PCA_PORTFOLIO_SWEEP else 'v3c3'" in source
+
+
+def test_exp1b_workflow_restores_canonical_seed_and_publishes_shard_copy():
+    workflow = (ROOT / ".github/workflows/ci_runner_repro.yml").read_text()
+    assert 'exp1b isolated benchmark:' in workflow
+    assert 'hypatiax_defi_benchmark_v3_results_seed${_seed}_shard${SHARD_INDEX}.json' in workflow
+    assert 'git checkout -- "${_canonical}"' in workflow
+    assert 'portfolio_variance_defi_seed_sweep_seed${_seed}_shard${SHARD_INDEX}.json' in workflow
+    assert 'if [[ "$fname" == "portfolio_variance_defi_seed_sweep_seed${_seed}_shard${SHARD_INDEX}.json" ]]; then' in workflow
+    assert 'REPLACE: refreshing tracked exp1b per-seed portfolio artifact' not in workflow

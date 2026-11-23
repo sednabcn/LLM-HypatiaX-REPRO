@@ -104,7 +104,12 @@ def test_exp1b_contract_requires_seed_outputs_and_shared_baseline():
     checker = (ROOT / ".github/workflows/ci_pipeline_check.yml").read_text()
     assert "PYSR_SEED=" in (ROOT / "run_all.sh").read_text()
     assert "portfolio_variance_defi_seed_sweep_seed" in runner
-    assert "REPLACE: refreshing tracked exp1b per-seed portfolio artifact" in runner
+    assert "REPLACE: refreshing tracked exp1b per-seed portfolio artifact" not in runner
+    runner_script = (ROOT / "run_all.sh").read_text()
+    assert "_EXP1B_TMP=" in runner_script
+    assert "_BENCH_TMP=" in runner_script
+    assert "_PVA_TMP=" in runner_script
+    assert "_shard" in runner_script
     assert "hypatiax_defi_benchmark_v3_results.json" in checker
     assert "contract_missing" in checker
     assert "portfolio_variance_defi_seed_sweep_seed{seed}.json" in checker
