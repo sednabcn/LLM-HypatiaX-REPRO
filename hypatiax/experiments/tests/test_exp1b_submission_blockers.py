@@ -73,13 +73,13 @@ def test_exp1b_default_split_is_not_silently_relabelled_as_pca():
     assert "'v3c3-pca' if PCA_PORTFOLIO_SWEEP else 'v3c3'" in source
 
 
-def test_exp1b_workflow_restores_canonical_seed_and_publishes_shard_copy():
+def test_exp1b_workflow_requires_fresh_shard_benchmark_and_portfolio_outputs():
     workflow = (ROOT / ".github/workflows/ci_runner_repro.yml").read_text()
-    assert 'exp1b isolated benchmark:' in workflow
+    assert "exp1b fresh benchmark output missing" in workflow
+    assert "Never replace it with the old canonical seed file." in workflow
     assert 'hypatiax_defi_benchmark_v3_results_seed${_seed}_shard${SHARD_INDEX}.json' in workflow
-    assert 'git checkout -- "${_canonical}"' in workflow
     assert 'portfolio_variance_defi_seed_sweep_seed${_seed}_shard${SHARD_INDEX}.json' in workflow
-    assert 'if [[ "$fname" == "portfolio_variance_defi_seed_sweep_seed${_seed}_shard${SHARD_INDEX}.json" ]]; then' in workflow
+    assert 'REFRESH: published fresh' in workflow
     assert 'REPLACE: refreshing tracked exp1b per-seed portfolio artifact' not in workflow
 
 
@@ -113,12 +113,71 @@ def test_exp1b_store_step_requires_fresh_benchmark_and_refreshes_tracked_sweep()
     store_start = workflow.index("- name: Store results in canonical RESULT_SUBDIR")
     store_end = workflow.index("\n      - name:", store_start + 10)
     store = workflow[store_start:store_end]
+    pva_start = store.index('PVA_DIR="')
+    pva_end = store.index('if [[ "${EXP:-}" == "exp1b_seeds"', pva_start)
+    pva = store[pva_start:pva_end]
 
     assert "exp1b fresh benchmark output missing" in store
     assert "Never replace it with the old canonical seed file." in store
-    assert 'cp -f "' + chr(92) + '$' + '{src}" "' + chr(92) + '$' + '{dest_f}"' in store
-    assert "REFRESH: published fresh" in store
-    assert 'SKIP: ' + chr(92) + '$' + '{fname} is git-tracked in dest — committed prior result, skipping.' not in store
+    assert 'cp -f "' + '
+
+def test_exp1b_verification_checks_fresh_seed_and_portfolio_provenance():
+    workflow = (ROOT / ".github/workflows/ci_runner_repro.yml").read_text()
+    start = workflow.index("- name: Verify exp1b output files exist")
+    end = workflow.index("\n      - name:", start + 10)
+    verify = workflow[start:end]
+
+    for token in (
+        r"portfolio_seed(\d+)",
+        "portfolio_variance_defi_seed_sweep_seed",
+        '"seeds_run"',
+        '"nn_seed"',
+        '"test_r2"',
+        '"far_r2"',
+        '"route_execution_status"',
+        '"score_semantics"',
+        "far_r2 must remain an alias of test_r2",
+    ):
+        assert token in verify
+
+
+def test_exp1b_seeds_planner_uses_one_worker_per_configured_seed():
+    workflow = (ROOT / ".github/workflows/ci_runner_repro.yml").read_text()
+    assert "DEFAULT_SEEDS" in workflow and "99,123,777,2024" in workflow
+    assert 'N_SHARDS = max(1, len(SEEDS))' in workflow
+    assert '"exp1b_seeds":       [f"{d}_seed{s}" for s in SEEDS for d in DEFI_TASKS]' in workflow
+
+ + '{src}" "' + '
+
+def test_exp1b_verification_checks_fresh_seed_and_portfolio_provenance():
+    workflow = (ROOT / ".github/workflows/ci_runner_repro.yml").read_text()
+    start = workflow.index("- name: Verify exp1b output files exist")
+    end = workflow.index("\n      - name:", start + 10)
+    verify = workflow[start:end]
+
+    for token in (
+        r"portfolio_seed(\d+)",
+        "portfolio_variance_defi_seed_sweep_seed",
+        '"seeds_run"',
+        '"nn_seed"',
+        '"test_r2"',
+        '"far_r2"',
+        '"route_execution_status"',
+        '"score_semantics"',
+        "far_r2 must remain an alias of test_r2",
+    ):
+        assert token in verify
+
+
+def test_exp1b_seeds_planner_uses_one_worker_per_configured_seed():
+    workflow = (ROOT / ".github/workflows/ci_runner_repro.yml").read_text()
+    assert "DEFAULT_SEEDS" in workflow and "99,123,777,2024" in workflow
+    assert 'N_SHARDS = max(1, len(SEEDS))' in workflow
+    assert '"exp1b_seeds":       [f"{d}_seed{s}" for s in SEEDS for d in DEFI_TASKS]' in workflow
+
+ + '{dest_f}"' in pva
+    assert "REFRESH: published fresh" in pva
+    assert "SKIP:" not in pva
 
 
 def test_exp1b_verification_checks_fresh_seed_and_portfolio_provenance():
