@@ -11,7 +11,9 @@ def _candidate(candidate_id, expression):
 
 
 def _fixture():
-    X = np.asarray([[1., 2.], [2., 1.], [3., 2.], [4., 3.], [5., 4.], [6., 5.]])
+    # Every four-row training complement must retain full rank for the
+    # two basis terms plus intercept; avoid a single leverage row.
+    X = np.asarray([[1., 2.], [2., 4.], [3., 1.], [4., 5.], [5., 3.], [6., 7.]])
     y = 2.0 * X[:, 0] - 0.5 * X[:, 1] + 7.0
     candidates = [_candidate("x-id", "x"), _candidate("y-id", "y")]
     fitted = fit_native_multi_basis_candidates(

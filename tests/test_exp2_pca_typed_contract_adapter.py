@@ -53,13 +53,16 @@ def test_pca_worker_deserializes_and_audits_the_typed_contract():
     assert "tuple(_typed_problem.variable_names) != tuple(var_names)" in worker
     assert '_meta["discovery_problem"] = _typed_problem' in worker
     assert "metadata=_meta" in worker
-    assert '_benchmark_provenance["discovery_problem_contract"] = _contract_audit' in worker
+    assert '"discovery_problem_contract": _contract_audit' in worker
+    assert '_benchmark_provenance.update({' in worker
 
 
 def test_pca_selector_is_forwarded_without_changing_the_v50_2_default():
     source, worker = _runner_and_worker()
 
     assert 'choices=["v50_2", "v60"]' in source
-    assert 'default=os.environ.get("HYPATIAX_HYBRID_IMPLEMENTATION", "v50_2")' in source
+    assert 'def _resolve_hybrid_implementation(cli_value=None)' in source
+    assert 'or os.environ.get("HYPATIAX_HYBRID_IMPLEMENTATION")' in source
+    assert 'engine.get("implementation", "v50_2")' in source
     assert '_tc_kwargs["hybrid_implementation"] = getattr(' in source
     assert 'kwargs.get("hybrid_implementation", "v50_2")' in worker

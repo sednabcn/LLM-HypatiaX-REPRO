@@ -8,6 +8,7 @@ import numpy as np
 
 from .training_validation import (
     CandidateValidationSummary,
+    FoldPredictorContractError,
     TrainingFold,
     evaluate_candidate_on_training_folds,
 )

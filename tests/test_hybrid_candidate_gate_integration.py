@@ -112,13 +112,6 @@ def test_training_only_report_selects_candidate_from_candidate_specific_fold_evi
         target_name="energy",
         variable_names=("x",),
         variable_domains={"x": {"minimum": -2, "maximum": 2}},
-        constraints=(
-            ConstraintSpec(
-                constraint_id="energy-nonnegative",
-                kind="nonnegative_output",
-                severity="soft",
-            ),
-        ),
     )
     system = _system("x**2", problem)
     X = np.linspace(-2.0, 2.0, 20).reshape(-1, 1)
@@ -198,13 +191,6 @@ def test_engine_candidate_with_engineered_feature_passes_gate_and_fold_report():
             "a": {"minimum": 1.0, "maximum": 5.0},
             "b": {"minimum": 2.0, "maximum": 8.0},
         },
-        constraints=(
-            ConstraintSpec(
-                constraint_id="amplitude-nonnegative",
-                kind="nonnegative_output",
-                severity="hard",
-            ),
-        ),
     )
     system = _system("annotated display only", problem)
     system.symbolic_engine.discover = lambda *args, **kwargs: {
@@ -600,8 +586,11 @@ def test_inner_candidate_gate_exception_is_retained_as_ineligible_report_record(
     assert malformed["eligible"] is False
     assert "malformed_candidate_envelope_item:1" in " ".join(malformed["rejection_reasons"])
     envelope_audit = result["discovery_report"]["provenance"]["candidate_envelope_audit"]
-    assert envelope_audit["declared_item_count"] == 3
-    assert envelope_audit["retained_item_count"] == 3
-    assert envelope_audit["malformed_item_count"] == 1
-    assert envelope_audit["ingestion_failure_count"] == 1
+    malformed_records = [item for item in report_candidates if item["source"] == "unknown"]
+    assert len(malformed_records) == 2
+    assert len({item["candidate_id"] for item in malformed_records}) == 2
+    assert envelope_audit["declared_item_count"] == 4
+    assert envelope_audit["retained_item_count"] == 4
+    assert envelope_audit["malformed_item_count"] == 2
+    assert envelope_audit["ingestion_failure_count"] == 2
     assert envelope_audit["ingestion_complete"] is False

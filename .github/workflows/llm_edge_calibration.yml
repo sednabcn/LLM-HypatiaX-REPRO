@@ -1,0 +1,80 @@
+name: LLM edge-degradation calibration
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_calls:
+        description: "Hard cap on new Anthropic requests (maximum 74)"
+        required: true
+        type: number
+        default: 74
+
+permissions:
+  contents: read
+
+concurrency:
+  group: llm-edge-calibration
+  cancel-in-progress: false
+
+jobs:
+  calibrate:
+    name: Generate core-only formulas and score withheld edges
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      LLM_METHOD_TIMEOUT: "120"
+      HYPATIAX_DISABLE_HARDCODED: "1"
+      HYPATIAX_DISABLE_PROMPT_HINTS: "1"
+      HYPATIAX_R2_SIGN_FLIP: "0"
+      HYPATIAX_STRICT: "1"
+      PYTHONHASHSEED: "0"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install pinned dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install -r requirements.txt
+          python -m pip check
+
+      - name: Validate call cap and API secret
+        env:
+          MAX_CALLS: ${{ inputs.max_calls }}
+        run: |
+          set -euo pipefail
+          test -n "$ANTHROPIC_API_KEY"
+          python - <<'PY'
+          import os
+          value = int(os.environ["MAX_CALLS"])
+          if not 1 <= value <= 74:
+              raise SystemExit("max_calls must be between 1 and 74")
+          print(f"Maximum new Anthropic requests: {value}")
+          PY
+
+      - name: Run leakage-controlled calibration cohort
+        env:
+          MAX_CALLS: ${{ inputs.max_calls }}
+        run: |
+          python scripts/calibrate_llm_edge_degradation.py \
+            --max-calls "$MAX_CALLS" \
+            --output hypatiax/data/results/routing_tau_calibration.json
+
+      - name: Upload calibration cohort
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: llm-edge-degradation-calibration
+          path: hypatiax/data/results/routing_tau_calibration.json
+          if-no-files-found: warn
+          retention-days: 90

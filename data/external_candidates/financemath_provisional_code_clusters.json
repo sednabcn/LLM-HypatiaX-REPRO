@@ -1,0 +1,462 @@
+{
+  "schema_version": "1.0",
+  "title": "FinanceMath provisional Python-solution token-fingerprint clusters",
+  "status": "candidate_generation_only_not_reviewed",
+  "source": {
+    "dataset": "yale-nlp/FinanceMath",
+    "revision": "bdc2b6b04252aa09630b66ec1e2a5c98e5a2794c",
+    "validation_blob_sha": "2c6027405c2fb3009d5d43ba14cc3eb45952fc61",
+    "test_blob_sha": "75638f09072637df164a5602035da1c77e58b089",
+    "registry_path": "data/external_candidates/financemath_candidate_registry.json"
+  },
+  "method": {
+    "implementation": "lightweight line-aware Python token scanner; not Python ast parsing",
+    "fingerprint": "64-bit FNV-1a over Unicode code points; deterministic grouping fingerprint only, not cryptographic",
+    "exact": "same token stream after whitespace/comment removal, preserving identifiers, literals, operators, and indentation transitions",
+    "literal_normalized": "same token stream with numeric and string literal values replaced by placeholders; identifiers, operators, and indentation transitions preserved",
+    "limitations": [
+      "not semantic equivalence",
+      "does not canonicalize variable renaming, commutative operations, algebraic identities, or alternate control flow",
+      "scanner is heuristic and not a complete Python tokenizer",
+      "literal-normalized matches may be coincidental or represent different financial quantities",
+      "syntax errors are not independently validated",
+      "all clusters require human mathematical review"
+    ]
+  },
+  "counts": {
+    "registry_records": 1200,
+    "source_solutions_found": 1200,
+    "missing_source_solutions": 0,
+    "exact_duplicate_groups": 6,
+    "records_in_exact_duplicate_groups": 12,
+    "exact_singletons": 1188,
+    "literal_normalized_groups": 13,
+    "records_in_literal_normalized_groups": 28,
+    "literal_normalized_singletons": 1172
+  },
+  "exact_duplicate_clusters": [
+    {
+      "cluster_id": "EXACT-0001",
+      "fingerprint_fnv1a64_codepoints": "1eaf090d55c2b06d",
+      "member_count": 2,
+      "members": [
+        {
+          "source_split": "test",
+          "source_question_id": "test-828",
+          "topic": "Accounting",
+          "table_count": 1,
+          "screening_class": "table_dependent_formula_candidate"
+        },
+        {
+          "source_split": "validation",
+          "source_question_id": "validation-25",
+          "topic": "Accounting",
+          "table_count": 1,
+          "screening_class": "table_dependent_formula_candidate"
+        }
+      ]
+    },
+    {
+      "cluster_id": "EXACT-0002",
+      "fingerprint_fnv1a64_codepoints": "5a763e68f3d5bc34",
+      "member_count": 2,
+      "members": [
+        {
+          "source_split": "test",
+          "source_question_id": "test-820",
+          "topic": "Accounting",
+          "table_count": 1,
+          "screening_class": "table_dependent_formula_candidate"
+        },
+        {
+          "source_split": "test",
+          "source_question_id": "test-994",
+          "topic": "Accounting",
+          "table_count": 1,
+          "screening_class": "table_dependent_formula_candidate"
+        }
+      ]
+    },
+    {
+      "cluster_id": "EXACT-0003",
+      "fingerprint_fnv1a64_codepoints": "6ac7524e21cd42b8",
+      "member_count": 2,
+      "members": [
+        {
+          "source_split": "test",
+          "source_question_id": "test-253",
+          "topic": "Accounting",
+          "table_count": 1,
+          "screening_class": "table_dependent_formula_candidate"
+        },
+        {
+          "source_split": "test",
+          "source_question_id": "test-391",
+          "topic": "Accounting",
+          "table_count": 1,
+          "screening_class": "table_dependent_formula_candidate"
+        }
+      ]
+    },
+    {
+      "cluster_id": "EXACT-0004",
+      "fingerprint_fnv1a64_codepoints": "7082a72f40ef693a",
+      "member_count": 2,
+      "members": [
+        {
+          "source_split": "test",
+          "source_question_id": "test-56",
+          "topic": "Portfolio Management & Strategy",
+          "table_count": 0,
+          "screening_class": "text_formula_candidate"
+        },
+        {
+          "source_split": "test",
+          "source_question_id": "test-688",
+          "topic": "Portfolio Management & Strategy",
+          "table_count": 0,
+          "screening_class": "text_formula_candidate"
+        }
+      ]
+    },
+    {
+      "cluster_id": "EXACT-0005",
+      "fingerprint_fnv1a64_codepoints": "8f51d54358aabe05",
+      "member_count": 2,
+      "members": [
+        {
+          "source_split": "test",
+          "source_question_id": "test-0",
+          "topic": "Portfolio Management & Strategy",
+          "table_count": 1,
+          "screening_class": "table_dependent_formula_candidate"
+        },
+        {
+          "source_split": "test",
+          "source_question_id": "test-668",
+          "topic": "Portfolio Management & Strategy",
+          "table_count": 1,
+          "screening_class": "table_dependent_formula_candidate"
+        }
+      ]
+    },
+    {
+      "cluster_id": "EXACT-0006",
+      "fingerprint_fnv1a64_codepoints": "d42c026271debcfe",
+      "member_count": 2,
+      "members": [
+        {
+          "source_split": "test",
+          "source_question_id": "test-761",
+          "topic": "Asset Classes & Derivatives",
+          "table_count": 1,
+          "screening_class": "table_dependent_formula_candidate"
+        },
+        {
+          "source_split": "validation",
+          "source_question_id": "validation-179",
+          "topic": "Quantitative Analysis & Valuation",
+          "table_count": 1,
+          "screening_class": "table_dependent_formula_candidate"
+        }
+      ]
+    }
+  ],
+  "literal_normalized_clusters": [
+    {
+      "cluster_id": "SHAPE-0001",
+      "fingerprint_fnv1a64_codepoints": "0419e6846efe1553",
+      "member_count": 3,
+      "members": [
+        {
+          "source_split": "test",
+          "source_question_id": "test-0",
+          "topic": "Portfolio Management & Strategy",
+          "table_count": 1,
+          "screening_class": "table_dependent_formula_candidate"
+        },
+        {
+          "source_split": "test",
+          "source_question_id": "test-530",
+          "topic": "Portfolio Management & Strategy",
+          "table_count": 1,
+          "screening_class": "table_dependent_formula_candidate"
+        },
+        {
+          "source_split": "test",
+          "source_question_id": "test-668",
+          "topic": "Portfolio Management & Strategy",
+          "table_count": 1,
+          "screening_class": "table_dependent_formula_candidate"
+        }
+      ]
+    },
+    {
+      "cluster_id": "SHAPE-0002",
+      "fingerprint_fnv1a64_codepoints": "7b733fc8e59a0d60",
+      "member_count": 3,
+      "members": [
+        {
+          "source_split": "test",
+          "source_question_id": "test-528",
+          "topic": "Accounting",
+          "table_count": 1,
+          "screening_class": "table_dependent_formula_candidate"
+        },
+        {
+          "source_split": "test",
+          "source_question_id": "test-73",
+          "topic": "Accounting",
+          "table_count": 2,
+          "screening_class": "table_dependent_formula_candidate"
+        },
+        {
+          "source_split": "test",
+          "source_question_id": "test-980",
+          "topic": "Accounting",
+          "table_count": 1,
+          "screening_class": "table_dependent_formula_candidate"
+        }
+      ]
+    },
+    {
+      "cluster_id": "SHAPE-0003",
+      "fingerprint_fnv1a64_codepoints": "d17ec5cbf4d4b553",
+      "member_count": 2,
+      "members": [
+        {
+          "source_split": "test",
+          "source_question_id": "test-828",
+          "topic": "Accounting",
+          "table_count": 1,
+          "screening_class": "table_dependent_formula_candidate"
+        },
+        {
+          "source_split": "validation",
+          "source_question_id": "validation-25",
+          "topic": "Accounting",
+          "table_count": 1,
+          "screening_class": "table_dependent_formula_candidate"
+        }
+      ]
+    },
+    {
+      "cluster_id": "SHAPE-0004",
+      "fingerprint_fnv1a64_codepoints": "f63402c05c202b90",
+      "member_count": 2,
+      "members": [
+        {
+          "source_split": "test",
+          "source_question_id": "test-514",
+          "topic": "Asset Classes & Derivatives",
+          "table_count": 0,
+          "screening_class": "text_formula_candidate"
+        },
+        {
+          "source_split": "test",
+          "source_question_id": "test-518",
+          "topic": "Asset Classes & Derivatives",
+          "table_count": 1,
+          "screening_class": "table_dependent_formula_candidate"
+        }
+      ]
+    },
+    {
+      "cluster_id": "SHAPE-0005",
+      "fingerprint_fnv1a64_codepoints": "cbf684ed5516fbf8",
+      "member_count": 2,
+      "members": [
+        {
+          "source_split": "test",
+          "source_question_id": "test-820",
+          "topic": "Accounting",
+          "table_count": 1,
+          "screening_class": "table_dependent_formula_candidate"
+        },
+        {
+          "source_split": "test",
+          "source_question_id": "test-994",
+          "topic": "Accounting",
+          "table_count": 1,
+          "screening_class": "table_dependent_formula_candidate"
+        }
+      ]
+    },
+    {
+      "cluster_id": "SHAPE-0006",
+      "fingerprint_fnv1a64_codepoints": "6a496a24915bd0d4",
+      "member_count": 2,
+      "members": [
+        {
+          "source_split": "test",
+          "source_question_id": "test-62",
+          "topic": "Quantitative Analysis & Valuation",
+          "table_count": 0,
+          "screening_class": "procedural_or_library"
+        },
+        {
+          "source_split": "test",
+          "source_question_id": "test-832",
+          "topic": "Quantitative Analysis & Valuation",
+          "table_count": 0,
+          "screening_class": "procedural_or_library"
+        }
+      ]
+    },
+    {
+      "cluster_id": "SHAPE-0007",
+      "fingerprint_fnv1a64_codepoints": "e6fd090e3017386e",
+      "member_count": 2,
+      "members": [
+        {
+          "source_split": "test",
+          "source_question_id": "test-253",
+          "topic": "Accounting",
+          "table_count": 1,
+          "screening_class": "table_dependent_formula_candidate"
+        },
+        {
+          "source_split": "test",
+          "source_question_id": "test-391",
+          "topic": "Accounting",
+          "table_count": 1,
+          "screening_class": "table_dependent_formula_candidate"
+        }
+      ]
+    },
+    {
+      "cluster_id": "SHAPE-0008",
+      "fingerprint_fnv1a64_codepoints": "1539b79a8130f36c",
+      "member_count": 2,
+      "members": [
+        {
+          "source_split": "test",
+          "source_question_id": "test-493",
+          "topic": "Asset Classes & Derivatives",
+          "table_count": 0,
+          "screening_class": "text_formula_candidate"
+        },
+        {
+          "source_split": "validation",
+          "source_question_id": "validation-76",
+          "topic": "Asset Classes & Derivatives",
+          "table_count": 0,
+          "screening_class": "text_formula_candidate"
+        }
+      ]
+    },
+    {
+      "cluster_id": "SHAPE-0009",
+      "fingerprint_fnv1a64_codepoints": "6366321e1763ed0d",
+      "member_count": 2,
+      "members": [
+        {
+          "source_split": "test",
+          "source_question_id": "test-56",
+          "topic": "Portfolio Management & Strategy",
+          "table_count": 0,
+          "screening_class": "text_formula_candidate"
+        },
+        {
+          "source_split": "test",
+          "source_question_id": "test-688",
+          "topic": "Portfolio Management & Strategy",
+          "table_count": 0,
+          "screening_class": "text_formula_candidate"
+        }
+      ]
+    },
+    {
+      "cluster_id": "SHAPE-0010",
+      "fingerprint_fnv1a64_codepoints": "cd1db4657223a29d",
+      "member_count": 2,
+      "members": [
+        {
+          "source_split": "test",
+          "source_question_id": "test-190",
+          "topic": "Accounting",
+          "table_count": 0,
+          "screening_class": "text_formula_candidate"
+        },
+        {
+          "source_split": "test",
+          "source_question_id": "test-630",
+          "topic": "Accounting",
+          "table_count": 0,
+          "screening_class": "text_formula_candidate"
+        }
+      ]
+    },
+    {
+      "cluster_id": "SHAPE-0011",
+      "fingerprint_fnv1a64_codepoints": "a8a9994b1a116bc1",
+      "member_count": 2,
+      "members": [
+        {
+          "source_split": "test",
+          "source_question_id": "test-306",
+          "topic": "Portfolio Management & Strategy",
+          "table_count": 1,
+          "screening_class": "table_dependent_formula_candidate"
+        },
+        {
+          "source_split": "validation",
+          "source_question_id": "validation-187",
+          "topic": "Portfolio Management & Strategy",
+          "table_count": 1,
+          "screening_class": "table_dependent_formula_candidate"
+        }
+      ]
+    },
+    {
+      "cluster_id": "SHAPE-0012",
+      "fingerprint_fnv1a64_codepoints": "830702f69a67735d",
+      "member_count": 2,
+      "members": [
+        {
+          "source_split": "test",
+          "source_question_id": "test-255",
+          "topic": "Quantitative Analysis & Valuation",
+          "table_count": 1,
+          "screening_class": "table_dependent_formula_candidate"
+        },
+        {
+          "source_split": "test",
+          "source_question_id": "test-845",
+          "topic": "Quantitative Analysis & Valuation",
+          "table_count": 1,
+          "screening_class": "table_dependent_formula_candidate"
+        }
+      ]
+    },
+    {
+      "cluster_id": "SHAPE-0013",
+      "fingerprint_fnv1a64_codepoints": "9b5b2e57733d7bee",
+      "member_count": 2,
+      "members": [
+        {
+          "source_split": "test",
+          "source_question_id": "test-761",
+          "topic": "Asset Classes & Derivatives",
+          "table_count": 1,
+          "screening_class": "table_dependent_formula_candidate"
+        },
+        {
+          "source_split": "validation",
+          "source_question_id": "validation-179",
+          "topic": "Quantitative Analysis & Valuation",
+          "table_count": 1,
+          "screening_class": "table_dependent_formula_candidate"
+        }
+      ]
+    }
+  ],
+  "excluded_from_adjudication": {
+    "core15_overlap_status": "not_checked",
+    "historical_74_overlap_status": "not_checked",
+    "canonical_equation_family_id": "not_assigned",
+    "independence_status": "not_adjudicated",
+    "cohort_assignment": "not_assigned",
+    "reviewer_status": "unreviewed"
+  }
+}

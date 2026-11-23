@@ -1,0 +1,555 @@
+{
+  "schema_version": "1.0",
+  "title": "FinanceMath provisional mathematical-family and overlap review",
+  "status": "provisional_manual_review_not_final_independence_adjudication",
+  "source": {
+    "dataset": "yale-nlp/FinanceMath",
+    "revision": "bdc2b6b04252aa09630b66ec1e2a5c98e5a2794c",
+    "validation_blob_sha": "2c6027405c2fb3009d5d43ba14cc3eb45952fc61",
+    "test_blob_sha": "75638f09072637df164a5602035da1c77e58b089",
+    "historical_74_result_blob_sha": "e71a3b252ccaecf775d33b87b78383a8b0798896",
+    "core15_exclusion_ids": [
+      "Arrhenius",
+      "Henderson-Hasselbalch",
+      "Rate Law",
+      "Allometric Scaling",
+      "Michaelis-Menten",
+      "Logistic Growth",
+      "Kinetic Energy",
+      "Gravitational Force",
+      "Ideal Gas Law",
+      "Impermanent Loss",
+      "Price Impact",
+      "Constant Product",
+      "Value at Risk",
+      "Liquidation Price",
+      "Portfolio Std Dev"
+    ],
+    "historical_74_equation_ids": [
+      "Value at Risk at 95%",
+      "Value at Risk at 99%",
+      "Partial liquidation amount",
+      "Constant product formula",
+      "Simple Staking APY",
+      "Loan-to-Value",
+      "Spot price from AMM",
+      "LP share percentage",
+      "Long position unrealized PnL",
+      "Short position unrealized PnL",
+      "Funding rate cost",
+      "Validator commission adjusted",
+      "Slashing penalty",
+      "Protocol reserve accumulation",
+      "Leveraged position notional",
+      "Cross-margin available balance",
+      "Realized PnL for long",
+      "LP fee earnings",
+      "Multi-day Value at Risk",
+      "ES scaling for multi-day",
+      "Annualised Portfolio tracking error",
+      "Incremental VaR",
+      "Reserve ratio",
+      "Impermanent loss breakeven fee rate",
+      "Liquidation Price Long",
+      "Liquidation Price Short",
+      "Constant Product Price Impact",
+      "Effective Leverage",
+      "Borrowing Interest",
+      "Compounding Staking Returns",
+      "Portfolio Sharpe Ratio",
+      "APY calculation",
+      "Capital efficiency",
+      "AMM output amount",
+      "Price slippage percentage",
+      "Information ratio",
+      "Utilization rate of DeFi",
+      "Borrow APY from utilization",
+      "Supply APY from borrow",
+      "Health factor",
+      "Impermanent loss percentage",
+      "Options Delta",
+      "Collateral ratio",
+      "Funding rate cost (extended)",
+      "Staking reward for fixed lock-up",
+      "Expected Shortfall at 95%",
+      "Expected Shortfall at 99%",
+      "Optimal LP Position (Kelly)",
+      "Concentrated liquidity position width",
+      "Portfolio VaR for two correlated",
+      "Position margin ratio",
+      "Concentrated liquidity position width (v2)",
+      "Spot price from AMM reserve",
+      "Black-Scholes Call Price",
+      "Black-Scholes Put Price",
+      "Component ES",
+      "Gamma of option",
+      "Vega of option",
+      "Multi-Collateral LTV",
+      "Correlated Portfolio VaR",
+      "Impermanent loss in constant product",
+      "Constant product formula (multivariate)",
+      "Convexity Adjustment",
+      "Liquidation price for leveraged long",
+      "Liquidation price for leveraged short",
+      "Maximum safe leverage",
+      "Required collateral",
+      "Forward price for derivative",
+      "Portfolio Expected Shortfall for correlated",
+      "Call option intrinsic",
+      "Put-call parity",
+      "Simple options moneyness",
+      "Uniswap V3 virtual",
+      "Theta of option"
+    ]
+  },
+  "method_and_limits": [
+    "Manual equation-family grouping was performed only for the 13 literal-normalized code clusters (28 records), using source questions and Python solutions.",
+    "The 13 clusters reduce to 12 provisional mathematical families because SHAPE-0011 and SHAPE-0012 are both annualized geometric mean return.",
+    "Exact repeated prompts/data/solutions are flagged as one item, not independent replications.",
+    "This is not a full semantic adjudication of the remaining 1,172 literal-normalized singletons.",
+    "Core-15 and historical-74 overlap scan is conservative keyword screening across all 1,200 question texts; matches are leads requiring formula-level review, not automatic exclusions.",
+    "No source question is marked statistically independent, calibration-eligible, or evaluation-eligible.",
+    "Historical 74 equation IDs are names from the immutable 74-equation result snapshot; formula-level equivalence cannot be fully proven from names alone."
+  ],
+  "cluster_review": [
+    {
+      "cluster": "SHAPE-0001",
+      "family": "FMF-REAL-RETURN-FISHER",
+      "name": "Real return via nominal return and inflation",
+      "decision": "same mathematical family across 3 records; not a Core-15 or historical-74 named formula match",
+      "rationale": "All three implementations use (1 + nominal/geometric return)/(1 + inflation) - 1; corporate-bond and equity examples differ only in input values and asset labels."
+    },
+    {
+      "cluster": "SHAPE-0002",
+      "family": "FMF-FINANCIAL-LEVERAGE-RATIO",
+      "name": "Financial leverage ratio",
+      "decision": "same mathematical family across 3 records; not a named Core-15 or historical-74 match",
+      "rationale": "All use total assets divided by total equity; values and source table differ."
+    },
+    {
+      "cluster": "SHAPE-0003",
+      "family": "FMF-CASH-PAID-SUPPLIERS",
+      "name": "Cash paid to suppliers",
+      "decision": "exact duplicate question, data, and solution; count at most one source item",
+      "rationale": "The validation and test records are verbatim-equivalent in question and solution."
+    },
+    {
+      "cluster": "SHAPE-0004",
+      "family": "FMF-GORDON-GROWTH",
+      "name": "Gordon growth stock valuation",
+      "decision": "same mathematical family across 2 records; not a named Core-15 or historical-74 match",
+      "rationale": "Both use next dividend divided by required return less perpetual growth; parameter values and wording differ."
+    },
+    {
+      "cluster": "SHAPE-0005",
+      "family": "FMF-COMPONENT-DEPRECIATION-DIFFERENCE",
+      "name": "IFRS versus US GAAP component depreciation difference",
+      "decision": "exact duplicate question and solution; count at most one source item",
+      "rationale": "Same equipment values, component lives, calculation, and answer."
+    },
+    {
+      "cluster": "SHAPE-0006",
+      "family": "FMF-COMBINATIONS-NCR",
+      "name": "Combinations n choose r",
+      "decision": "same mathematical family across 2 records; not a named Core-15 or historical-74 match",
+      "rationale": "Both implement n!/(n-r)!r!; different n/r and problem setting."
+    },
+    {
+      "cluster": "SHAPE-0007",
+      "family": "FMF-INCOME-TAX-EXPENSE",
+      "name": "Income tax expense from payable and deferred tax liability",
+      "decision": "exact duplicate question and solution; count at most one source item",
+      "rationale": "Same inputs, same addition, same answer."
+    },
+    {
+      "cluster": "SHAPE-0008",
+      "family": "FMF-DURATION-GAP",
+      "name": "Bond duration gap",
+      "decision": "same mathematical family across 2 records; likely adjacent to duration/risk concepts but no direct named match in the 74-ID list",
+      "rationale": "Both calculate Macaulay duration as modified duration times (1 + yield), then subtract investment horizon."
+    },
+    {
+      "cluster": "SHAPE-0009",
+      "family": "FMF-REVERSE-HS-TARGET",
+      "name": "Inverse head-and-shoulders price target",
+      "decision": "exact duplicate formula and inputs; count at most one source item",
+      "rationale": "Both calculate neckline + (neckline - head) with identical levels and result."
+    },
+    {
+      "cluster": "SHAPE-0010",
+      "family": "FMF-BOND-ISSUE-PV",
+      "name": "Bond issue price from coupon annuity and face value",
+      "decision": "same mathematical family across 2 records; no direct match to a named historical-74 equation",
+      "rationale": "Both discount coupon payments as an annuity and add discounted face value; maturity, coupon, and rate differ."
+    },
+    {
+      "cluster": "SHAPE-0011 + SHAPE-0012",
+      "family": "FMF-GEOMETRIC-MEAN-RETURN",
+      "name": "Annualized geometric mean return",
+      "decision": "merge into one mathematical family across 5 records; not a Core-15 or historical-74 named formula match",
+      "rationale": "Both groups multiply gross period returns and take the nth root minus one; the number of periods and input values differ."
+    },
+    {
+      "cluster": "SHAPE-0013",
+      "family": "FMF-CLASSIFICATION-ACCURACY",
+      "name": "Binary classification accuracy",
+      "decision": "exact duplicate question and confusion-matrix counts; count at most one source item",
+      "rationale": "Both use (TP + TN)/(TP + FP + TN + FN) with identical counts and answer."
+    }
+  ],
+  "cluster_summary": {
+    "literal_normalized_clusters": 13,
+    "records_in_clusters": 28,
+    "provisional_mathematical_families": 12,
+    "cluster_families_merged": [
+      "SHAPE-0011",
+      "SHAPE-0012"
+    ],
+    "exact_duplicate_question_solution_clusters": [
+      "SHAPE-0003",
+      "SHAPE-0005",
+      "SHAPE-0007",
+      "SHAPE-0009",
+      "SHAPE-0013"
+    ],
+    "named_core15_or_historical74_matches_among_these_28": 0
+  },
+  "overlap_screen": {
+    "records_with_keyword_hits": 35,
+    "records": [
+      {
+        "source_question_id": "test-107",
+        "topic": "Asset Classes & Derivatives",
+        "matched_overlap_classes": [
+          "Historical-74: Duration gap"
+        ],
+        "question_excerpt": "A buyer acquires an annual coupon bond with a 8% coupon rate and exactly 20 years left until maturity at a price equivalent to its par value. The buyer's investment horizon spans eight years. The approximate modified duration of the bond is 12.480 years. What is the duration gap at the moment of acquisition?",
+        "solution_excerpt": "def solution():\n    macaulay_duration = 12.480 * 1.08\n    investment_horizon = 8\n    duration_gap = macaulay_duration - investment_horizon\n    return duration_gap"
+      },
+      {
+        "source_question_id": "test-126",
+        "topic": "Quantitative Analysis & Valuation",
+        "matched_overlap_classes": [
+          "Core15: Value at Risk"
+        ],
+        "question_excerpt": "An investment director purchased 600 call options on a stock that doesn't pay dividends, with a strike price of USD 60, at a cost of USD 3 each. If the current stock price is at USD 62, the daily stock return volatility is pegged at 1.82%, and the delta of the option stands at 0.5. How can we approximate the 1-day 95% VaR of this position using the",
+        "solution_excerpt": "def solution():\n    delta = 0.5\n    volatility = 1.82 / 100\n    strike_price = 60\n    current_price = 62\n    quantity = 600\n    Z = 1.645\n\n    VaR_one_share = volatility * Z * current_price\n    VaR_one_option  = delta * VaR_one_share\n    total_VaR = VaR_one_option * quantity\n\n    return total_VaR"
+      },
+      {
+        "source_question_id": "test-152",
+        "topic": "Asset Classes & Derivatives",
+        "matched_overlap_classes": [
+          "Historical-74: Convexity adjustment"
+        ],
+        "question_excerpt": "Using the duration model with convexity adjustment, how much will the bond's price change, in percentage, if interest rates drop 2%, given that the bond's duration is 7.31 and its convexity is -24.85?",
+        "solution_excerpt": "def solution():\n    AnnModDur = 7.31\n    DeltaYield = -0.02\n    AnnConvexity = -24.85\n\n    change_in_price = (-(AnnModDur * DeltaYield)) + (0.5 * AnnConvexity * (DeltaYield**2))\n    return change_in_price * 100"
+      },
+      {
+        "source_question_id": "test-181",
+        "topic": "Risk Management",
+        "matched_overlap_classes": [
+          "Core15: Value at Risk"
+        ],
+        "question_excerpt": "Assuming there are 225 days in a year, what is the highest number of daily losses that can go beyond the 1-day 99% VaR acceptable in a 1-year backtest for a financial risk analyst to determine, with 95% certainty, that the model is properly calibrated?",
+        "solution_excerpt": "def solution():\n    T = 225 # number of observations\n    p = 0.01 # failure rate\n    z = 1.96 # two-tail confidence level quantile\n\n    # formula to calculate the number of exceedances\n    x = (z * ((p * (1 - p) * T) ** 0.5)) + (p * T)\n\n    return int(x) # return as integer, as we cannot have fractional exceedances"
+      },
+      {
+        "source_question_id": "test-243",
+        "topic": "Risk Management",
+        "matched_overlap_classes": [
+          "Core15: Value at Risk"
+        ],
+        "question_excerpt": "Enterprise B releases 20 unique bonds and the risk of default for Enterprise B is 2%. The portfolio, made up of the 20 bonds, has a notional value of $1,000,000. Assuming that the default correlation of the 20 bonds is equal to 1 and the recovery rate is 0%, what is the credit VaR of the portfolio at the 99% confidence level?",
+        "solution_excerpt": "def solution():\n    notional_value = 1000000\n    default_probability = 0.02\n    expected_loss = default_probability * notional_value\n    credit_VaR = notional_value - expected_loss\n    return credit_VaR"
+      },
+      {
+        "source_question_id": "test-257",
+        "topic": "Quantitative Analysis & Valuation",
+        "matched_overlap_classes": [
+          "Core15: Value at Risk"
+        ],
+        "question_excerpt": "What is the standard deviation of the average weekly return if an investment analyst is estimating the VaR for a portfolio using a data set of 25 weekly returns, with an average weekly return of 7% and a standard deviation for the return series of 15%, given that the weekly returns are independent and identically distributed?",
+        "solution_excerpt": "def solution():\n    import math\n    st_dev = 15\n    sample_size = 25\n    st_dev_mean = st_dev / math.sqrt(sample_size)\n    return st_dev_mean"
+      },
+      {
+        "source_question_id": "test-271",
+        "topic": "Risk Management",
+        "matched_overlap_classes": [
+          "Core15: Value at Risk"
+        ],
+        "question_excerpt": "Assuming a functional procedure has a 5% chance of resulting in a substantial financial loss and if not, no significant loss is recorded (i.e., Bernoulli). If the substantial loss happens, the intensity is normally distributed with an average of $4 million and a standard deviation of $2 million. What is the expected shortfall at the 95% confidence ",
+        "solution_excerpt": "def solution():\n    return 4.0 # Return the mean of the normal distribution as per the given text solution."
+      },
+      {
+        "source_question_id": "test-279",
+        "topic": "Risk Management",
+        "matched_overlap_classes": [
+          "Core15: Value at Risk"
+        ],
+        "question_excerpt": "A portfolio manager possesses a portfolio of options on a non-dividend paying stock named LYR. The portfolio includes 10,000 deep in-the-money call options on LYR and 50,000 deep out-of-the money call options on LYR. Along with this, there are 20,000 forward contracts on LYR. The current trading price of LYR is USD 100. Given 252 trading days in a ",
+        "solution_excerpt": "def solution():\n    import math\n\n    call_option_delta = 1\n    deep_in_the_money_call = 10000\n    deep_out_of_the_money_call = 0\n    forward_contract_delta = 1\n    forward_contracts = 20000\n\n    alpha = 1.645\n    stock_price = 100\n    volatility = 0.3\n    trading_days = 252\n\n    net_portfolio_delta = (call_option_delta * deep_in_the_money_call) + (deep_out_of_the_money_call) + (forward_contract_delta * forward_contracts)\n\n    var_estimate = alpha"
+      },
+      {
+        "source_question_id": "test-283",
+        "topic": "Risk Management",
+        "matched_overlap_classes": [
+          "Core15: Value at Risk"
+        ],
+        "question_excerpt": "If an employee named Anna, FRM, who works as an analyst at Meyer Industries, is calculating the value at risk (VaR) for the company's profit/loss distribution, which is supposed to be normally distributed with a yearly average of $2 million and a standard deviation of $1 million, what would be the VaR at a 99% confidence level using a parametric me",
+        "solution_excerpt": "def solution():\n    mean = 2.0\n    std_dev = 1.0\n    z_value = 2.33\n    VaR = -(mean - z_value * std_dev)\n    return VaR"
+      },
+      {
+        "source_question_id": "test-30",
+        "topic": "Risk Management",
+        "matched_overlap_classes": [
+          "Core15: Value at Risk"
+        ],
+        "question_excerpt": "Assuming there are 250 trading days in a year, how would the daily VaR at 99% level change if the financial institution sells $50 worth of asset A and purchases $50 worth of asset B, given that the institution's trading portfolio includes two assets with a Correlation (A, B) = 0.2?",
+        "solution_excerpt": "def solution():\n    # constant values\n    var_multiplier = 2.33\n    trading_days = 250\n\n    # t = 0\n    mu_p1 = 13.33 / trading_days # convert from year to day\n    sigma_p1 = 19.15 / ((trading_days) ** 0.5) # convert from year to day\n    portfolio_value1 = 150 # $100A + $50B\n\n    # calculate daily 99% VaR for t = 0\n    daily_var1 = (var_multiplier * sigma_p1 - mu_p1) * portfolio_value1\n\n    # t = 1\n    mu_p2 = 16.66 / trading_days # convert from "
+      },
+      {
+        "source_question_id": "test-301",
+        "topic": "Risk Management",
+        "matched_overlap_classes": [
+          "Core15: Value at Risk"
+        ],
+        "question_excerpt": "When the 95% confidence level VaR model of Chase Corporation is being backtested using the data from the last 750 trading days, how many anticipated irregularities would we expect to find?",
+        "solution_excerpt": "def solution():\n    return (1 - 0.95) * 750"
+      },
+      {
+        "source_question_id": "test-310",
+        "topic": "Quantitative Analysis & Valuation",
+        "matched_overlap_classes": [
+          "Core15: Value at Risk"
+        ],
+        "question_excerpt": "A risk assessor is computing the VaR for a portfolio using a data set of 50 weekly returns. The average weekly return calculated from the sample is 8% with a standard deviation of 17%. Given that weekly returns are assumed to be independent and identically distributed, what is the standard deviation of the average weekly return?",
+        "solution_excerpt": "def solution():\n    import math\n    std_dev = 17\n    sample_size = 50\n    std_avg = std_dev / math.sqrt(sample_size)\n    return std_avg"
+      },
+      {
+        "source_question_id": "test-333",
+        "topic": "Risk Management",
+        "matched_overlap_classes": [
+          "Core15: Value at Risk"
+        ],
+        "question_excerpt": "Assuming there are 250 trading days in a year and the daily returns are independently and identically distributed, what is the highest number of daily losses over a 10-year period exceeding the 1-day 99.5% VaR that would still indicate the model being correctly calibrated, for a risk manager who is backtesting an organization's VaR model at the 95%",
+        "solution_excerpt": "def solution():\n    p = 0.005  # Tail probability\n    T = 10 * 250  # Total observations over 10 years\n    z = 1.96  # Two-tail confidence level quantile for 95% confidence level\n    \n    # Calculate x - maximum number of losses exceeding VaR to conclude model is correctly calibrated\n    x = p * T + z * ((p * (1 - p) * T)**0.5)\n    return int(x)  # Return integer value of x"
+      },
+      {
+        "source_question_id": "test-340",
+        "topic": "Quantitative Analysis & Valuation",
+        "matched_overlap_classes": [
+          "Core15: Value at Risk"
+        ],
+        "question_excerpt": "Using the hybrid approach, what is the 5% VaR for a portfolio with 100 weeks of return history, with its lowest returns over six weeks illustrated in the chart?",
+        "solution_excerpt": "def solution():\n    return 6 - (6 - 5.5) * (5 - 3.8) / (5.33 - 3.8)"
+      },
+      {
+        "source_question_id": "test-345",
+        "topic": "Risk Management",
+        "matched_overlap_classes": [
+          "Core15: Value at Risk"
+        ],
+        "question_excerpt": "What is the 99.9% credit var for a bond valued at $100 million that has a one-year cumulative default probability of 2% with no recovery rate and a 99.9% confidence level for the coming month?",
+        "solution_excerpt": "def solution():\n    probability_of_default_per_year = 0.02\n    value_of_bond = 100\n    # change yearly PD to monthly PD\n    probability_of_default_per_month = probability_of_default_per_year / 12\n\n    expected_loss = probability_of_default_per_month * value_of_bond\n    var = value_of_bond - expected_loss\n\n    return var"
+      },
+      {
+        "source_question_id": "test-367",
+        "topic": "Quantitative Analysis & Valuation",
+        "matched_overlap_classes": [
+          "Core15: Portfolio Std Dev"
+        ],
+        "question_excerpt": "Assume an investment portfolio consists of 40% in property A and 60% in property B. The average and variance of the return on A are 0 and 25 respectively. The average and variance of the return on B are 1 and 121 correspondingly. The correlation coefficient between A and B is 0.3. What is the closest estimate for portfolio volatility?",
+        "solution_excerpt": "def solution():\n    import math\n    variance_portfolio = math.pow(0.4, 2) * 25 + math.pow(0.6, 2) * 121 + 2 * 0.4 * 0.6 * 0.3 * math.sqrt(25*121)\n    volatility = math.sqrt(variance_portfolio) \n\n    return volatility"
+      },
+      {
+        "source_question_id": "test-461",
+        "topic": "Quantitative Analysis & Valuation",
+        "matched_overlap_classes": [
+          "Core15: Value at Risk"
+        ],
+        "question_excerpt": "Assuming there are 250 trading days in a year and the portfolio returns are independent and follow the same normal distribution with zero mean, what is the estimated yearly VaR at the 95% confidence level for a local credit union's investment securities portfolio that has a current market value of USD 3,700,000 with a daily variance of 0.0004?",
+        "solution_excerpt": "def solution():\n    market_value = 3700000\n    daily_variance = 0.0004\n    days = 250\n    z_value = 1.645\n\n    daily_standard_deviation = daily_variance ** 0.5\n    annual_var = market_value * (days ** 0.5) * daily_standard_deviation * z_value\n\n    return annual_var"
+      },
+      {
+        "source_question_id": "test-493",
+        "topic": "Asset Classes & Derivatives",
+        "matched_overlap_classes": [
+          "Historical-74: Duration gap"
+        ],
+        "question_excerpt": "A yearly coupon bond is valued at par value, with a coupon rate of 5%, and it will mature in 10 years. If one plans to invest for five years and the approximate modified duration of the bond is 6.872, what should the duration gap be at the point of buying?",
+        "solution_excerpt": "def solution():\n    modified_duration = 6.872\n    yield_to_maturity = 0.05\n    investment_horizon = 5\n\n    macaulay_duration = modified_duration * (1 + yield_to_maturity)\n    duration_gap = macaulay_duration - investment_horizon\n    \n    return duration_gap"
+      },
+      {
+        "source_question_id": "test-535",
+        "topic": "Risk Management",
+        "matched_overlap_classes": [
+          "Core15: Value at Risk"
+        ],
+        "question_excerpt": "A portfolio is made up of options on Apple and Verizon. The Apple options have a delta of 1000, while the Verizon options have a delta of 20000. The share price of Apple is $120, and Verizon's share price is $30. If we assume that the daily volatility of Apple is 2% and the daily volatility of Verizon is 1%, and the correlation between the daily ch",
+        "solution_excerpt": "def solution():\n    import math\n    VaR_Mic = 1.65 * 0.02 * 120 * 1000\n    VaR_AT_T = 1.65 * 0.01 * 30 * 20000\n    VaR = math.sqrt((VaR_Mic ** 2) + (VaR_AT_T ** 2) + 2 * 0.3 * VaR_Mic * VaR_AT_T) * math.sqrt(5)\n    return VaR"
+      },
+      {
+        "source_question_id": "test-575",
+        "topic": "Quantitative Analysis & Valuation",
+        "matched_overlap_classes": [
+          "Core15: Value at Risk"
+        ],
+        "question_excerpt": "Assuming 260 days a year, an option on the Nikkei stock index has a strike price at 3,000 Brazilian reais (BRL) with a delta of 0.6 and an annual volatility on the index of 24%. What is the 10-day VaR at 95% confidence level, under the delta-normal assumptions?",
+        "solution_excerpt": "def solution():\n    Z = 1.645\n    S = 3000\n    delta = 0.6\n    sigma = 0.24\n    T = 10\n\n    VaR = Z * S * delta * ((sigma / (260**0.5)) * (T**0.5))\n    \n    return int(VaR) # cast it as int to eliminate decimal places since BRL (Brazilian real) is written in integer values."
+      },
+      {
+        "source_question_id": "test-582",
+        "topic": "Risk Management",
+        "matched_overlap_classes": [
+          "Core15: Value at Risk"
+        ],
+        "question_excerpt": "How many exceptions in backtesting a VAR would we anticipate over a 250-day trading year if we hold a 90% confidence level?",
+        "solution_excerpt": "def solution():\n    p = 10 / 100\n    T = 250\n    return p * T"
+      },
+      {
+        "source_question_id": "test-613",
+        "topic": "Portfolio Management & Strategy",
+        "matched_overlap_classes": [
+          "Historical-74: Information ratio",
+          "Historical-74: Sharpe ratio"
+        ],
+        "question_excerpt": "Johnson requests his research team to generate risk and anticipated return predictions for Funds X, Y, and Z as well as the benchmark, shown in Exhibit 1. Johnson opts to introduce a fourth fund to his group, Fund W, that will utilize the same benchmark embedded in Exhibit 1. Given the information from Exhibit 1, what would be the Sharpe ratio if F",
+        "solution_excerpt": "def solution():\n    SR_B = 0.44\n    IR = 0.35\n    SR_P = (SR_B ** 2 + IR ** 2)**0.5\n    return SR_P"
+      },
+      {
+        "source_question_id": "test-624",
+        "topic": "Portfolio Management & Strategy",
+        "matched_overlap_classes": [
+          "Historical-74: Sharpe ratio"
+        ],
+        "question_excerpt": "What is the highest Sharpe ratio achievable by a fund manager when merging the S&P 500 benchmark portfolio and the Indigo Fund?",
+        "solution_excerpt": "def solution():\n    SRB = 0.333\n    IR = 0.15\n    SRP2 = (SRB**2) + (IR**2)\n    SRP = SRP2 ** 0.5\n    return SRP"
+      },
+      {
+        "source_question_id": "test-911",
+        "topic": "Asset Classes & Derivatives",
+        "matched_overlap_classes": [
+          "Historical-74: Loan-to-Value"
+        ],
+        "question_excerpt": "If a Property B has an appraised worth of $36,000,000 with a predicted Year 1 NOI of 900,000, What would be the highest loan amount that Property B could receive if the loan provider is interested in an interest-only loan at 5% mortgage rate, given that the maximum loan to value doesn't exceed 80% and the minimum debt service coverage ratio is no l",
+        "solution_excerpt": "def solution():\n    property_worth = 36000000\n    year1_noi = 900000\n    mortgage_rate = 0.05\n    max_ltv = 0.8\n    min_dscr = 1.2\n    \n    max_loan_ltv = property_worth * max_ltv\n    max_loan_dscr = (year1_noi / min_dscr) / mortgage_rate\n    \n    return min(max_loan_ltv, max_loan_dscr)"
+      },
+      {
+        "source_question_id": "test-94",
+        "topic": "Portfolio Management & Strategy",
+        "matched_overlap_classes": [
+          "Historical-74: Information ratio"
+        ],
+        "question_excerpt": "Assuming that active returns do not correlate, according to the basic law of active management, how many securities would a fund overseen by an investment strategist with a 0.75 information ratio, a 0.1819 information coefficient, and a transfer coefficient of 1.0 contain?",
+        "solution_excerpt": "def solution():\n    IR = 0.75\n    IC = 0.1819\n    TC = 1.0\n\n    BR = (IR / IC)**2 / TC\n\n    return int(BR)"
+      },
+      {
+        "source_question_id": "test-945",
+        "topic": "Portfolio Management & Strategy",
+        "matched_overlap_classes": [
+          "Core15: Value at Risk"
+        ],
+        "question_excerpt": "If a portfolio contains two investments, both of equal value, with a VaR of $15 million and $30 million respectively, and if these two investments are perfectly correlated, what would be the calculated VaR of the portfolio?",
+        "solution_excerpt": "def solution():\n    VAR1 = 15\n    VAR2 = 30\n    portfolio_VAR = VAR1 + VAR2\n    return portfolio_VAR"
+      },
+      {
+        "source_question_id": "test-97",
+        "topic": "Portfolio Management & Strategy",
+        "matched_overlap_classes": [
+          "Core15: Value at Risk"
+        ],
+        "question_excerpt": "If a risk analyst supposes the joint distribution of returns is multivariate normal and calculates the ensuing risk measures for a portfolio of two assets: what would be the decrease in portfolio VAR if we eliminate asset 2?",
+        "solution_excerpt": "def solution():\n    portfolio_VAR = 61.6\n    asset_1_VAR = 23.3\n    decrease_in_portfolio_VAR = portfolio_VAR - asset_1_VAR\n    return decrease_in_portfolio_VAR"
+      },
+      {
+        "source_question_id": "validation-171",
+        "topic": "Portfolio Management & Strategy",
+        "matched_overlap_classes": [
+          "Core15: Value at Risk"
+        ],
+        "question_excerpt": "What is the percent of contribution to VaR from Asset A in a portfolio, that comprises of two assets: A and B, where Asset A's value is $5,000,000 with a marginal VaR of 0.0452 and Asset B's value is $3,000,000 with a marginal VaR of 0.0332?",
+        "solution_excerpt": "def solution():\n    asset_A_value = 5000000\n    asset_B_value = 3000000\n    asset_A_MVaR = 0.0452\n    asset_B_MVaR = 0.0332\n    component_VaR_A = asset_A_value * asset_A_MVaR\n    component_VaR_B = asset_B_value * asset_B_MVaR\n    portfolio_VaR = component_VaR_A + component_VaR_B\n    percent_of_contribution_to_VaR_A = component_VaR_A / portfolio_VaR\n    return percent_of_contribution_to_VaR_A * 100"
+      },
+      {
+        "source_question_id": "validation-172",
+        "topic": "Risk Management",
+        "matched_overlap_classes": [
+          "Core15: Value at Risk"
+        ],
+        "question_excerpt": "An investment manager has a collection of options on XYZ, a stock that doesn't pay dividends. The collection consists of 5,000 deep in-the-money call options on XYZ and 20,000 deep out-of-the-money call options on XYZ. The portfolio also holds 10,000 future contracts on XYZ. Currently, XYZ is trading at USD 52. Given that there are 252 trading days",
+        "solution_excerpt": "def solution():\n    position_delta = 1*5000 + 0*20000 + 1*10000\n    price_per_share = 52\n    volatility = 0.12\n    confidence_level = 2.326\n    trading_days = 252\n\n    var = confidence_level * price_per_share * position_delta * volatility * (1/trading_days)**0.5\n\n    return var"
+      },
+      {
+        "source_question_id": "validation-180",
+        "topic": "Quantitative Analysis & Valuation",
+        "matched_overlap_classes": [
+          "Core15: Value at Risk"
+        ],
+        "question_excerpt": "The collection of investments includes two zero-coupon bonds, each priced at $10. The initial bond possesses a modified duration of a year, while the second bond carries a modified duration of nine years. With an even yield curve and a consistent yield of 5%, all alterations of the yield curve result in equal shifts. Given that the daily instabilit",
+        "solution_excerpt": "def solution():\n    dollar_duration = 1*10 + 9*10\n    daily_var = dollar_duration * 0.01 * 1.65\n    return daily_var"
+      },
+      {
+        "source_question_id": "validation-186",
+        "topic": "Quantitative Analysis & Valuation",
+        "matched_overlap_classes": [
+          "Core15: Value at Risk"
+        ],
+        "question_excerpt": "A financial expert is requested to calculate the VaR for a stake in Mega Healthcare Solutions Ltd. The firm's shares go for USD 26.00, with a daily volatility standing at 1.5%. Utilizing the delta-normal approach, what is the VaR at the 95% confidence level for a long position in an at-the-money put on this share with a delta of -0.5 spanning a 1-d",
+        "solution_excerpt": "def solution():\n    delta = 0.5\n    z_score = 1.645\n    volatility = 0.015\n    share_price = 26.0\n\n    Var = abs(delta) * z_score * volatility * share_price\n    return Var"
+      },
+      {
+        "source_question_id": "validation-193",
+        "topic": "Risk Management",
+        "matched_overlap_classes": [
+          "Core15: Value at Risk"
+        ],
+        "question_excerpt": "Assuming that a broker holds an option stance in crude oil exhibiting a delta of 100000 barrels and a gamma of -50000 barrels per dollar price shift, compute the VaR for this stance utilizing the delta-gamma approach, under the presumption that the maximum crude oil price shift is $2.00 per barrel.",
+        "solution_excerpt": "def solution():\n    Delta = 100000\n    Gamma = -50000\n    VAR_ds = 2\n\n    VAR_df = Delta * -VAR_ds + (1 / 2) * Gamma * VAR_ds ** 2\n    return VAR_df"
+      },
+      {
+        "source_question_id": "validation-4",
+        "topic": "Quantitative Analysis & Valuation",
+        "matched_overlap_classes": [
+          "Core15: Value at Risk"
+        ],
+        "question_excerpt": "A financial risk assessor at a local financial institution is working out the yearly VaR of a collection of investment securities. The collection presently has a market worth of USD 3,700,000 with a daily fluctuation of 0.0004. Provided that there are 250 days of trading in a year and the daily returns on the collection are autonomous and adhere to",
+        "solution_excerpt": "def solution():\n    worth = 3700000\n    volatility = 0.0004\n    days = 250\n    Z = 1.645\n    daily_std_dev = (volatility)**0.5\n    annual_VaR = worth * (days**0.5) * daily_std_dev * Z\n    return annual_VaR"
+      },
+      {
+        "source_question_id": "validation-48",
+        "topic": "Quantitative Analysis & Valuation",
+        "matched_overlap_classes": [
+          "Core15: Value at Risk"
+        ],
+        "question_excerpt": "A researcher is tasked with determining the VaR of a long position in a put option on the shares of Large Pharmaceuticals Corp. The shares are currently priced at USD 26.00, with a daily volatility rate of 1.5%, and the option is at-the-money with a delta of -0.5. What would be the 1-day 95% VaR of the option position, if calculated via the delta-n",
+        "solution_excerpt": "def solution():\n    delta = -0.5\n    rate = 0.015\n    price = 26\n    U = 1.645\n    sd = abs(delta) * (rate * price)\n    VaR = sd * U\n    return VaR"
+      },
+      {
+        "source_question_id": "validation-76",
+        "topic": "Asset Classes & Derivatives",
+        "matched_overlap_classes": [
+          "Historical-74: Duration gap"
+        ],
+        "question_excerpt": "When a trader buys an annual coupon bond with a 6% coupon rate and exactly 20 years left until it reaches maturity at a price that's equivalent to par value. The trader's investment duration is eight years. The approximate modified duration of the bond is 11.470 years. What is the duration gap at the moment of procurement?",
+        "solution_excerpt": "def solution():\n    modified_duration = 11.470\n    yield_to_maturity = 0.06\n    investment_horizon = 8\n    macaulay_duration = modified_duration * (1 + yield_to_maturity)\n    duration_gap = macaulay_duration - investment_horizon\n    return duration_gap"
+      }
+    ],
+    "counts_by_class": {
+      "Core15: Value at Risk": 26,
+      "Core15: Portfolio Std Dev": 1,
+      "Historical-74: Information ratio": 2,
+      "Historical-74: Sharpe ratio": 2,
+      "Historical-74: Loan-to-Value": 1,
+      "Historical-74: Convexity adjustment": 1,
+      "Historical-74: Duration gap": 3
+    }
+  },
+  "adjudication_boundary": {
+    "core15_overlap_status": "not_final_for_all_1200; keyword leads listed separately",
+    "historical_74_overlap_status": "not_final_for_all_1200; keyword leads listed separately",
+    "canonical_equation_family_ids": "provisional IDs only for 13 clusters",
+    "independence_status": "not_adjudicated",
+    "cohort_assignment": "not_assigned",
+    "registry_review_status": "unchanged_unreviewed"
+  }
+}

@@ -141,6 +141,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_fitting_audit: dict[str, Any] = {}
         self._last_v60_generation_audit: dict[str, Any] = {}
         self._last_v60_budget_runtime: DiscoveryBudgetRuntime | None = None
+        self._last_v60_activate_native_result = False
 
     def _reset_v60_call_state(self) -> None:
         """Clear every V60 audit before a new call to prevent cross-call leakage."""
@@ -498,7 +499,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             }
             if far_metadata_keys.intersection(prepared):
                 raise ValueError(
-                    "far/evaluation data must be supplied only to evaluate_native_far_set() after finalization"
+                    "far/evaluation arrays are not accepted in discovery metadata; supply them only to evaluate_native_far_set() after finalization"
                 )
             if run_context is None:
                 raise ValueError(

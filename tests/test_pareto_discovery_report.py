@@ -32,7 +32,7 @@ def _candidate(expression, seed, scores, *, eligible=True, outcomes=(), stabilit
 
 
 def test_pareto_report_retains_tradeoffs_and_excludes_dominated_candidate():
-    accurate_complex = _candidate("x**2", 1, [0.1, 0.5])
+    accurate_complex = _candidate("x**2", 1, [0.1, 0.2])
     balanced_simple = _candidate("x", 2, [0.2, 0.3])
     dominated = _candidate("x", 3, [0.4, 0.6])
 
@@ -105,7 +105,7 @@ def test_selected_candidate_soft_warning_is_preserved_in_report_status():
 
     assert report.status == "accepted_with_warnings"
     assert report.selected_candidate_id == candidate.candidate_id
-    assert report.candidates[0].metrics["pareto_selection"]["eligibility_reasons"] == []
+    assert report.candidates[0].metrics["pareto_selection"]["eligibility_reasons"] == ()
 
 
 

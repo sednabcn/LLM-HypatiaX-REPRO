@@ -156,7 +156,7 @@ on:
         default: "false"
 
       fresh_mode:
-        description: "Artifact-only fresh mode, currently restricted to exp1-provenance. Uses run/attempt-isolated results, disables checkpoint reuse/resume and skips all result commits."
+        description: "Artifact-only fresh mode for exp1-provenance only. Uses run/attempt-isolated results, disables checkpoint reuse/resume and skips all result commits."
         required: false
         type: choice
         options:
@@ -3335,6 +3335,26 @@ jobs:
           PY
           fi
 
+      - name: Exclude stale seed42 alias from Exp1 artifacts
+        if: ${{ needs.plan.outputs.exp_id == 'exp1' && steps.resolve_ids.outputs.has_work == 'true' }}
+        env:
+          RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+        run: |
+          set -euo pipefail
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
+          CANONICAL="${TARGET}/hypatiax_defi_benchmark_v3_results.json"
+          SEED42="${TARGET}/hypatiax_defi_benchmark_v3_results_seed42.json"
+          # The canonical Exp1 result is authoritative. If this run changed it
+          # but left the tracked seed42 alias untouched, that alias is a stale
+          # checkout copy: exclude it from this run's artifact, never from git.
+          if [[ -f "${CANONICAL}" && -f "${SEED42}" ]] \
+             && ! git diff --quiet HEAD -- "${CANONICAL}" \
+             && git diff --quiet HEAD -- "${SEED42}"; then
+            echo "Canonical Exp1 result changed; excluding unchanged seed42 alias from artifact."
+            rm "${SEED42}"
+          else
+            echo "Seed42 alias is absent or changed; preserving artifact contents."
+          fi
       - name: Upload shard results artifact
         if: always()
         uses: actions/upload-artifact@v4.3.6

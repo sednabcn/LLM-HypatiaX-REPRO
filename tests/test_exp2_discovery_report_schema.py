@@ -96,6 +96,7 @@ def test_soft_constraint_pareto_report_requires_consistent_audited_objective():
         "objectives": ["mean_declared_soft_constraint_violation_fraction_min"],
     })
     candidate = report["candidates"][0]
+    candidate["metrics"]["complexity"] = {"node_count": 4}
     candidate["constraint_outcomes"].append({
         "constraint_id": "soft_positive", "status": "fail", "severity": "soft",
         "reason": "one sampled violation",
@@ -227,7 +228,7 @@ def test_pareto_report_recomputes_front_and_deterministic_selected_candidate():
             lambda report: report["candidates"][0]["metrics"]["pareto_selection"]["objectives"].update(
                 mean_normalized_rmse=9.0
             ),
-            "recomputed objective front",
+            "underlying training evidence",
         ),
         (
             lambda report: report["candidates"][0]["metrics"]["pareto_selection"].update(
@@ -264,7 +265,7 @@ def test_pareto_report_rejects_inconsistent_membership_objectives_or_winner(muta
 
 def test_pareto_complexity_is_recomputed_when_source_metric_is_absent():
     report = _valid_pareto_report()
-    report["pareto_candidate_ids"] = ["candidate-1", "candidate-2"]
+    report["pareto_candidate_ids"] = ["candidate-1"]
     report["selected_candidate_id"] = "candidate-1"
     first = report["candidates"][0]
     del first["metrics"]["complexity"]
