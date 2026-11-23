@@ -172,4 +172,5 @@ def test_exp1b_store_and_upload_are_gated_on_successful_worker_execution():
     upload_end = workflow.index("\n      - name:", upload_start + 10)
     assert "steps.run_experiment.outcome == 'success'" in workflow[store_start:store_end]
     assert "steps.run_experiment.outcome == 'success'" in workflow[upload_start:upload_end]
+    assert "steps.store_results.outcome == 'success'" in workflow[upload_start:upload_end]
 
