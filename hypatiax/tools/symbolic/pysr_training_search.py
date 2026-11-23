@@ -76,25 +76,34 @@ def evaluate_pysr_search_on_training_folds(
     retained_models: list[Any] = []
     invocation_index = 0
 
-    def _search_and_predict(
-        X_fit: np.ndarray, y_fit: np.ndarray, X_validation: np.ndarray
-    ) -> tuple[np.ndarray, str]:
-        nonlocal invocation_index
-        fold = folds[invocation_index]
-        invocation_index += 1
+    # Construct and validate every fold-local searcher before entering the
+    # generic fold evaluator. That evaluator intentionally records ordinary
+    # per-fold fit failures as missing evidence; a reused model is instead a
+    # factory-contract violation and must surface directly to the caller.
+    for fold in folds:
         if budget_runtime is not None and budget_runtime.expired():
-            raise TimeoutError("discovery wall-time budget expired before training-fold search")
+            raise TimeoutError("discovery wall-time budget expired before training-fold searcher construction")
         fold_seed = int(seed + fold.repeat * 100_003 + fold.fold)
         model = searcher_factory(fold_seed)
         if model is None:
             raise ValueError("searcher_factory returned None")
         if any(model is previous for previous in retained_models):
-            raise FoldPredictorContractError("searcher_factory must return a fresh PySR model for every fold")
-        retained_models.append(model)
+            raise ValueError("searcher_factory must return a fresh PySR model for every fold")
         if not callable(getattr(model, "fit", None)) or not callable(
             getattr(model, "predict", None)
         ):
             raise TypeError("searcher must expose fit(X, y) and predict(X)")
+        retained_models.append(model)
+
+    def _search_and_predict(
+        X_fit: np.ndarray, y_fit: np.ndarray, X_validation: np.ndarray
+    ) -> tuple[np.ndarray, str]:
+        nonlocal invocation_index
+        fold = folds[invocation_index]
+        model = retained_models[invocation_index]
+        invocation_index += 1
+        if budget_runtime is not None and budget_runtime.expired():
+            raise TimeoutError("discovery wall-time budget expired before training-fold search")
         model.fit(X_fit, y_fit)
         if budget_runtime is not None and budget_runtime.expired():
             raise TimeoutError("training-fold search returned after discovery wall-time deadline")
