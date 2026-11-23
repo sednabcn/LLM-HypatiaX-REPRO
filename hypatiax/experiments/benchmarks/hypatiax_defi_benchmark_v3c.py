@@ -1099,11 +1099,19 @@ def _hybrid_predict_and_eval(
     )
     structural_tokens = structural_risk_tokens(llm_code)
     structural_risk_flag = bool(structural_tokens)
-    degradation_probe = (
+    # This NN-trained edge probe is a separate NN robustness diagnostic.
+    # It is NOT an estimate of the frozen LLM formula's degradation and must
+    # never be passed to the pure-LLM routing gate.
+    nn_degradation_probe = (
         _extrapolation_probe(X_train, y_train)
         if llm_trustworthy else
         {"status": "trust_gate_failed", "delta": None, "r2_train": None, "r2_edge": None}
     )
+    # The LLM-specific calibration cohort/manifest is not yet ready. Keep the
+    # LLM degradation estimand explicitly unavailable and fail closed even if
+    # an NN-derived probe or an environment tau happens to be present.
+    llm_degradation_delta = None
+    llm_degradation_status = "not_calibrated"
     degradation_tau = _routing_delta_tau()
     try:
         ood_diagnostic = kde_ood_probability(X_train, X_test)
@@ -1119,7 +1127,7 @@ def _hybrid_predict_and_eval(
                            "nn": (1.0 - llm_w).astype(float).tolist()}
     policy = route_decision_from_diagnostics(
         bool(llm_trustworthy), llm_train_r2, structural_tokens,
-        degradation_probe.get("delta"), degradation_tau,
+        llm_degradation_delta, degradation_tau,
     )
     decision = "llm" if policy["decision"] == "fitted_llm" else policy["decision"]
     route_reason = policy["route_reason"]
@@ -1346,7 +1354,12 @@ def _hybrid_predict_and_eval(
         "route_execution_status": route_execution_status,
         "structural_risk_flag": structural_risk_flag,
         "structural_risk_tokens": structural_tokens,
-        "degradation_probe": degradation_probe, "degradation_tau": degradation_tau,
+        # Keep the legacy name as an alias while making its NN provenance explicit.
+        "degradation_probe": nn_degradation_probe,
+        "nn_degradation_probe": nn_degradation_probe,
+        "llm_degradation_delta": llm_degradation_delta,
+        "llm_degradation_status": llm_degradation_status,
+        "degradation_tau": degradation_tau,
         "ood_diagnostic": ood_diagnostic,
         "ood_covariate_protocol": {
             "density_fit_rows": "X_train", "query_rows": "X_test",
