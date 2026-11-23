@@ -53,3 +53,31 @@ The 127 literal-unique formulas are **not yet 127 certified independent units**.
 ## Next review required
 
 A second reviewer should inspect the tagged candidate pairs/groups, especially parameterized/free-coefficient forms and the shared radial, damped-oscillatory, and piecewise templates. Any merged family must receive a documented canonical formula and rationale. The four historical expressions are now source-recovered, but their provenance must remain marked as protocol-derived rather than artifact-stored.
+
+
+## Second-pass review of the eight repeated-template groups
+
+A second symbolic-structure pass reviewed the eight groups member-by-member. It does **not** create additional canonical equation families:
+
+| Group | Second-pass finding | Decision |
+|---|---|---|
+| Radial Gaussian envelope | Exact `exp(-(x²+y²))` factor occurs with different multipliers/addends; other members vary the damping coefficient. | Shared factor only; no whole-equation merge |
+| Radial square-root | `OCS6` and `OCS10` share `cos(sqrt(x²+y²))`, but multiply it by different functions. Other members use distinct compositions. | Shared factor only |
+| Radial logarithm | `EBS7` is the standalone logarithm; the other members combine it with different functions and operations. | Shared subexpression only |
+| `sin(x*y)` | `EBS9` is standalone; the other records compose, modulate, divide, add, or branch on the term. | Shared subexpression only |
+| Piecewise/discrete | Predicates and branch functions differ. Integer-grid floor/modulo records have a different input-domain stratum from continuous surfaces. | No merge; keep discrete stratum separate |
+| `exp(-Abs(x-y))` | `EBS10` is the envelope alone; `OCS8` multiplies it by an oscillatory term. | Shared envelope only |
+| `sin(x)*cos(y)` | `PTM5 = EBS2 + 0.1*x*y`. | Candidate parameterized extension; source provenance needed |
+| `tanh(x*y)` | Same subexpression appears with distinct additive and multiplicative compositions. | Shared subexpression only |
+
+### Pair requiring source-level review
+
+`EBS2` and `PTM5` are not equivalent as written. They may be related by a parameterized generator in which the cross-coordinate coefficient is zero for one instance and nonzero for the other, but the catalog formulae alone do not establish that provenance. Keep them separate provisionally and do not count either as independent until the upstream generation metadata is checked.
+
+### Second-pass decision and limits
+
+- The only established whole-equation duplicate remains `NACS1 = TECS7`.
+- No further whole-equation family merges are justified by these eight shared-template groups.
+- The integer-grid `DIGS*` cases are a distinct input-domain stratum and should not be pooled with continuous `x,y` surfaces without an explicit protocol rationale.
+- This is a targeted second pass over the eight pre-identified groups, not an exhaustive all-pairs equivalence proof or a proof of independent data generation.
+- All canonical family IDs, independence statuses, and cohort assignments remain unresolved/null. No tau or routing change follows from this review.
