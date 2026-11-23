@@ -577,3 +577,44 @@ def test_exp1_nn_constant_test_target_records_undefined_r2_status():
     assert result["test_r2_status"] == "degenerate_target"
     assert np.isnan(result["test_r2"])
     assert result["success"] is False
+
+
+
+def test_exp1_nn_probe_never_drives_the_llm_degradation_gate(monkeypatch):
+    _common(monkeypatch, "ensemble")
+    Xtr, ytr, Xte, yte = _inputs()
+    nn_probe = {
+        "status": "ok", "delta": 0.0,
+        "r2_train": 0.99, "r2_edge": 0.99,
+    }
+    monkeypatch.setattr(bench, "_extrapolation_probe", lambda *a, **k: nn_probe)
+    # Even a configured tau cannot make an NN statistic an LLM statistic.
+    monkeypatch.setattr(bench, "_routing_delta_tau", lambda: 0.1)
+    captured = {}
+
+    def capture_route(
+        trust_gate_passed, fitted_train_r2, structural_tokens,
+        degradation_delta=None, degradation_tau=None,
+    ):
+        captured["delta"] = degradation_delta
+        captured["tau"] = degradation_tau
+        return {"decision": "ensemble", "route_reason": "offline test route"}
+
+    monkeypatch.setattr(bench, "route_decision_from_diagnostics", capture_route)
+    nn_result = {
+        "train_r2": 0.7, "test_r2": 0.2, "success": True,
+        "y_pred_train": np.full(len(ytr), 0.4),
+        "y_pred_test": np.full(len(yte), 0.4),
+    }
+
+    result = bench._hybrid_predict_and_eval(
+        "fixture", "defi", Xtr, ytr, Xte, yte, ["x"], {},
+        nn_result=nn_result,
+    )
+
+    assert captured == {"delta": None, "tau": 0.1}
+    assert result["nn_degradation_probe"] == nn_probe
+    assert result["degradation_probe"] == nn_probe  # legacy alias
+    assert result["llm_degradation_delta"] is None
+    assert result["llm_degradation_status"] == "not_calibrated"
+    assert result["decision"] == "ensemble"
