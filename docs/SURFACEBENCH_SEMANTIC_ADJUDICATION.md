@@ -20,6 +20,24 @@
 5. The candidate formulas share broad construction patterns: radial quadratic invariants, Gaussian/exponential envelopes, oscillatory trigonometric/hyperbolic components, piecewise regimes, coupled bivariate interactions, and free symbolic coefficients. These are **template annotations**, not equivalence classes. Different branch conditions, radial envelopes, coefficients, and base functions mean the tag alone cannot merge records into one equation family.
 6. OOD renderings are not counted as separate equations; each is a view of its source equation.
 
+
+## Within-source repeated-template groups
+
+The JSON now enumerates eight concrete repeated-subexpression/template groups with member IDs. These are reviewer queues, **not** equivalence classes or independent-family assignments:
+
+| Shared construction | SurfaceBench IDs | Interpretation |
+|---|---|---|
+| `exp(-a*(x²+y²))` radial Gaussian envelope | NACS3, NACS10, MTAS3, NCS2, NCS6, EMTS1, EMTS7, LRDS1, LRDS2, LRDS3, LRDS4, LRDS8, PTM3, MOCS10, EBS3, TECS2 | Same parameterized envelope; coefficients and remaining factors differ |
+| Radial square-root construction | NACS9, MTAS6, OCS6, OCS10, TECS1, MOCS5, MOCS8, NCS4, LRDS6 | Shared radial-root argument/factor; surrounding functions differ |
+| `log(1+x²+y²)` | NACS5, TECS4, MOCS1, EBS7, PTM2 | Shared subexpression used as factor, standalone surface, or additive term |
+| `sin(x*y)` | NACS4, NACS11, OCS3, OCS4, TECS3, CMRS7, EBS9 | Direct, nested, piecewise, and envelope-modulated appearances |
+| Piecewise/discrete regimes | PDS1–PDS6, PDS8–PDS10, CMRS1–CMRS4, CMRS6–CMRS9, MOCS7, DIGS3, DIGS4, DIGS7, DIGS9, DIGS10 | Shared regime structure; predicates and branch expressions differ |
+| `exp(-Abs(x-y))` | OCS8, EBS10 | Shared factor; one record multiplies it by an oscillatory term |
+| `sin(x)*cos(y)` | EBS2, PTM5 | Shared subexpression; PTM5 adds a cross-coordinate term |
+| `tanh(x*y)` | MTAS2, OCS10, PTM8 | Shared subexpression with different surrounding terms |
+
+The group membership is deliberately conservative and explicit. A common subexpression, envelope, or branch mechanism is insufficient to merge two equations: each proposed family merge still needs a canonicalized formula and a mathematical rationale. The JSON preserves `canonical_equation_family_id=null` and `independence_status=not_adjudicated` for every record.
+
 ## Adjudication policy
 
 - Exact duplicates are one equation.
