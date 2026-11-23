@@ -94,3 +94,56 @@ def test_exp1b_sweep_records_selected_route_and_explicit_nn_seed():
     ):
         assert field in source
 
+def test_exp1b_runtime_output_paths_are_expanded_not_literal_directory_names():
+    source = RUNNER.read_text()
+    start = source.index('run exp1b "')
+    end = source.index('\nrun portfolio "', start)
+    block = source[start:end]
+
+    # The command is nested in bash -c "...": escape for the parent shell, but
+    # use double quotes in the child so RESULTS_DIR expands at execution time.
+    assert 'dest15="' + chr(92) + '$' + '{RESULTS_DIR}/comparison_results/noise-noiseless/15"' in block
+    assert '_PVA_DIR="' + chr(92) + '$' + '{RESULTS_DIR}/portfolio_variance_audit"' in block
+    assert "dest15='" + chr(92) + '$' + '{RESULTS_DIR}' not in block
+    assert "_PVA_DIR='" + chr(92) + '$' + '{RESULTS_DIR}' not in block
+
+
+def test_exp1b_store_step_requires_fresh_benchmark_and_refreshes_tracked_sweep():
+    workflow = (ROOT / ".github/workflows/ci_runner_repro.yml").read_text()
+    store_start = workflow.index("- name: Store results in canonical RESULT_SUBDIR")
+    store_end = workflow.index("\n      - name:", store_start + 10)
+    store = workflow[store_start:store_end]
+
+    assert "exp1b fresh benchmark output missing" in store
+    assert "Never replace it with the old canonical seed file." in store
+    assert 'cp -f "' + chr(92) + '$' + '{src}" "' + chr(92) + '$' + '{dest_f}"' in store
+    assert "REFRESH: published fresh" in store
+    assert 'SKIP: ' + chr(92) + '$' + '{fname} is git-tracked in dest — committed prior result, skipping.' not in store
+
+
+def test_exp1b_verification_checks_fresh_seed_and_portfolio_provenance():
+    workflow = (ROOT / ".github/workflows/ci_runner_repro.yml").read_text()
+    start = workflow.index("- name: Verify exp1b output files exist")
+    end = workflow.index("\n      - name:", start + 10)
+    verify = workflow[start:end]
+
+    for token in (
+        r"portfolio_seed(\d+)",
+        "portfolio_variance_defi_seed_sweep_seed",
+        '"seeds_run"',
+        '"nn_seed"',
+        '"test_r2"',
+        '"far_r2"',
+        '"route_execution_status"',
+        '"score_semantics"',
+        "far_r2 must remain an alias of test_r2",
+    ):
+        assert token in verify
+
+
+def test_exp1b_seeds_planner_uses_one_worker_per_configured_seed():
+    workflow = (ROOT / ".github/workflows/ci_runner_repro.yml").read_text()
+    assert "DEFAULT_SEEDS" in workflow and "99,123,777,2024" in workflow
+    assert 'N_SHARDS = max(1, len(SEEDS))' in workflow
+    assert '"exp1b_seeds":       [f"{d}_seed{s}" for s in SEEDS for d in DEFI_TASKS]' in workflow
+
