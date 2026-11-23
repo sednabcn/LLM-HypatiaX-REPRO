@@ -47,6 +47,34 @@ def _common(monkeypatch, route):
     monkeypatch.setattr(bench, "_execute_formula", lambda code, x, **k: np.full(len(x), 0.5))
 
 
+def test_exp1_hybrid_forwards_explicit_nn_seed(monkeypatch):
+    _common(monkeypatch, "nn")
+    Xtr, ytr, Xte, yte = _inputs()
+    captured = {}
+
+    monkeypatch.setattr(
+        bench, "_generate_llm_formula",
+        lambda *a, **k: {"python_code": None, "llm_called": False},
+    )
+
+    def fake_nn(*args, **kwargs):
+        captured["seed"] = kwargs.get("seed")
+        return {
+            "train_r2": 0.5, "test_r2": 0.25, "success": True,
+            "y_pred_train": np.full(len(ytr), 0.4),
+            "y_pred_test": np.full(len(yte), 0.4),
+        }
+
+    monkeypatch.setattr(bench, "_train_and_eval_nn", fake_nn)
+    result = bench._hybrid_predict_and_eval(
+        "fixture", "defi", Xtr, ytr, Xte, yte, ["x"], {}, nn_seed=321
+    )
+
+    assert captured["seed"] == 321
+    assert result["train_r2"] == 0.5
+    assert result["test_r2"] == 0.25
+
+
 def test_exp1_ensemble_training_metric_is_for_the_ensemble(monkeypatch):
     _common(monkeypatch, "ensemble")
     Xtr, ytr, Xte, yte = _inputs()
@@ -446,6 +474,7 @@ def test_exp1_hybrid_abstention_bypasses_ensemble_and_records_zero_nn_weight(mon
     assert result["test_r2"] == 0.15
     assert result["train_r2_source"] == "nn_abstention_log_ridge"
     assert result["route_execution_status"] == "nn_abstention_fallback_executed"
+    assert result["decision"] == "nn_abstention_fallback"
     assert result["blend_weights"]["nn"] == [0.0] * len(yte)
     assert result["blend_weights"]["llm"] == [0.0] * len(yte)
     assert result["blend_weights"]["replacement"] == [1.0] * len(yte)
@@ -503,6 +532,7 @@ def test_exp1_nn_route_records_abstention_replacement_status(monkeypatch):
     assert result["nn_selected_model"] == "training_mean"
     assert result["train_r2_source"] == "nn_abstention_training_mean"
     assert result["route_execution_status"] == "nn_abstention_fallback_executed"
+    assert result["decision"] == "nn_abstention_fallback"
     assert result["blend_weights"]["nn"] == [0.0] * len(yte)
     assert result["blend_weights"]["llm"] == [0.0] * len(yte)
     assert result["blend_weights"]["replacement"] == [1.0] * len(yte)
