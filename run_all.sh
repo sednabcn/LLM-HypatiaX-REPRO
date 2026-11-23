@@ -519,6 +519,13 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
   dest15="\${RESULTS_DIR}/comparison_results/noise-noiseless/15"
   mkdir -p "\${dest15}"
   IFS=',' read -r -a _SEEDS <<< "\${_SHARD_SEEDS}"
+  # Remove only this worker's previous shard outputs before computing. If this
+  # attempt fails, the publisher must not mistake an old file for fresh.
+  for _SEED in "\${_SEEDS[@]}"; do
+    _TAG=''; [[ "\${_SEED}" == '42' ]] || _TAG="_seed\${_SEED}"
+    _OLD_BENCH_PUBLISH="\${dest15}/hypatiax_defi_benchmark_v3_results\${_TAG}_shard\${_SHARD}.json"
+    rm -f "\${_OLD_BENCH_PUBLISH}"
+  done
   _SHARD=\${SHARD_INDEX:-0}
   _EXP1B_TMP="\${RUNNER_TEMP:-/tmp}/hypatiax-exp1b-\${GITHUB_RUN_ID:-local}-shard\${_SHARD}"
   _BENCH_TMP="\${_EXP1B_TMP}/benchmark"
@@ -550,6 +557,8 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
   _PV_TAG=\$(echo \"\${_SHARD_SEEDS}\" | tr ',' '_')
   _PV_FILE=\"\${_PVA_TMP}/portfolio_variance_defi_seed_sweep_seed\${_PV_TAG}.json\"
   rm -f \"\${_PV_FILE}\"
+  _PV_PUBLISH=\"\${_PVA_DIR}/portfolio_variance_defi_seed_sweep_seed\${_PV_TAG}_shard\${SHARD_INDEX:-0}.json\"
+  rm -f \"\${_PV_PUBLISH}\"
   echo \"[exp1b] Running portfolio_variance_v3c2.py (Strategy A, sweep-only) for seed(s): \${_SHARD_SEEDS}\"
   (
     set -o pipefail
@@ -566,7 +575,6 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
     exit 1
   fi
   echo \"[exp1b] OK portfolio sweep written: \${_PV_FILE}\"
-  _PV_PUBLISH="\${_PVA_DIR}/portfolio_variance_defi_seed_sweep_seed\${_PV_TAG}_shard\${SHARD_INDEX:-0}.json"
   cp -f "\${_PV_FILE}" "\${_PV_PUBLISH}"
   _SHARD=\${SHARD_INDEX:-0}
   _SEED_TAG=\$(echo \"\${_SHARD_SEEDS:-42}\" | tr ',' '_')
