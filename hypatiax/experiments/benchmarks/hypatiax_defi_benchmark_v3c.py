@@ -102,7 +102,7 @@ Fix 13  LLM model updated: Sonnet 4.5 → Sonnet 4.6 (id pinned in code).
 
 Denominator fix (updated)
 ──────────────────────────
-74 cases total; 0 intractable.  The 3 formerly skipped cases are now
+74 cases total; 1 intractable (IL breakeven), leaving 73 standard cases.\nThe 3 formerly skipped cases are now
 included in the denominator, raising it from the effective 71 in v3.0
 back to the intended 74.
 
@@ -1448,7 +1448,7 @@ def build_extrap_split(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SECTION 7 — Test catalogue (74 cases, 0 intractable)
+# SECTION 7 — Test catalogue (74 cases, 1 intractable)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _get_test_cases() -> list[dict]:
@@ -1578,21 +1578,55 @@ def _normalize_saved_record(record: dict) -> dict:
     return record
 
 
-def _validate_result_records(records: list, require_il_record: bool = False) -> None:
-    """Fail closed when serialized diagnostics or abstention weights are invalid."""
+def _validate_result_records(
+    records: list,
+    require_il_record: bool = False,
+    require_complete: bool = False,
+) -> None:
+    """Fail closed on malformed, duplicate, unexpected, or incomplete DeFi-74 records.
+
+    Checkpoint writes may contain a valid partial subset. Final benchmark output
+    must contain every catalogue case exactly once.
+    """
     if not isinstance(records, list) or not records:
         raise ValueError("Benchmark results must be a non-empty list")
 
+    expected_ids = [tc["name"] for tc in _get_test_cases()]
+    expected_set = set(expected_ids)
+    observed_ids = []
     il_records = []
     errors = []
-    for record in records:
-        equation_id = str(record.get("equation_id", "<unknown>"))
+
+    for index, record in enumerate(records):
+        if not isinstance(record, dict):
+            errors.append(f"record[{index}] must be an object")
+            continue
+        equation_id = str(record.get("equation_id", "")).strip()
+        if not equation_id:
+            errors.append(f"record[{index}] is missing equation_id")
+            continue
+        observed_ids.append(equation_id)
+        if equation_id not in expected_set:
+            errors.append(f"{equation_id}: unexpected case ID")
+
+        expected_case = next(
+            (case for case in _get_test_cases() if case["name"] == equation_id),
+            None,
+        )
+        if expected_case is not None:
+            expected_intractable = _is_intractable_case(expected_case)
+            if record.get("extrapolation_intractable") is not expected_intractable:
+                errors.append(
+                    f"{equation_id}: extrapolation_intractable must be "
+                    f"{expected_intractable}"
+                )
         if "impermanent loss breakeven" in equation_id.lower():
             il_records.append(record)
-            if record.get("extrapolation_intractable") is not True:
-                errors.append(f"{equation_id}: extrapolation_intractable must be true")
 
         result_arms = record.get("results", {})
+        if not isinstance(result_arms, dict):
+            errors.append(f"{equation_id}: results must be an object")
+            continue
         for arm in ("neural_network", "hybrid"):
             data = result_arms.get(arm)
             if not isinstance(data, dict):
@@ -1625,6 +1659,23 @@ def _validate_result_records(records: list, require_il_record: bool = False) -> 
                 errors.append(
                     f"{equation_id}: abstained hybrid must save all-zero NN blend weights"
                 )
+
+    duplicates = sorted({case_id for case_id in observed_ids if observed_ids.count(case_id) > 1})
+    if duplicates:
+        errors.append("duplicate case IDs: " + ", ".join(duplicates))
+
+    if require_complete:
+        missing = sorted(expected_set - set(observed_ids))
+        if missing:
+            errors.append(
+                f"incomplete DeFi-74 result: expected {len(expected_ids)} unique cases, "
+                f"found {len(set(observed_ids))}; missing: " + ", ".join(missing)
+            )
+        if len(records) != len(expected_ids):
+            errors.append(
+                f"incomplete DeFi-74 result: expected exactly {len(expected_ids)} records, "
+                f"found {len(records)}"
+            )
 
     if require_il_record and not il_records:
         errors.append("IL breakeven record is missing")
@@ -1663,7 +1714,7 @@ def _save_checkpoint(results: list):
 
 
 def _save_final(results: list, require_il_record: bool = True):
-    _validate_result_records(results, require_il_record=require_il_record)
+    _validate_result_records(results, require_il_record=require_il_record, require_complete=require_il_record)
     def _default(obj):
         if isinstance(obj, (np.integer,)):         return int(obj)
         if isinstance(obj, (np.floating, float)):
@@ -1683,7 +1734,7 @@ def _save_final(results: list, require_il_record: bool = True):
 _INTRACTABLE_NAMES = {
     tc["name"] for tc in _get_test_cases() if _is_intractable_case(tc)
 }
-_STANDARD_TOTAL = len(_get_test_cases()) - len(_INTRACTABLE_NAMES)  # = 66 + adjustments
+_STANDARD_TOTAL = len(_get_test_cases()) - len(_INTRACTABLE_NAMES)  # 73 standard cases
 
 
 def _generate_report(results: list):
@@ -1711,8 +1762,9 @@ def _generate_report(results: list):
             "catastrophic":  int(np.sum(arr < CLIP_LO)),
         }
 
-    # Fixed denominator = number of STANDARD cases run so far
-    denom = max(len(standard), 1)
+    # Fixed denominator: 74 catalogue cases minus the single intractable case.
+    # Missing records must never shrink the denominator or inflate percentages.
+    denom = _STANDARD_TOTAL
 
     print("\n" + "=" * 80)
     print("STATISTICAL REPORT — HypatiaX DeFi Benchmark v3.0")
@@ -1929,16 +1981,17 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
             protocol_cases = protocol.load_test_data(
                 tc["domain"], num_samples=tc["num_samples"]
             )
-            match = next(
-                ((d, X, y, v, m) for d, X, y, v, m in protocol_cases
-                 if tc["name"].lower() in d.lower()),
-                None,
-            )
-            if not match:
-                print(f"  ⚠️  No protocol match for '{tc['name']}' — skipping")
-                continue
+            matches = [
+                (d, X, y, v, m) for d, X, y, v, m in protocol_cases
+                if tc["name"].lower() in d.lower()
+            ]
+            if len(matches) != 1:
+                raise ValueError(
+                    f"Expected exactly one protocol match for {tc['name']!r}; "
+                    f"found {len(matches)}"
+                )
 
-            desc, X_full, y_full, var_names, metadata = match
+            desc, X_full, y_full, var_names, metadata = matches[0]
             _is_il_breakeven = "impermanent loss breakeven" in tc["name"].lower()
             metadata.update({
                 "extrapolation_test": (
@@ -2181,6 +2234,10 @@ def report_only():
     else:
         src = FINAL_OUTPUT
     results = json.loads(src.read_text())
+    if src == FINAL_OUTPUT:
+        _validate_result_records(
+            results, require_il_record=True, require_complete=True
+        )
     _generate_report(results)
 
 
