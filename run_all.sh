@@ -519,6 +519,7 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
   dest15="\${RESULTS_DIR}/comparison_results/noise-noiseless/15"
   mkdir -p "\${dest15}"
   IFS=',' read -r -a _SEEDS <<< "\${_SHARD_SEEDS}"
+  _SHARD=\${SHARD_INDEX:-0}
   # Remove only this worker's previous shard outputs before computing. If this
   # attempt fails, the publisher must not mistake an old file for fresh.
   for _SEED in "\${_SEEDS[@]}"; do
