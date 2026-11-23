@@ -16,11 +16,11 @@ def test_exp1b_benchmark_uses_its_declared_portfolio_case_filter():
     end = source.index('\nrun portfolio "', start)
     block = source[start:end]
 
-    assert 'DEFI_TASK_FILTER="Portfolio"' in block
-    assert 'DEFI_SEEDS="' + chr(92) + '$' + '{_SHARD_SEEDS}"' in block
-    assert 'PYSR_SEED="' + chr(92) + '$' + '{_SEEDS[0]}"' in block
-
-
+    quote = chr(92) + chr(34)
+    escaped_var = chr(92) + chr(36)
+    assert 'DEFI_TASK_FILTER=' + quote + 'Portfolio' + quote in block
+    assert 'DEFI_SEEDS=' + quote + escaped_var + '{_SHARD_SEEDS}' + quote in block
+    assert 'PYSR_SEED=' + quote + escaped_var + '{_SEEDS[0]}' + quote in block
 def test_exp1b_sweep_only_does_not_run_the_seed42_single_case_twice():
     source = BENCHMARK.read_text()
     tree = ast.parse(source)
@@ -102,14 +102,12 @@ def test_exp1b_runtime_output_paths_are_expanded_not_literal_directory_names():
     end = source.index('\nrun portfolio "', start)
     block = source[start:end]
 
-    # The command is nested in bash -c "...": escape for the parent shell, but
-    # use double quotes in the child so RESULTS_DIR expands at execution time.
-    assert 'dest15="' + chr(92) + '$' + '{RESULTS_DIR}/comparison_results/noise-noiseless/15"' in block
-    assert '_PVA_DIR="' + chr(92) + '$' + '{RESULTS_DIR}/portfolio_variance_audit"' in block
-    assert "dest15='" + chr(92) + '$' + '{RESULTS_DIR}' not in block
-    assert "_PVA_DIR='" + chr(92) + '$' + '{RESULTS_DIR}' not in block
-
-
+    quote = chr(92) + chr(34)
+    escaped_var = chr(92) + chr(36)
+    assert 'dest15=' + quote + escaped_var + '{RESULTS_DIR}/comparison_results/noise-noiseless/15' + quote in block
+    assert '_PVA_DIR=' + quote + escaped_var + '{RESULTS_DIR}/portfolio_variance_audit' + quote in block
+    assert "dest15='" + escaped_var + '{RESULTS_DIR}' not in block
+    assert "_PVA_DIR='" + escaped_var + '{RESULTS_DIR}' not in block
 def test_exp1b_store_step_requires_fresh_benchmark_and_refreshes_tracked_sweep():
     workflow = WORKFLOW.read_text()
     store_start = workflow.index("- name: Store results in canonical RESULT_SUBDIR")
@@ -158,6 +156,8 @@ def test_exp1b_clears_only_its_own_shard_outputs_before_rerun():
     end = source.index('\nrun portfolio "', start)
     block = source[start:end]
 
-    assert '_SHARD=' + chr(92) + chr(36) + '{SHARD_INDEX:-0}' in block
-    assert 'rm -f "' + chr(92) + chr(36) + '{_OLD_BENCH_PUBLISH}"' in block
-    assert 'rm -f ' + chr(92) + '"' + chr(92) + chr(36) + '{_PV_PUBLISH}' + chr(92) + '"' in block
+    quote = chr(92) + chr(34)
+    escaped_var = chr(92) + chr(36)
+    assert '_SHARD=' + escaped_var + '{SHARD_INDEX:-0}' in block
+    assert 'rm -f ' + quote + escaped_var + '{_OLD_BENCH_PUBLISH}' + quote in block
+    assert 'rm -f ' + quote + escaped_var + '{_PV_PUBLISH}' + quote in block
