@@ -2158,6 +2158,10 @@ jobs:
                   echo "  COLLISION: ${fname} already in dest — storing as $(basename "$dest_f")"
                 fi
                 cp -v "$f" "${dest_f}"
+                # Restore any tracked canonical seed artifact after taking the shard copy.
+                if git ls-files --error-unmatch "$f" >/dev/null 2>&1; then
+                  git checkout -- "$f"
+                fi
                 pva_copied=$((pva_copied + 1))
               done < <(find "${PVA_DIR}" -type f \( -name "*.json" -o -name "*.csv" \))
               if [[ $pva_copied -gt 0 ]]; then
