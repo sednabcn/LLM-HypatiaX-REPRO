@@ -532,7 +532,7 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
   for _SEED in "\${_SEEDS[@]}"; do
     _TAG=''; [[ "\${_SEED}" == '42' ]] || _TAG="_seed\${_SEED}"
     _BENCH="\${_BENCH_TMP}/hypatiax_defi_benchmark_v3_results\${_TAG}.json"
-    [[ -s "\${_BENCH}" ]] || { echo "::error::exp1b missing benchmark JSON for seed \${_SEED}"; exit 1; }
+    [[ -s "\${_BENCH}" ]] || { echo \"::error::exp1b missing benchmark JSON for seed \${_SEED}\"; exit 1; }
     _PUBLISH="\${dest15}/hypatiax_defi_benchmark_v3_results\${_TAG}_shard\${_SHARD}.json"
     cp -f "\${_BENCH}" "\${_PUBLISH}"
   done
