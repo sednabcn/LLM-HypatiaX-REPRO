@@ -1936,39 +1936,16 @@ jobs:
                               f"hypatiax/data/results/portfolio_variance_audit/*seed_sweep_seed{s}*.json",
                           ]
                   elif EXP == "exp1b":
-                      shard_ids_local = json.loads(os.environ.get("SHARD_IDS") or "[]")
-                      seeds_this_shard = [
-                          tid[len("portfolio_seed"):] for tid in shard_ids_local
-                      ]
-                      PVA_DIR = "hypatiax/data/results/portfolio_variance_audit"
-                      REAL_NAMES = [
-                          "hypatiax_defi_benchmark*results*.json",
-                          "hypatiax_defi_benchmark*checkpoint*.json",
-                      ]
-                      combined_globs = []
-                      for s in seeds_this_shard:
-                          combined_globs += [
-                              f"*comparison_FIXED_*seed{s}*.json",
-                              f"*comparison_FIXED_*seed{s}*.csv",
-                              f"{PVA_DIR}/*seed{s}*.json",
-                              f"{PVA_DIR}/*seed{s}*.csv",
-                              f"{PVA_DIR}/**/*seed{s}*.json",
-                              f"{PVA_DIR}/**/*seed{s}*.csv",
-                          ]
-                      for pat in REAL_NAMES:
-                          combined_globs += [
-                              pat,                      # CWD root
-                              f"{PVA_DIR}/{pat}",        # known stray dir, flat
-                              f"{PVA_DIR}/**/{pat}",     # known stray dir, nested
-                              f"hypatiax/data/results/**/{pat}",  # anywhere under OUT_BASE
-                          ]
-                      if not combined_globs:
-                          combined_globs = ["*comparison_FIXED_*.json",
-                                            "*comparison_FIXED_*.csv",
-                                            f"{PVA_DIR}/*.json",
-                                            f"{PVA_DIR}/*.csv",
-                                            f"{PVA_DIR}/**/*.json",
-                                            f"{PVA_DIR}/**/*.csv"]
+                      # exp1b owns explicit, run-private benchmark and portfolio
+                      # outputs. run_all.sh publishes the shard-suffixed files and
+                      # the Store/Verify steps require those exact paths plus
+                      # provenance. Never glob shared result trees here: they
+                      # contain historical canonical files and outputs rescued
+                      # by older runs, which must not be relabelled as fresh.
+                      print(
+                          "  [exp1b] checkpoint rescue skipped: only the current "
+                          "run's explicitly published shard outputs are eligible."
+                      )
                   elif EXP == "exp1_pca_seeds":
                       # same one-seed-per-shard rule as exp1b_seeds; PCA output filename families.
                       shard_ids_local = json.loads(os.environ.get("SHARD_IDS") or "[]")
