@@ -73,7 +73,79 @@ Report the number of independent calibration families, degradation distribution,
 
 Once chosen, freeze τ and its model/prompt/protocol context. The threshold is not a universal constant.
 
-## 6. Routing and independent evaluation
+## 6. Convergence, stability, and stopping criteria
+
+Calibration should distinguish three different claims. They are related, but none implies the others:
+
+1. **Numerical convergence:** the chosen calibration objective has reached a stable minimum or minimum plateau over the candidate threshold values.
+2. **Statistical stability:** the selected threshold is not excessively sensitive to which independent calibration families happen to be sampled.
+3. **Out-of-family generalization:** the frozen threshold performs acceptably on a separate, untouched evaluation cohort.
+
+A stable numerical optimum is not evidence by itself that the threshold is statistically stable or generalizes.
+
+### 6.1 Define the calibration objective before searching
+
+For a cost-sensitive policy, one possible family-weighted empirical loss is
+
+\[
+\widehat L_{\mathrm{cal}}(\tau)
+= C_{\mathrm{fail}}\,N_{\mathrm{false\ acceptance}}(\tau)
++ C_{\mathrm{fallback}}\,N_{\mathrm{unnecessary\ fallback}}(\tau),
+\]
+
+where the two costs and the operational definitions of false acceptance and unnecessary fallback are fixed before inspecting results. If families have unequal importance, specify and justify family weights in advance; do not let families with many rows dominate the objective.
+
+The objective must also specify how invalid formulas, failed generations, missing scores, and abstentions are handled. They must not silently disappear from the denominator. Where appropriate, treat invalidity or failure as an explicit outcome with a predeclared cost or report it as a separate constraint.
+
+### 6.2 Search the scalar threshold reproducibly
+
+Because \(\tau\) is a scalar decision boundary, gradient descent is generally unnecessary. A transparent procedure is:
+
+1. Define the admissible threshold range and candidate set before examining evaluation outcomes.
+2. Evaluate the predefined calibration loss at each candidate threshold, using calibration families only.
+3. Identify the minimum loss and any contiguous or near-minimum plateau within a predeclared tolerance.
+4. If several thresholds tie or are practically indistinguishable, apply a predeclared tie-break rule (for example, the more conservative routing choice) and report the full acceptable interval.
+5. Freeze the selected threshold, objective, costs, candidate grid, tie-break rule, data manifest, model/prompt version, and code revision.
+
+A grid search over observed calibration degradation values can be sufficient when the decision rule changes only at those values. Include boundary cases and define comparison semantics consistently (including the equality case at \(\Delta_{\mathrm{LLM}}=\tau\)). Do not report more decimal places than the data and stability analysis support.
+
+### 6.3 Assess statistical and decision stability
+
+Resample at the **independent equation-family level**, never at the individual formula-row or sampled-point level when those observations are dependent. For each family-level bootstrap or other justified resampling replicate, repeat the complete threshold-selection procedure and record the selected threshold and resulting routing decisions.
+
+Report:
+- the threshold distribution and an uncertainty interval, with the resampling unit and method;
+- how often each family is routed to the LLM, fallback, or abstention outcome across replicates;
+- the range of thresholds whose calibration loss is within the predeclared tolerance of the minimum;
+- sensitivity to reasonable, predeclared changes in cost assumptions and candidate-grid resolution;
+- results separately by mathematical stratum when the sample supports such analysis.
+
+Also perform a local decision-sensitivity check around the selected threshold. For a declared perturbation range, quantify how many calibration-family decisions change when \(\tau\) is moved slightly up or down. A narrow optimum that flips many decisions under tiny perturbations is not a robust calibration.
+
+Bootstrap intervals can be misleading when the number of genuinely independent families is small, when families are highly heterogeneous, or when the family adjudication itself is uncertain. In those cases, label the uncertainty assessment as weak or inconclusive; do not manufacture precision by resampling dependent rows. If there are too few independent families to support a meaningful stability analysis, the correct outcome is **insufficient evidence**, not a claim of convergence.
+
+### 6.4 Predeclare stopping and acceptance rules
+
+Before calibration, record the minimum evidence needed to stop. The protocol should specify:
+
+- the required number and coverage of independently adjudicated calibration families, justified for the intended strata and precision;
+- an acceptable uncertainty width or threshold-variability tolerance;
+- an acceptable decision-flip rate under the declared local sensitivity analysis;
+- the objective-improvement tolerance used to define a plateau;
+- required coverage of formula-validity, failure, and abstention outcomes;
+- the rule for declaring calibration inconclusive and collecting more eligible families.
+
+Stop calibration only when the numerical objective is stable **and** the statistical/decision stability requirements are met. If those requirements are not met, report the failure to converge or insufficient evidence and do not publish a production threshold. Do not repeatedly inspect the held-out evaluation cohort to decide whether to continue calibration.
+
+### 6.5 Keep independent evaluation as a separate gate
+
+After calibration meets its predeclared stopping criteria, freeze \(\tau\) and the complete protocol. Evaluate once on the untouched, family-disjoint evaluation cohort. Generalization is supported only if the predeclared evaluation criteria are met, including routing errors, edge-region quality, fallback quality, and relevant stratum-level results.
+
+If evaluation fails, do not adjust \(\tau\) and reuse the same evaluation cohort as validation. Diagnose the failure, create a new calibration protocol if needed, and reserve a new untouched evaluation cohort. Calibration convergence is therefore a necessary process check, not proof of out-of-family validity.
+
+**Current status:** these are proposed acceptance criteria, not evidence that calibration has converged. The repository still has no valid independent LLM core/edge calibration cohort, no frozen \(\tau\), and no independent evaluation result. The threshold must remain unavailable until the upstream family/cohort and measurement requirements are satisfied.
+
+## 7. Routing and independent evaluation
 
 Conceptually:
 
@@ -89,7 +161,7 @@ This rule is subject to formula validity, quality gates, and abstention policy. 
 
 Apply the frozen rule to previously unseen evaluation families. Report routing accuracy, false acceptance of inadequate LLM solutions, unnecessary fallback rate, edge performance, overall cost, and results by mathematical stratum. Do not retune τ on this evaluation cohort. If recalibration is necessary, designate a new calibration population and preserve a new untouched evaluation population.
 
-## 7. Advantages
+## 8. Advantages
 
 1. **Scientific validity:** separates threshold selection from claims of generalization.
 2. **Reduced leakage:** family-level splits prevent close variants appearing on both sides.
@@ -98,7 +170,7 @@ Apply the frozen rule to previously unseen evaluation families. Report routing a
 5. **Cost-aware decisions:** the threshold can reflect the relative consequences of routing errors.
 6. **Extensibility:** new sources and mathematical strata can be added under explicit rules.
 
-## 8. Limitations and risks
+## 9. Limitations and risks
 
 1. **Family adjudication is difficult:** symbolic difference does not prove generator or statistical independence.
 2. **Limited sample size:** many formulas may represent few independent families; small cohorts widen uncertainty.
@@ -109,7 +181,7 @@ Apply the frozen rule to previously unseen evaluation families. Report routing a
 7. **Solver dependence:** fallback quality must be measured independently.
 8. **Distribution shift:** deployment populations may differ from both calibration and evaluation cohorts.
 
-## 9. Current repository evidence and status
+## 10. Current repository evidence and status
 
 The current audit trail includes:
 - a pinned registry of 128 SurfaceBench explicit-surface entries;
@@ -123,7 +195,7 @@ These are meaningful screening and adjudication results, not proof of complete p
 
 **No valid τ value is established by this audit.** The required LLM core/edge measurements and independent cohorts have not yet been completed. In particular, an NN-trained extrapolation/degradation probe must not be substituted for \(\Delta_{\mathrm{LLM}}\). Keep the LLM degradation field unavailable/null and the status explicitly uncalibrated until valid measurements exist.
 
-## 10. Recommended gated workflow
+## 11. Recommended gated workflow
 
 | Phase | Work | Acceptance artifact |
 |---|---|---|
@@ -140,7 +212,7 @@ These are meaningful screening and adjudication results, not proof of complete p
 
 Do not launch expensive experiments or paid model calls until the source/family, cohort, R² policy, workflow-contract, and relevant regression gates have passed and the user has explicitly approved the run.
 
-## 11. Research notes and interpretation safeguards
+## 12. Research notes and interpretation safeguards
 
 - **Tau is not “trained and predicted” in the same sense as a model.** Tau is calibrated from data and then used as a fixed decision boundary. A separate predictor may estimate degradation for a new task; that predictor also needs its own leakage-safe training/evaluation design.
 - **Avoid circularity:** calibrate on cohort A, freeze τ, evaluate on cohort B. Never tune τ in response to cohort B and then report B as independent validation.
@@ -150,7 +222,7 @@ Do not launch expensive experiments or paid model calls until the source/family,
 - **Keep fail-closed behavior:** until calibration is valid, τ remains unavailable; do not invent a value.
 - **Recalibration:** model or prompt changes can invalidate the old threshold. Version the calibration artifact and retain the old evaluation record.
 
-## 12. Conclusion
+## 13. Conclusion
 
 Tau calibration is a scientific protocol, not merely a numerical tuning exercise. Its credibility depends on defining the population, adjudicating equation families, measuring frozen LLM formula degradation, selecting a threshold under a predefined objective, and validating that frozen threshold on independent families.
 
