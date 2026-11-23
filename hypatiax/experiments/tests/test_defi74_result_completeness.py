@@ -78,3 +78,59 @@ def test_validation_rejects_wrong_intractability_classification():
     il_record["extrapolation_intractable"] = False
     with pytest.raises(ValueError, match="extrapolation_intractable must be True"):
         benchmark._validate_result_records(records, require_complete=True)
+
+
+def test_filtered_portfolio_scope_passes_without_full_catalogue_or_il_record():
+    portfolio_cases = [
+        case for case in benchmark._get_test_cases()
+        if "portfolio" in case["name"].lower()
+    ]
+    assert portfolio_cases
+    assert not any(
+        "impermanent loss breakeven" in case["name"].lower()
+        for case in portfolio_cases
+    )
+    records = [_record(case["name"]) for case in portfolio_cases]
+
+    benchmark._validate_result_records(
+        records,
+        require_il_record=False,
+        require_complete=True,
+        expected_cases=portfolio_cases,
+    )
+
+
+def test_filtered_scope_rejects_missing_selected_case():
+    portfolio_cases = [
+        case for case in benchmark._get_test_cases()
+        if "portfolio" in case["name"].lower()
+    ]
+    records = [_record(case["name"]) for case in portfolio_cases[:-1]]
+
+    with pytest.raises(ValueError, match="incomplete filtered benchmark result"):
+        benchmark._validate_result_records(
+            records,
+            require_complete=True,
+            expected_cases=portfolio_cases,
+        )
+
+
+def test_filtered_scope_rejects_case_outside_selected_filter():
+    portfolio_cases = [
+        case for case in benchmark._get_test_cases()
+        if "portfolio" in case["name"].lower()
+    ]
+    outside_case = next(
+        case for case in benchmark._get_test_cases()
+        if "portfolio" not in case["name"].lower()
+    )
+    records = [_record(case["name"]) for case in portfolio_cases]
+    records[-1] = _record(outside_case["name"])
+
+    with pytest.raises(ValueError, match="unexpected case ID"):
+        benchmark._validate_result_records(
+            records,
+            require_complete=True,
+            expected_cases=portfolio_cases,
+        )
+
