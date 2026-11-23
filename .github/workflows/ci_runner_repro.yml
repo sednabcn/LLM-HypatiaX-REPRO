@@ -1540,6 +1540,7 @@ jobs:
           PYEOF
 
       - name: Run experiment tasks
+        id: run_experiment
         if: ${{ steps.resolve_ids.outputs.has_work == 'true' }}
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -2046,7 +2047,7 @@ jobs:
           PYEOF
 
       - name: Store results in canonical RESULT_SUBDIR
-        if: always()
+        if: ${{ always() && (needs.plan.outputs.exp_id != 'exp1b' || steps.run_experiment.outcome == 'success') }}
         env:
           RESULTS_DIR:   ${{ env.OUT_BASE }}
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
@@ -3393,7 +3394,7 @@ jobs:
             echo "Seed42 alias is absent or changed; preserving artifact contents."
           fi
       - name: Upload shard results artifact
-        if: always()
+        if: ${{ always() && (needs.plan.outputs.exp_id != 'exp1b' || steps.run_experiment.outcome == 'success') }}
         uses: actions/upload-artifact@v4.3.6
         with:
           name: results-${{ github.event.inputs.experiment }}-shard${{ matrix.shard }}
