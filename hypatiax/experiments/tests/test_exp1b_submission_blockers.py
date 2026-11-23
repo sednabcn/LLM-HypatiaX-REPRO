@@ -81,3 +81,16 @@ def test_exp1b_workflow_restores_canonical_seed_and_publishes_shard_copy():
     assert 'portfolio_variance_defi_seed_sweep_seed${_seed}_shard${SHARD_INDEX}.json' in workflow
     assert 'if [[ "$fname" == "portfolio_variance_defi_seed_sweep_seed${_seed}_shard${SHARD_INDEX}.json" ]]; then' in workflow
     assert 'REPLACE: refreshing tracked exp1b per-seed portfolio artifact' not in workflow
+
+
+def test_exp1b_sweep_records_selected_route_and_explicit_nn_seed():
+    source = BENCHMARK.read_text()
+    assert "nn_seed=nn_seed" in source
+    for field in (
+        "'nn_seed'", "'test_r2'", "'train_r2_source'",
+        "'route_execution_status'", "'nn_abstained'",
+        "'nn_selected_model'", "'nn_edge_r2'", "'ridge_edge_r2'",
+        "'score_semantics'",
+    ):
+        assert field in source
+

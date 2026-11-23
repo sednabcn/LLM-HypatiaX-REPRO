@@ -1071,6 +1071,7 @@ def _hybrid_predict_and_eval(
     llm_attempt_state: dict | None = None,
     nn_result: dict | None = None,
     split_metadata: dict | None = None,
+    nn_seed: int | None = None,
 ) -> dict:
     """Run the Exp1 LLM/NN route and report metrics for the predictor used."""
     llm_result = _generate_llm_formula(description, domain, var_names, metadata)
@@ -1172,9 +1173,11 @@ def _hybrid_predict_and_eval(
         if _valid_nn_result(nn_result):
             return nn_result
         t0 = time.time()
+        nn_kwargs = {"split_metadata": split_metadata}
+        if nn_seed is not None:
+            nn_kwargs["seed"] = int(nn_seed)
         trained = _train_and_eval_nn(
-            X_train, y_train, X_test, y_test,
-            split_metadata=split_metadata,
+            X_train, y_train, X_test, y_test, **nn_kwargs
         )
         nn_rerun_time_s += time.time() - t0
         return trained
@@ -1239,6 +1242,7 @@ def _hybrid_predict_and_eval(
                 else "ensemble_and_nn_fallback_failed",
             )
         elif bool(nn_m.get("abstained", False)):
+            decision = "nn_abstention_fallback"
             # The NN quality gate rejected the MLP. Its replacement (log-Ridge
             # or training mean) is the selected predictor; do not let rejected
             # NN output enter the LLM/NN ensemble.
@@ -1298,6 +1302,7 @@ def _hybrid_predict_and_eval(
         selected_train_r2 = _metric(nn_m.get("train_r2")) if valid_nn else float("nan")
         test_r2 = _metric(nn_m.get("test_r2")) if valid_nn else float("nan")
         if bool(nn_m.get("abstained", False)):
+            decision = "nn_abstention_fallback"
             # The NN quality gate selected a replacement predictor (Ridge or
             # training mean), so expose abstention rather than labelling it NN.
             train_r2_source = "nn_abstention_" + str(
