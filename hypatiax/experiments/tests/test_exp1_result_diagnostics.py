@@ -9,7 +9,7 @@ from hypatiax.experiments.benchmarks import hypatiax_defi_benchmark_v3c as bench
 
 def _record():
     return {
-        "equation_id": "Impermanent loss breakeven",
+        "equation_id": "Impermanent loss breakeven fee rate",
         "extrapolation_intractable": True,
         "results": {
             "neural_network": {
@@ -69,7 +69,7 @@ def test_saved_result_contract_rejects_misclassified_il_case():
 
 def test_legacy_resume_record_is_backfilled_without_overwriting_values():
     record = {
-        "equation_id": "Impermanent loss breakeven",
+        "equation_id": "Impermanent loss breakeven fee rate",
         "extrapolation_intractable": False,
         "results": {
             "neural_network": {"nn_selected_model": "nn"},
