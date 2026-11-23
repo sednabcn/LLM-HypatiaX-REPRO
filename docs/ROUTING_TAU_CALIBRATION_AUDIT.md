@@ -60,3 +60,14 @@ The current NN edge probe may remain useful as a separate NN robustness diagnost
 ## Next gate
 
 No code change to routing and no tau value is recommended by this audit. A valid LLM-specific calibration requires formulas generated without access to the edge labels. That entails a separately approved calibration run and may incur LLM API costs. Until that is authorized and completed, leave tau null.
+
+## Implementation correction (2026-11-23)
+
+The benchmark's routing call has been corrected following this audit. The NN-derived
+`_extrapolation_probe` is now recorded explicitly as `nn_degradation_probe`
+(and retained under the legacy `degradation_probe` alias for artifact compatibility),
+but its delta is no longer passed to the LLM route gate. The LLM-specific degradation
+value is explicitly `null` with status `not_calibrated` until the separate
+calibration protocol is complete. A configured tau alone therefore cannot activate
+the pure-LLM route using an NN statistic. The policy remains fail-closed; no tau,
+success threshold, or historical result was changed.
