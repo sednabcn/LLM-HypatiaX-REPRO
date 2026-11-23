@@ -81,3 +81,15 @@ A second symbolic-structure pass reviewed the eight groups member-by-member. It 
 - The integer-grid `DIGS*` cases are a distinct input-domain stratum and should not be pooled with continuous `x,y` surfaces without an explicit protocol rationale.
 - This is a targeted second pass over the eight pre-identified groups, not an exhaustive all-pairs equivalence proof or a proof of independent data generation.
 - All canonical family IDs, independence statuses, and cohort assignments remain unresolved/null. No tau or routing change follows from this review.
+
+
+## Upstream catalog provenance check: EBS2 and PTM5
+
+The pinned upstream catalog at `psaegert/symbolic-data@13b23672154e6dd6a463ad223d3f72829d21fe60`, file `assets/catalogs/surfacebench-explicit-surfaces.yaml`, lists:
+
+- `EBS2` (`sin(x)*cos(y)`) in the **Elementary Bivariate Surfaces** category, sampled over ([-2\pi,2\pi]^2).
+- `PTM5` (`sin(x)*cos(y) + 0.1*x*y`) in the **Polynomial–Transcendental Mixtures** category, sampled over ([-5,5]^2).
+
+Both share the base term `sin(x)*cos(y)`; PTM5 adds a cross-coordinate polynomial term. The catalog records formulae, categories, and input distributions, but the reviewed fields do not document a shared generator, coefficient sweep, or common lineage. Therefore the earlier *possible parameterized extension* is downgraded: this is a shared base subexpression across distinct benchmark tasks, not evidence of one parameterized family. It remains possible that the authors used related construction ideas, but that is not established by the pinned metadata.
+
+No cohort or independence status is upgraded. Distinct categories and formulas alone do not establish statistical independence.
