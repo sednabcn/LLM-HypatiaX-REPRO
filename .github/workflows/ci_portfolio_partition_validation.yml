@@ -81,7 +81,10 @@ jobs:
           for row in data["results"]:
               assert "train_r2" not in row, "Ambiguous legacy train_r2 field found"
               assert "llm_train_r2" in row
-              assert row["test_r2_source"] in {"nn", "llm", "ensemble"}
+              assert row["test_r2_source"] in {
+                  "nn", "llm", "ensemble", "nn_fallback",
+                  "nn_abstention_fallback",
+              }
               assert isinstance(row["success_test_r2_gt_0_99"], bool)
           assert data["aggregate"]["n_success_test_r2_gt_0_99"] == sum(
               row["success_test_r2_gt_0_99"] for row in data["results"]
