@@ -1639,7 +1639,7 @@
       },
       "success": false,
       "llm_train_r2": 1.0,
-      "time_s": 2.031287431716919,
+      "time_s": 2.148784875869751,
       "llm_code": "def formula(var_asset1, var_asset2, correlation):\n    return np.sqrt(var_asset1**2 + var_asset2**2 + 2 * correlation * var_asset1 * var_asset2)",
       "llm_called": true,
       "bypass_kind": "live",
