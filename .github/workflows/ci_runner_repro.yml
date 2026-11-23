@@ -2137,8 +2137,8 @@ jobs:
                 echo "::error::exp1b fresh portfolio sweep missing or empty: ${src}"
                 exit 1
               fi
-              # This shard-specific path is intentionally refreshable. A tracked
-              # file here is a previous run's result, not a reason to skip this run.
+              # A tracked shard path is a previous run's result, not a reason
+              # to skip this fresh output; this worker owns this shard suffix.
               cp -f "${src}" "${dest_f}"
               if git ls-files --error-unmatch "${src}" >/dev/null 2>&1; then
                 git checkout -- "${src}"
@@ -2273,7 +2273,6 @@ jobs:
       - name: Verify exp1b output files exist
         if: ${{ needs.plan.outputs.exp_id == 'exp1b' && steps.resolve_ids.outputs.has_work == 'true' }}
         env:
-          RESULTS_ROOT: ${{ github.workspace }}/hypatiax/data/results
           TARGET: ${{ github.workspace }}/hypatiax/data/results/comparison_results/noise-noiseless/15
           SHARD_INDEX: ${{ matrix.shard }}
         run: |
@@ -2290,7 +2289,6 @@ jobs:
           if len(seeds) != 1:
               raise SystemExit(f"::error::exp1b shard must own exactly one seed; got {seeds}")
           seed = seeds[0]
-
           benchmark_name = (
               f"hypatiax_defi_benchmark_v3_results_shard{shard}.json"
               if seed == 42 else
@@ -2338,6 +2336,1070 @@ jobs:
           print(f"  portfolio: {portfolio_path}")
           print(f"  test_r2={test_r2!r}, success={row.get('success')!r}, decision={row.get('decision')!r}")
           PYEOF
+
+      - name: Verify portfolio output (this shard's seed sweep file exists)
+        if: ${{ needs.plan.outputs.exp_id == 'portfolio' && steps.resolve_ids.outputs.has_work == 'true' }}
+        env:
+          RESULTS_ROOT: ${{ github.workspace }}/hypatiax/data/results
+        run: |
+          set -euo pipefail
+          TARGET="${RESULTS_ROOT}/portfolio_variance_audit"
+          SEEDS="$(echo "${SHARD_IDS:-[]}" | grep -oE 'portfolio_seed[0-9]+' | sed 's/portfolio_seed//' | sort -un | tr '\n' ' ')"
+          echo "=== portfolio output verification (seed(s): ${SEEDS}) ==="
+          find "${TARGET}" -type f 2>/dev/null | sort || true
+          [[ -n "${SEEDS// /}" ]] || { echo "::error::portfolio: no portfolio_seedNN IDs in SHARD_IDS."; exit 1; }
+          for S in ${SEEDS}; do
+            F="${TARGET}/portfolio_variance_defi_seed_sweep_seed${S}.json"
+            if [[ ! -s "${F}" ]]; then
+              echo "::error::portfolio seed ${S}: expected ${F} is missing or empty."
+              echo "  Check the 'Run experiment tasks' log: Strategy A needs torch, hypatiax, ANTHROPIC_API_KEY"
+              echo "  and an importable _hybrid_predict_and_eval in hypatiax_defi_benchmark_v3c.py."
+              exit 1
+            fi
+            python3 - "${F}" "${S}" <<'PYV'
+          import json, sys
+          path, seed = sys.argv[1], sys.argv[2]
+          d = json.load(open(path))
+          seeds = [str(x) for x in d.get("seeds_run", [])]
+          if seed not in seeds:
+              print(f"::error::{path}: seeds_run={seeds} does not contain {seed}")
+              sys.exit(1)
+          print(f"  OK portfolio seed {seed} verified ({path}).")
+          PYV
+          done
+
+      - name: Verify exp1b_seeds output (this shard's seed file exists, is stamped with that seed)
+        if: ${{ needs.plan.outputs.exp_id == 'exp1b_seeds' && steps.resolve_ids.outputs.has_work == 'true' }}
+        env:
+          RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+        run: |
+          set -euo pipefail
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
+          python3 - "${TARGET}" <<'PYEOF'
+          import glob, json, os, re, sys
+
+          target    = sys.argv[1]
+          shard_ids = json.loads(os.environ.get("SHARD_IDS") or "[]")
+          seeds     = sorted({t.rsplit("_seed", 1)[1] for t in shard_ids if "_seed" in t})
+          domains   = {t.rsplit("_seed", 1)[0] for t in shard_ids}
+          if len(seeds) != 1:
+              print(f"::error::exp1b_seeds shard must own exactly one seed, got {seeds}")
+              sys.exit(1)
+          seed = seeds[0]
+
+          files = [
+              f for f in glob.glob(os.path.join(target, "*.json"))
+              if re.search(rf"seed{seed}(?!\d)", os.path.basename(f))
+              and "checkpoint" not in os.path.basename(f)
+              and not os.path.basename(f).startswith("_")
+          ]
+          print(f"=== exp1b_seeds verification: seed {seed}, dir {target} ===")
+          for f in sorted(glob.glob(os.path.join(target, "*"))):
+              print("  ", os.path.basename(f))
+          if not files:
+              print(f"::error::exp1b_seeds seed {seed}: no result file named '*seed{seed}*.json' in {target}.")
+              print("  If run_all.sh wrote an un-tagged file, the seed was NOT applied (the DeFi script must be the")
+              print("  patched one that tags non-42 outputs with _seed<N>).")
+              sys.exit(1)
+
+          bad = False
+          for f in files:
+              try:
+                  data = json.load(open(f))
+              except Exception as e:
+                  print(f"::error::{os.path.basename(f)} is not valid JSON: {e}")
+                  bad = True
+                  continue
+              recs = data if isinstance(data, list) else data.get("results", [])
+              n = len(recs)
+              stamped = [r.get("seed") for r in recs if isinstance(r, dict) and "seed" in r]
+              print(f"  {os.path.basename(f)}: {n} record(s)")
+              if n == 0:
+                  print(f"::error::{os.path.basename(f)} has no records.")
+                  bad = True
+              if not stamped:
+                  print(f"::warning::{os.path.basename(f)}: records carry no 'seed' field — cannot prove the seed was applied (is the patched DeFi script running?).")
+              elif any(str(x) != seed for x in stamped):
+                  print(f"::error::{os.path.basename(f)}: records stamped with seeds {sorted(set(map(str, stamped)))}, expected only {seed}.")
+                  bad = True
+              if len(domains) == 10 and n < 74:
+                  print(f"::error::{os.path.basename(f)}: only {n}/74 records for a full 10-domain shard — truncated/incomplete run; the timing tables need all 74.")
+                  bad = True
+          if bad:
+              sys.exit(1)
+          print(f"  OK exp1b_seeds seed {seed} verified.")
+          PYEOF
+
+
+      - name: Verify exp1-provenance shard and write provenance manifest
+        if: ${{ needs.plan.outputs.exp_id == 'exp1-provenance' && steps.resolve_ids.outputs.has_work == 'true' }}
+        env:
+          RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+          SCRIPT_PATH: ${{ needs.plan.outputs.script_path }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PYEOF'
+          import hashlib, importlib.metadata, json, os, platform
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          target = Path(os.environ["OUT_BASE"]) / os.environ["RESULT_SUBDIR"]
+          shard_ids = json.loads(os.environ.get("SHARD_IDS") or "[]")
+          seeds = sorted({int(t.rsplit("_seed", 1)[1]) for t in shard_ids if "_seed" in t})
+          domains = sorted({t.rsplit("_seed", 1)[0] for t in shard_ids if "_seed" in t})
+          expected_seeds = [42, 99, 123, 777, 2024]
+          shard_index = int(os.environ["SHARD_INDEX"])
+          if seeds != [expected_seeds[shard_index]]:
+              raise SystemExit(f"::error::exp1-provenance shard {shard_index} has unexpected seed assignment: {seeds}")
+          if len(domains) != 10:
+              raise SystemExit(f"::error::exp1-provenance requires all 10 domain tasks; got {domains}")
+          seed = seeds[0]
+          suffix = "" if seed == 42 else f"_seed{seed}"
+          result_path = target / f"hypatiax_defi_benchmark_v3_results{suffix}.json"
+          if not result_path.is_file() or result_path.stat().st_size == 0:
+              raise SystemExit(f"::error::exp1-provenance seed {seed}: missing result file {result_path}")
+          data = json.loads(result_path.read_text(encoding="utf-8"))
+          records = data if isinstance(data, list) else data.get("results", [])
+          if len(records) != 74:
+              raise SystemExit(f"::error::exp1-provenance seed {seed}: expected 74 case records, got {len(records)}")
+          stamped = [r.get("seed") for r in records if isinstance(r, dict) and "seed" in r]
+          if len(stamped) != 74 or any(str(v) != str(seed) for v in stamped):
+              raise SystemExit(f"::error::exp1-provenance seed {seed}: missing or inconsistent seed stamps: {sorted(set(map(str, stamped)))}")
+
+          script = Path(os.environ["SCRIPT_PATH"])
+          protocol = Path("config/exp1_provenance.yaml")
+          config = Path("config/repro.yaml")
+          def sha256(path):
+              return hashlib.sha256(path.read_bytes()).hexdigest()
+          manifest = {
+              "experiment_id": "exp1-provenance",
+              "status": "passed",
+              "workflow_run_id": os.environ["GITHUB_RUN_ID"],
+              "workflow_run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+              "commit_sha": os.environ["GITHUB_SHA"],
+              "git_ref": os.environ["GITHUB_REF"],
+              "seed": seed,
+              "shard_index": shard_index,
+              "shard_id": int(os.environ["SHARD_ID"]),
+              "n_shards": int(os.environ["N_SHARDS"]),
+              "assigned_task_ids": shard_ids,
+              "assigned_domains": domains,
+              "expected_case_count": 74,
+              "observed_case_count": len(records),
+              "result_file": result_path.name,
+              "result_sha256": sha256(result_path),
+              "script_path": str(script),
+              "script_sha256": sha256(script),
+              "protocol_config_sha256": sha256(protocol),
+              "repro_config_sha256": sha256(config),
+              "python_version": platform.python_version(),
+              "platform": platform.platform(),
+              "runtime_package_versions": {
+                  name: importlib.metadata.version(name)
+                  for name in ("numpy", "torch", "pysr", "anthropic", "scipy", "scikit-learn")
+              },
+              "clean_run_flags": {
+                  "HYPATIAX_DISABLE_HARDCODED": os.environ.get("HYPATIAX_DISABLE_HARDCODED"),
+                  "HYPATIAX_DISABLE_PROMPT_HINTS": os.environ.get("HYPATIAX_DISABLE_PROMPT_HINTS"),
+                  "HYPATIAX_STRICT": os.environ.get("HYPATIAX_STRICT"),
+                  "HYPATIAX_R2_SIGN_FLIP": os.environ.get("HYPATIAX_R2_SIGN_FLIP"),
+              },
+              "created_at_utc": datetime.now(timezone.utc).isoformat(),
+          }
+          manifest_path = target / f"exp1-provenance_seed{seed}_manifest.json"
+          manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+          print(f"Verified exp1-provenance seed {seed}: 74/74 records; manifest={manifest_path}")
+          PYEOF
+
+      - name: Verify exp1_pca_seeds output (this shard's seed file exists, is stamped with that seed)
+        if: ${{ needs.plan.outputs.exp_id == 'exp1_pca_seeds' && steps.resolve_ids.outputs.has_work == 'true' }}
+        env:
+          RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+        run: |
+          set -euo pipefail
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
+          python3 - "${TARGET}" <<'PYEOF'
+          import glob, json, os, re, sys
+
+          target    = sys.argv[1]
+          shard_ids = json.loads(os.environ.get("SHARD_IDS") or "[]")
+          seeds     = sorted({t.rsplit("_seed", 1)[1] for t in shard_ids if "_seed" in t})
+          domains   = {t.rsplit("_seed", 1)[0] for t in shard_ids}
+          if len(seeds) != 1:
+              print(f"::error::exp1_pca_seeds shard must own exactly one seed, got {seeds}")
+              sys.exit(1)
+          seed = seeds[0]
+
+          SKIP = ("checkpoint", "disclosure", "summary")
+          files = [
+              f for f in glob.glob(os.path.join(target, "*.json"))
+              if re.search(rf"seed{seed}(?!\d)", os.path.basename(f))
+              and not any(x in os.path.basename(f) for x in SKIP)
+              and not os.path.basename(f).startswith("_")
+          ]
+          print(f"=== exp1_pca_seeds verification: seed {seed}, dir {target} ===")
+          for f in sorted(glob.glob(os.path.join(target, "*"))):
+              print("  ", os.path.basename(f))
+          if not files:
+              print(f"::error::exp1_pca_seeds seed {seed}: no result file named '*seed{seed}*.json' in {target}.")
+              print("  hypatiax_defi_benchmark_pca.py produced no result JSON in its scratch output dir —")
+              print("  check the 'Run experiment tasks' log for the script's own error.")
+              sys.exit(1)
+
+          # Evidence in the run log that the seed reached the script. Only consulted when the
+          # records themselves carry no 'seed' stamp (the PCA script's stamping is not assumed).
+          try:
+              log = open("/tmp/run_all_step.log", errors="replace").read()
+          except OSError:
+              log = ""
+          log_seen = re.search(rf"seed[^0-9\n]{{0,12}}{seed}(?!\d)", log, re.IGNORECASE) is not None
+
+          bad = False
+          n_record_files = 0
+          for f in files:
+              name = os.path.basename(f)
+              try:
+                  data = json.load(open(f))
+              except Exception as e:
+                  print(f"::error::{name} is not valid JSON: {e}")
+                  bad = True
+                  continue
+              recs = data if isinstance(data, list) else (data.get("results") if isinstance(data, dict) else None)
+              if not isinstance(recs, list):
+                  print(f"  {name}: not a per-case records file (no 'results' list) - skipped")
+                  continue
+              n_record_files += 1
+              n = len(recs)
+              stamped = [r.get("seed") for r in recs if isinstance(r, dict) and "seed" in r]
+              print(f"  {name}: {n} record(s)")
+              if n == 0:
+                  print(f"::error::{name} has no records.")
+                  bad = True
+              if not stamped:
+                  if log_seen:
+                      print(f"::warning::{name}: records carry no 'seed' field; the run log does mention seed {seed}, so accepting.")
+                  else:
+                      print(f"::error::{name}: records carry no 'seed' field AND the run log never mentions seed {seed} - cannot prove the seed was applied.")
+                      bad = True
+              elif any(str(x) != seed for x in stamped):
+                  print(f"::error::{name}: records stamped with seeds {sorted(set(map(str, stamped)))}, expected only {seed}.")
+                  bad = True
+              if len(domains) == 10 and n < 74:
+                  print(f"::error::{name}: only {n}/74 records for a full 10-domain shard - truncated/incomplete run.")
+                  bad = True
+          if n_record_files == 0:
+              print(f"::error::exp1_pca_seeds seed {seed}: none of the seed-tagged JSON files is a per-case records file.")
+              bad = True
+          if bad:
+              sys.exit(1)
+          print(f"  OK exp1_pca_seeds seed {seed} verified.")
+          PYEOF
+
+      - name: Verify exp1c output files exist
+        if: ${{ needs.plan.outputs.exp_id == 'exp1c' && steps.resolve_ids.outputs.has_work == 'true' }}
+        env:
+          RESULTS_ROOT: ${{ github.workspace }}/hypatiax/data/results
+        run: |
+          set -euo pipefail
+          TARGET="${RESULTS_ROOT}/comparison_results/noise-noiseless/exp1c"
+          COUNT_BENCHMARK=$(find "${TARGET}" -name "hypatiax_defi_benchmark*results*.json" 2>/dev/null | wc -l)
+          COUNT_DEFI=$(find  "${TARGET}" -name "defi_v4_*.json"          2>/dev/null | wc -l)
+          COUNT_POOLED=$(find "${TARGET}" -name "hypatiax_defi_benchmark*_pooled_seed_report.json" 2>/dev/null | wc -l)
+          COUNT_TOTAL=$(( COUNT_BENCHMARK + COUNT_DEFI + COUNT_POOLED ))
+          echo "=== exp1c output verification ==="
+          echo "  Target dir                                        : ${TARGET}"
+          echo "  hypatiax_defi_benchmark*results*.json          : ${COUNT_BENCHMARK}"
+          echo "  defi_v4_*.json                                    : ${COUNT_DEFI}"
+          echo "  hypatiax_defi_benchmark*_pooled_seed_report.json: ${COUNT_POOLED}"
+          echo "  Total                                             : ${COUNT_TOTAL}"
+          echo "--- Directory listing ---"
+          find "${TARGET}" -type f 2>/dev/null | sort || true
+          if [[ "${COUNT_TOTAL}" -eq 0 ]]; then
+            echo "::error::exp1c produced NO output files in '${TARGET}'."
+            echo "  Expected: hypatiax_defi_benchmark*results*.json, defi_v4_*.json,"
+            echo "            or hypatiax_defi_benchmark*_pooled_seed_report.json"
+            echo "  The script may have written to a different path.  Check:"
+            echo "    1. 'exp1c post-run file scan' in the Run experiment tasks log"
+            echo "    2. 'Move results to RESULTS_DIR' step log for exp1c"
+            echo "  Also confirm RESULTS_DIR env was set to $(pwd)/${OUT_BASE} (absolute)."
+            exit 1
+          fi
+          echo "  OK exp1c output files present in canonical path."
+
+      - name: Verify exp1_ablation output (all arms present, no-LLM arm made no LLM call)
+        if: ${{ needs.plan.outputs.exp_id == 'exp1_ablation' && steps.resolve_ids.outputs.has_work == 'true' && github.event.inputs.dry_run != 'true' }}
+        env:
+          RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PYV'
+          import json, os, sys
+          path = os.path.join(os.environ["OUT_BASE"], os.environ["RESULT_SUBDIR"],
+                              f"exp1_ablation_checkpoint_shard{os.environ['SHARD_INDEX']}.json")
+          nollm = os.environ.get("HYPATIAX_NOLLM_ARM") == "1"
+          arms = ["pysr_only", "hypatia"] + (["hypatia_nollm"] if nollm else [])
+          try:
+              d = json.load(open(path))
+          except Exception as e:
+              print(f"::error::cannot read {path}: {e}"); sys.exit(1)
+          if not d:
+              print(f"::error::{path} is empty"); sys.exit(1)
+          bad = False
+          for k in sorted(d, key=lambda x: (not str(x).isdigit(), int(x) if str(x).isdigit() else 0, str(x))):
+              v = d[k]
+              miss = [a for a in arms if not isinstance(v.get(a), dict)]
+              h  = (v.get("hypatia") or {}).get("llm_called")
+              nl = (v.get("hypatia_nollm") or {}).get("llm_called")
+              print(f"[{k}] {v.get('name', '?')}: arms={[a for a in arms if a not in miss]} llm_called(hypatia)={h} llm_called(nollm)={nl}")
+              if miss:
+                  print(f"::error::eq {k}: missing arm(s) {miss}"); bad = True
+              if nollm and nl is True:
+                  print(f"::error::eq {k}: hypatia_nollm made an LLM call - the no-LLM arm is contaminated"); bad = True
+              if nollm and nl is None and "hypatia_nollm" not in miss:
+                  print(f"::warning::eq {k}: hypatia_nollm has no llm_called flag - cannot prove it stayed LLM-free")
+              hy = v.get("hypatia") or {}
+              if h is not True:
+                  if hy.get("timed_out"):
+                      # timeout rows never record llm_called; a timeout is a legitimate (flagged) result, not a contamination
+                      print(f"::warning::eq {k}: hypatia arm timed out (llm_called not recorded) - legitimate negative result")
+                  else:
+                      print(f"::error::eq {k}: hypatia arm did not make a live LLM call (llm_called={h})"); bad = True
+              elif hy.get("success") is False:
+                  # the LLM WAS called and the method still failed: that is a finding (e.g. the Arrhenius failure mode), not a CI failure
+                  print(f"::warning::eq {k}: hypatia arm failed after a live LLM call (success=false, best_expression={hy.get('best_expression')!r}) - recorded as a negative result")
+          try:
+              import anthropic
+              print(f"anthropic SDK version: {anthropic.__version__}")
+          except Exception as e:
+              print(f"::warning::cannot read anthropic version: {e}")
+          sys.exit(1 if bad else 0)
+          PYV
+
+      - name: Verify exp1_five output files exist
+        if: ${{ needs.plan.outputs.exp_id == 'exp1_five' && steps.resolve_ids.outputs.has_work == 'true' }}
+        env:
+          RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+        run: |
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
+          COUNT=$(find "${TARGET}" -name "exp1_five_results*.json" 2>/dev/null | wc -l)
+          echo "=== exp1_five output verification ==="
+          echo "  Target dir   : ${TARGET}"
+          echo "  File count   : ${COUNT}"
+          find "${TARGET}" -type f 2>/dev/null | sort || true
+          if [[ "${COUNT}" -eq 0 ]]; then
+            echo "::error::exp1_five produced NO output files in '${TARGET}'."
+            echo "  Expected: exp1_five_results*.json"
+            exit 1
+          fi
+          echo "  OK exp1_five output files present."
+
+      - name: Verify exp2_feynman output files exist
+        if: ${{ needs.plan.outputs.exp_id == 'exp2_feynman' && steps.resolve_ids.outputs.has_work == 'true' }}
+        env:
+          RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+        run: |
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
+          COUNT=$(find "${TARGET}" \( -name "protocol_core_*.json" -o -name "benchmark_results.json" \) 2>/dev/null | wc -l)
+          echo "=== exp2_feynman output verification ==="
+          echo "  Target dir       : ${TARGET}"
+          echo "  protocol_core_* / benchmark_results: ${COUNT}"
+          find "${TARGET}" -type f 2>/dev/null | sort || true
+          if [[ "${COUNT}" -eq 0 ]]; then
+            echo "::error::exp2_feynman produced NO output files in '${TARGET}'."
+            echo "  Expected: protocol_core_*.json or benchmark_results.json"
+            exit 1
+          fi
+          echo "  OK exp2_feynman output files present."
+
+      - name: Verify exp2 output files exist
+        if: ${{ needs.plan.outputs.exp_id == 'exp2' && steps.resolve_ids.outputs.has_work == 'true' }}
+        env:
+          RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+        run: |
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
+          COUNT=$(find "${TARGET}" \( -name "protocol_core_*.json" -o -name "benchmark_results.json" \) 2>/dev/null | wc -l)
+          echo "=== exp2 output verification ==="
+          echo "  Target dir   : ${TARGET}"
+          echo "  File count   : ${COUNT}"
+          find "${TARGET}" -type f 2>/dev/null | sort || true
+          if [[ "${COUNT}" -eq 0 ]]; then
+            echo "::error::exp2 produced NO output files in '${TARGET}'."
+            exit 1
+          fi
+          echo "  OK exp2 output files present."
+
+      - name: Verify exp2_five output files exist
+        if: ${{ needs.plan.outputs.exp_id == 'exp2_five' && steps.resolve_ids.outputs.has_work == 'true' }}
+        env:
+          RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+        run: |
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
+          COUNT=$(find "${TARGET}" \( -name "protocol_core_*.json" -o -name "benchmark_results.json" \) 2>/dev/null | wc -l)
+          echo "=== exp2_five output verification ==="
+          echo "  Target dir   : ${TARGET}"
+          echo "  File count   : ${COUNT}"
+          find "${TARGET}" -type f 2>/dev/null | sort || true
+          if [[ "${COUNT}" -eq 0 ]]; then
+            echo "::error::exp2_five produced NO output files in '${TARGET}'."
+            exit 1
+          fi
+          echo "  OK exp2_five output files present."
+
+      - name: Verify exp2_feynman_extrap output files exist
+        if: ${{ needs.plan.outputs.exp_id == 'exp2_feynman_extrap' && steps.resolve_ids.outputs.has_work == 'true' }}
+        env:
+          RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+          SHARD: ${{ matrix.shard }}
+        run: |
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
+          RUN_START_MARKER="${OUT_BASE}/.run_start_marker_shard${SHARD}"
+          python3 scripts/ci/validate_exp2_extrap_worker.py \
+            --output-dir "${TARGET}" \
+            --run-start-marker "${RUN_START_MARKER}" \
+            --expected-domains "feynman_biology feynman_chemistry feynman_electrochemistry feynman_electromagnetism feynman_electrostatics feynman_magnetism feynman_mechanics feynman_optics feynman_probability feynman_quantum feynman_thermodynamics"
+          COUNT_PROTO=$(find "${TARGET}" -name "protocol_core_extrap_*.json" 2>/dev/null | wc -l)
+          COUNT_BENCH=$(find "${TARGET}" \( -name "benchmark_results_extrap_shard*.json" -o -name "benchmark_results_extrap.json" \) 2>/dev/null | wc -l)
+          COUNT_REPORT=$(find "${TARGET}" -maxdepth 1 -name "discovery_reports_extrap.json" -type f 2>/dev/null | wc -l)
+          echo "=== exp2_feynman_extrap output verification ==="
+          echo "  Target dir                                    : ${TARGET}"
+          echo "  protocol_core_extrap_*.json                   : ${COUNT_PROTO}"
+          echo "  benchmark_results_extrap[_shard*].json        : ${COUNT_BENCH}"
+          echo "  discovery_reports_extrap.json                  : ${COUNT_REPORT}"
+          find "${TARGET}" -type f 2>/dev/null | sort || true
+          if [[ "${COUNT_REPORT}" -ne 1 ]]; then
+            echo "::error::Exp2 extrapolation worker must persist exactly one discovery_reports_extrap.json sidecar."
+            exit 1
+          fi
+          python3 - "${TARGET}/discovery_reports_extrap.json" "${TARGET}/exp2_extrap_summary.json" <<'PY'
+          import hashlib, json, sys
+          from pathlib import Path
+          sidecar_path, summary_path = map(Path, sys.argv[1:])
+          sidecar = json.loads(sidecar_path.read_text(encoding="utf-8"))
+          summary = json.loads(summary_path.read_text(encoding="utf-8"))
+          audit = summary.get("discovery_report_artifact")
+          if not isinstance(audit, dict):
+              raise SystemExit("worker summary is missing discovery_report_artifact audit")
+          digest = hashlib.sha256(sidecar_path.read_bytes()).hexdigest()
+          if audit.get("file") != sidecar_path.name or audit.get("sha256") != digest:
+              raise SystemExit("discovery report sidecar SHA-256 does not match worker summary")
+          if audit.get("bytes") != sidecar_path.stat().st_size:
+              raise SystemExit("discovery report sidecar byte count does not match worker summary")
+          if sidecar.get("schema_version") != "exp2_discovery_report_artifact_v1":
+              raise SystemExit("unexpected discovery report sidecar schema")
+          records = sidecar.get("records")
+          if not isinstance(records, list) or audit.get("report_count") != len(records):
+              raise SystemExit("discovery report sidecar record count does not match worker summary")
+          expected_status = "present" if records else "no_typed_discovery_reports"
+          if audit.get("status") != expected_status or sidecar.get("report_count") != len(records):
+              raise SystemExit("discovery report sidecar status/count is inconsistent")
+          if sidecar.get("selection_boundary", {}).get("far_evaluation_used_for_selection") is not False:
+              raise SystemExit("discovery report sidecar does not seal the far-evaluation selection boundary")
+          print(f"Validated durable discovery report sidecar: {len(records)} report(s), status={expected_status}, sha256={digest}")
+          PY
+          if [[ "${COUNT_PROTO}" -eq 0 ]]; then
+            echo "::error::exp2_feynman_extrap produced NO protocol_core_extrap_*.json in '${TARGET}'."
+            echo "  The --extrap run may have crashed before writing results."
+            echo "  Check the 'Run experiment tasks' log for errors."
+            exit 1
+          fi
+          if [[ "${COUNT_BENCH}" -eq 0 ]]; then
+            echo "::warning::benchmark_results_extrap[_shard*].json not found in '${TARGET}'."
+            echo "  This file is required by merge_extrap_into_benchmark.py --extrap-benchmark-dir."
+            echo "  Ensure run_comparative_suite_benchmark_v2.py v2.2+ is being used (--extrap support)."
+            echo "  The merge step will fall back to --extrap-dir (extrap_results_*.json) if present."
+          else
+            echo "  OK benchmark_results_extrap[_shard*].json present — merge step has primary extrap source."
+          fi
+          echo "  OK exp2_feynman_extrap protocol files present (${COUNT_PROTO} file(s))."
+
+      - name: Verify exp3/exp3b output files exist
+        if: ${{ (needs.plan.outputs.exp_id == 'exp3' || needs.plan.outputs.exp_id == 'exp3b') && steps.resolve_ids.outputs.has_work == 'true' }}
+        run: |
+          EXP="${{ needs.plan.outputs.exp_id }}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
+          COUNT=$(find "${TARGET}" -name "*.json" 2>/dev/null | wc -l)
+          echo "=== ${EXP} output verification ==="
+          echo "  Target dir  : ${TARGET}"
+          echo "  JSON count  : ${COUNT}"
+          find "${TARGET}" -type f 2>/dev/null | sort || true
+          if [[ "${COUNT}" -eq 0 ]]; then
+            echo "::error::${EXP} produced NO output files in '${TARGET}'."
+            exit 1
+          fi
+
+          SEED_COUNT=$(find "${TARGET}" -maxdepth 1 -name "exp3_nguyen12_seed*.json" 2>/dev/null | wc -l)
+          echo "  Seed-file count (exp3_nguyen12_seed*.json): ${SEED_COUNT}"
+          if [[ "${SEED_COUNT}" -eq 0 ]]; then
+            echo "::error::${EXP} produced no exp3_nguyen12_seed*.json files in '${TARGET}' — the experiment script likely failed (check the 'Run experiment tasks' log for a traceback) even though other JSON files (checkpoint/baseline) are present."
+            exit 1
+          fi
+
+          echo "  OK ${EXP} output files present (${SEED_COUNT} seed file(s))."
+
+      - name: Verify exp3 trajectories are populated
+        if: ${{ (needs.plan.outputs.exp_id == 'exp3' || needs.plan.outputs.exp_id == 'exp3b') && steps.resolve_ids.outputs.has_work == 'true' }}
+        env:
+          TARGET: ${{ env.OUT_BASE }}/${{ needs.plan.outputs.result_subdir }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PYEOF'
+          import glob, json, math, os, sys
+          target = os.environ["TARGET"]
+          files = sorted(glob.glob(os.path.join(target, "exp3_nguyen12_seed*.json")))
+          if not files:
+              print("No exp3 seed JSON files found; output gate above should already have failed.")
+              sys.exit(1)
+          bad = []
+          checked = 0
+          for path in files:
+              try:
+                  data = json.load(open(path, encoding="utf-8"))
+              except Exception as e:
+                  bad.append((os.path.basename(path), "invalid JSON", str(e)))
+                  continue
+              records = []
+              if isinstance(data, dict):
+                  container = data.get("results") if isinstance(data.get("results"), dict) else data
+                  for key in ("hypatiax", "pysr", "results_hypatia", "results_pysr"):
+                      value = container.get(key) if isinstance(container, dict) else None
+                      if isinstance(value, list):
+                          records.extend(value)
+              for rec in records:
+                  if not isinstance(rec, dict):
+                      continue
+                  checked += 1
+                  r2 = ((rec.get("evaluation") or {}).get("r2"))
+                  traj = rec.get("trajectory")
+                  try:
+                      finite_r2 = math.isfinite(float(r2))
+                  except Exception:
+                      finite_r2 = False
+                  if finite_r2 and not traj:
+                      bad.append((os.path.basename(path), rec.get("system"), rec.get("expression"), rec.get("h_error") or rec.get("p_error"), rec.get("trajectory_summary")))
+          print(f"Checked {checked} fitted result records across {len(files)} seed files.")
+          if bad:
+              print("::error::Successful exp3 PySR result(s) have empty trajectories:")
+              for row in bad:
+                  print("  ", row)
+              print("This indicates the trajectory instrumentation is still broken; inspect hof_path/hof_exists_at_end in the fit diagnostics and the _pysr_trajectory_runs directory.")
+              sys.exit(1)
+          print("OK: every finite-R2 PySR/HypatiaX record has a non-empty trajectory.")
+          PYEOF
+
+      - name: Upload PySR trajectory checkpoint files
+        if: ${{ always() && (needs.plan.outputs.exp_id == 'exp3' || needs.plan.outputs.exp_id == 'exp3b') && steps.resolve_ids.outputs.has_work == 'true' }}
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: pysr-trajectory-runs-${{ needs.plan.outputs.exp_id }}-shard${{ matrix.shard }}
+          path: ${{ env.OUT_BASE }}/_pysr_trajectory_runs/
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Verify suppA output files exist
+        if: ${{ needs.plan.outputs.exp_id == 'suppA' && steps.resolve_ids.outputs.has_work == 'true' }}
+        run: |
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
+          COUNT=$(find "${TARGET}" -name "*.json" 2>/dev/null | wc -l)
+          echo "=== suppA output verification ==="
+          echo "  Target dir: ${TARGET}  JSON files: ${COUNT}"
+          find "${TARGET}" -type f 2>/dev/null | sort || true
+          if [[ "${COUNT}" -eq 0 ]]; then
+            echo "::error::suppA produced NO output files in '${TARGET}'."
+            exit 1
+          fi
+          echo "  OK suppA output files present."
+
+      - name: Verify suppA wiring regression test result
+        if: ${{ needs.plan.outputs.exp_id == 'suppA' && steps.resolve_ids.outputs.has_work == 'true' }}
+        run: |
+          RESULT_JSON="${OUT_BASE}/regression_tests/proc_box_wiring_result.json"
+          echo "=== suppA proc_box wiring regression test (item 10b) ==="
+          if [[ ! -f "${RESULT_JSON}" ]]; then
+            echo "::warning::${RESULT_JSON} not found — test_proc_box_wiring.py was likely absent from hypatiax/experiments/tests/, so run_all.sh skipped the wiring check (see suppA's 'Run experiment tasks' log for the skip warning). Not fatal, but the item 10b regression gate did not run."
+            exit 0
+          fi
+          STATUS=$(python3 -c "import json; print(json.load(open('${RESULT_JSON}'))['status'])")
+          echo "  Result file : ${RESULT_JSON}"
+          echo "  Status      : ${STATUS}"
+          {
+            echo "### suppA — proc_box wiring regression test (item 10b)"
+            echo "Status: **${STATUS}**"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [[ "${STATUS}" != "PASS" ]]; then
+            echo "::error::suppA proc_box wiring regression test status is '${STATUS}', not PASS. run_all.sh should already have failed the run on this — if you're seeing this, check regression_tests/proc_box_wiring_run.log."
+            exit 1
+          fi
+          echo "  OK wiring regression test passed."
+
+      - name: Upload suppA wiring regression test log
+        if: ${{ always() && needs.plan.outputs.exp_id == 'suppA' && steps.resolve_ids.outputs.has_work == 'true' }}
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: suppA-proc-box-wiring-test-shard${{ matrix.shard }}
+          path: ${{ env.OUT_BASE }}/regression_tests/
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Verify hybrid_all_domains output files exist
+        if: ${{ needs.plan.outputs.exp_id == 'hybrid_all_domains' && steps.resolve_ids.outputs.has_work == 'true' }}
+        env:
+          RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+        run: |
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
+          COUNT=$(find "${TARGET}" -name "hybrid_llm_nn_all_domains_*.json" 2>/dev/null | wc -l)
+          echo "=== hybrid_all_domains output verification ==="
+          echo "  Target dir: ${TARGET}"
+          echo "  hybrid_llm_nn_all_domains_*.json: ${COUNT}"
+          find "${TARGET}" -type f 2>/dev/null | sort || true
+          if [[ "${COUNT}" -eq 0 ]]; then
+            echo "::error::hybrid_all_domains produced NO output files in '${TARGET}'."
+            echo "  Expected: hybrid_llm_nn_all_domains_*.json"
+            exit 1
+          fi
+          echo "  OK hybrid_all_domains output files present."
+
+      - name: Verify instability output files exist
+        if: ${{ needs.plan.outputs.exp_id == 'instability' && steps.resolve_ids.outputs.has_work == 'true' }}
+        env:
+          RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+        run: |
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
+          COUNT_CSV=$(find "${TARGET}" -name "instability_analysis.csv" 2>/dev/null | wc -l)
+          echo "=== instability output verification ==="
+          echo "  Target dir               : ${TARGET}"
+          echo "  instability_analysis.csv : ${COUNT_CSV}"
+          find "${TARGET}" -type f 2>/dev/null | sort || true
+          if [[ "${COUNT_CSV}" -eq 0 ]]; then
+            echo "=== locating instability_analysis.csv ==="
+            STRAY_CSV=$(find "${{ github.workspace }}" -name "instability_analysis.csv" 2>/dev/null | xargs -r ls -t 2>/dev/null | head -1 || true)
+            echo "  Stray CSV found: ${STRAY_CSV:-<none>}"
+            if [[ -n "${STRAY_CSV}" && -s "${STRAY_CSV}" ]]; then
+              echo "  Rescuing into canonical location: ${TARGET}/instability_analysis.csv"
+              mkdir -p "${TARGET}"
+              cp "${STRAY_CSV}" "${TARGET}/instability_analysis.csv"
+              COUNT_CSV=1
+            fi
+          fi
+          if [[ "${COUNT_CSV}" -eq 0 ]]; then
+            echo "::error::instability produced NO instability_analysis.csv in '${TARGET}' (and no stray copy found anywhere in the workspace)."
+            exit 1
+          fi
+          COUNT_ROWS=$(python3 -c "
+          import csv, pathlib
+          f = pathlib.Path('${TARGET}/instability_analysis.csv')
+          print(sum(1 for _ in csv.DictReader(f.open())) if f.exists() else 0)
+          " 2>/dev/null || echo 0)
+          echo "  instability_analysis.csv rows: ${COUNT_ROWS}"
+          if [[ "${COUNT_ROWS}" -eq 0 ]]; then
+            echo "::error::instability_analysis.csv exists but has 0 data rows — exp1 DeFi benchmark JSONs were missing or empty when the suite ran."
+            exit 1
+          fi
+          echo "  OK instability output files present."
+
+      - name: Verify extrap output files exist
+        if: ${{ needs.plan.outputs.exp_id == 'extrap' && steps.resolve_ids.outputs.has_work == 'true' }}
+        run: |
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
+          COUNT=$(find "${TARGET}" \( -name "all_domains_extrap_v4_*.json" -o -name "protocol_core_*.json" \) 2>/dev/null | wc -l)
+          echo "=== extrap output verification ==="
+          echo "  Target dir   : ${TARGET}"
+          echo "  File count   : ${COUNT}"
+          find "${TARGET}" -type f 2>/dev/null | sort || true
+          if [[ "${COUNT}" -eq 0 ]]; then
+            echo "::error::extrap produced NO output files in '${TARGET}'."
+            echo "  Expected: all_domains_extrap_v4_*.json or protocol_core_*.json"
+            exit 1
+          fi
+          echo "  OK extrap output files present."
+
+      - name: Verify suppB/suppB_sc output filename format (CRITICAL 4)
+        if: ${{ (needs.plan.outputs.exp_id == 'suppB' || needs.plan.outputs.exp_id == 'suppB_sc') && steps.resolve_ids.outputs.has_work == 'true' }}
+        run: |
+          WORKSPACE="${{ github.workspace }}"
+          if [[ "${{ needs.plan.outputs.exp_id }}" == "suppB" ]]; then
+            OUT_DIR="${WORKSPACE}/${OUT_BASE}/${{ needs.plan.outputs.result_subdir }}"
+            GLOB_PATTERN="noise_sweep_*.json"
+            LABEL="suppB"
+          else
+            OUT_DIR="${WORKSPACE}/${OUT_BASE}/comparison_results/feynman-tests/sample-complexity"
+            GLOB_PATTERN="sample_complexity_*.json"
+            LABEL="suppB_sc"
+          fi
+          ALL=$(find "${OUT_DIR}" -maxdepth 1 -name "*.json" 2>/dev/null | wc -l)
+          MATCH=$(find "${OUT_DIR}" -maxdepth 1 -name "${GLOB_PATTERN}" 2>/dev/null | wc -l)
+          echo "${LABEL}: ${OUT_DIR}"
+          echo "  Total JSON files  : ${ALL}"
+          echo "  Matching ${GLOB_PATTERN}: ${MATCH}"
+          if [[ "${ALL}" -gt 0 && "${MATCH}" -eq 0 ]]; then
+            LABEL_LC=$(echo "${LABEL}" | tr '[:upper:]' '[:lower:]')
+            echo "::warning::CRITICAL 4 - ${LABEL} wrote ${ALL} JSON file(s) but NONE match '${GLOB_PATTERN}'. tables-generator will produce placeholder tables. Reconcile run_${LABEL_LC}_benchmark.py output prefix with the glob in tables-generator.py."
+          elif [[ "${MATCH}" -gt 0 ]]; then
+            echo "  OK Filename format OK - tables-generator glob will match."
+          else
+            echo "  WARN No output files yet (shard may have had no pending tasks)."
+          fi
+
+      - name: Verify suppB output files exist
+        if: ${{ needs.plan.outputs.exp_id == 'suppB' && steps.resolve_ids.outputs.has_work == 'true' }}
+        run: |
+          TARGET="${OUT_BASE}/${{ needs.plan.outputs.result_subdir }}"
+          COUNT=$(find "${TARGET}" \( -name "noise_sweep_*.json" -o -name "noise_sweep_*.csv" \) 2>/dev/null | wc -l)
+          echo "=== suppB output verification ==="
+          echo "  Target dir : ${TARGET}"
+          echo "  File count : ${COUNT}"
+          find "${TARGET}" -type f 2>/dev/null | sort || true
+          if [[ "${COUNT}" -eq 0 ]]; then
+            echo "::error::suppB produced NO output files in '${TARGET}'."
+            echo "  Expected: noise_sweep_*.json or noise_sweep_*.csv"
+            exit 1
+          fi
+          echo "  OK suppB output files present."
+
+      - name: Verify suppB_sc output files exist
+        if: ${{ needs.plan.outputs.exp_id == 'suppB_sc' && steps.resolve_ids.outputs.has_work == 'true' }}
+        run: |
+          TARGET="${OUT_BASE}/comparison_results/feynman-tests/sample-complexity"
+          COUNT=$(find "${TARGET}" \( -name "sample_complexity_*.json" -o -name "sample_complexity_*.csv" \) 2>/dev/null | wc -l)
+          echo "=== suppB_sc output verification ==="
+          echo "  Target dir : ${TARGET}"
+          echo "  File count : ${COUNT}"
+          find "${TARGET}" -type f 2>/dev/null | sort || true
+          if [[ "${COUNT}" -eq 0 ]]; then
+            echo "::error::suppB_sc produced NO output files in '${TARGET}'."
+            echo "  Expected: sample_complexity_*.json or sample_complexity_*.csv"
+            exit 1
+          fi
+          echo "  OK suppB_sc output files present."
+
+      - name: Save shard checkpoint
+        if: always()
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, glob
+
+          ckpt_path  = f"checkpoint_worker_shard{os.environ['SHARD_INDEX']}.json"
+          result_dir = os.path.join(os.environ["OUT_BASE"],
+                                    os.environ["RESULT_SUBDIR"])
+          shard_ids  = json.loads(os.environ["SHARD_IDS"])
+          shard_run_ids = json.loads(os.environ.get("SHARD_RUN_IDS") or "[]")
+          id_to_run_id  = dict(zip(shard_ids, shard_run_ids))
+
+          completed = []
+          if os.path.exists(ckpt_path):
+              try:
+                  with open(ckpt_path) as f:
+                      completed = json.load(f).get("completed", [])
+
+              except Exception:
+                  pass
+
+          done_set = set(completed)
+
+          EXP = os.environ.get("EXP", "")
+          COMBINED_OUTPUT_EXPS = {"exp1", "exp1b", "portfolio", "exp1b_seeds", "exp1_pca_seeds", "exp1c", "suppB", "suppB_sc"}
+          search_dirs = [result_dir, "."]
+
+          if EXP == "exp1_ablation":
+              # Done only when this shard's checkpoint holds every required arm for every
+              # equation. A same-named file elsewhere in the workspace must never count.
+              ck = os.path.join(result_dir, f"exp1_ablation_checkpoint_shard{os.environ['SHARD_INDEX']}.json")
+              need = ["pysr_only", "hypatia"] + (["hypatia_nollm"] if os.environ.get("HYPATIAX_NOLLM_ARM") == "1" else [])
+              try:
+                  data = json.load(open(ck))
+              except Exception as e:
+                  print(f"  [exp1_ablation] cannot read {ck}: {e} - not marking done")
+                  data = None
+              if data:
+                  bad = [a for a in need
+                         if not all(isinstance(v, dict) and isinstance(v.get(a), dict) for v in data.values())]
+                  if bad:
+                      print(f"  [exp1_ablation] shard checkpoint incomplete for arms {bad} - not marking done")
+                  else:
+                      done_set.update(shard_ids)
+              elif data is not None:
+                  print("  [exp1_ablation] shard checkpoint is empty - not marking done")
+          elif EXP in COMBINED_OUTPUT_EXPS:
+              if EXP == "suppB":
+                  first_id = shard_ids[0]   # "noise{NL}__{domain}"
+                  nl_raw   = first_id.split("__")[0][len("noise"):]  # e.g. "0.0"
+                  nl_safe  = nl_raw.replace(".", "_")                 # e.g. "0_0"
+                  combined_globs = [
+                      f"noise_sweep_noise{nl_safe}_*.json",
+                      f"noise_sweep_noise{nl_safe}_*.csv",
+                      f"noise_sweep_noise{nl_raw}_*.json",  # raw dot variant
+                      f"noise_sweep_noise{nl_raw}_*.csv",
+                      # FEATURE-NSHARDS-SUFFIX names: noise_sweep_<TS>_nshardsNN.{json,csv}
+                      # (timestamp starts with a digit, so checkpoint files noise_sweep_sig*_checkpoint* are excluded)
+                      "noise_sweep_[0-9]*_nshards*.json",
+                      "noise_sweep_[0-9]*_nshards*.csv",
+                  ]
+              elif EXP == "suppB_sc":
+                  first_id = shard_ids[0]   # "sc_n{N}__{domain}"
+                  n_val    = first_id.split("__")[0][len("sc_n"):]    # e.g. "50"
+                  combined_globs = [
+                      f"sample_complexity_n{n_val}_*.json",
+                      f"sample_complexity_n{n_val}_*.csv",
+                      "sample_complexity_[0-9]*_nshards*.json",
+                      "sample_complexity_[0-9]*_nshards*.csv",
+                  ]
+              elif EXP == "portfolio":
+                  seeds_this_shard = [tid[len("portfolio_seed"):] for tid in shard_ids]
+                  combined_globs = []
+                  for s in seeds_this_shard:
+                      combined_globs += [
+                          f"*seed_sweep_seed{s}*.json",
+                          f"hypatiax/data/results/portfolio_variance_audit/*seed_sweep_seed{s}*.json",
+                      ]
+              elif EXP == "exp1b":
+                  seeds_this_shard = [tid[len("portfolio_seed"):] for tid in shard_ids]
+                  PVA_DIR = "hypatiax/data/results/portfolio_variance_audit"
+                  combined_globs = []
+                  for s in seeds_this_shard:
+                      combined_globs += [
+                          f"*hypatiax_defi_benchmark*_results_seed{s}*.json",
+                          f"*_results_seed{s}*.json",
+                          f"*comparison_FIXED_*seed{s}*.json",
+                          f"*comparison_FIXED_*seed{s}*.csv",
+                          f"{PVA_DIR}/*seed{s}*.json",
+                          f"{PVA_DIR}/*seed{s}*.csv",
+                          f"{PVA_DIR}/**/*seed{s}*.json",
+                          f"{PVA_DIR}/**/*seed{s}*.csv",
+                      ]
+                  if not combined_globs:
+                      combined_globs = ["*comparison_FIXED_*.json",
+                                        "*comparison_FIXED_*.csv",
+                                        f"{PVA_DIR}/*.json",
+                                        f"{PVA_DIR}/*.csv",
+                                        f"{PVA_DIR}/**/*.json",
+                                        f"{PVA_DIR}/**/*.csv"]
+              elif EXP == "exp1_pca_seeds":
+                  seeds_this_shard = sorted({t.rsplit("_seed", 1)[1] for t in shard_ids if "_seed" in t})
+                  combined_globs = []
+                  for s in seeds_this_shard:
+                      combined_globs += [
+                          f"*hypatiax_defi_benchmark*results*seed{s}.json",
+                          f"*hypatiax_defi_benchmark*results*seed{s}_*.json",
+                          f"*hypatiax_defi_benchmark*seed{s}_*results*.json",
+                          f"*defi_pca_v4_*seed{s}.json",
+                          f"*defi_pca_v4_*seed{s}_*.json",
+                          # result_dir only ever holds this experiment's seed-tagged files
+                          f"*seed{s}.json",
+                      ]
+              elif EXP == "exp1b_seeds":
+                  seeds_this_shard = sorted({t.rsplit("_seed", 1)[1] for t in shard_ids if "_seed" in t})
+                  combined_globs = []
+                  for s in seeds_this_shard:
+                      combined_globs += [
+                          f"*hypatiax_defi_benchmark*results*seed{s}.json",
+                          f"*hypatiax_defi_benchmark*results*seed{s}_*.json",
+                          f"*hypatiax_defi_benchmark*seed{s}_*results*.json",
+                          f"*defi_v4_*seed{s}.json",
+                          f"*defi_v4_*seed{s}_*.json",
+                      ]
+              elif EXP == "exp1c":
+                  seeds_this_shard = [tid[len("seed"):] for tid in shard_ids]
+                  combined_globs = ["hypatiax_defi_benchmark*_pooled_seed_report.json"]
+                  for s in seeds_this_shard:
+                      combined_globs += [
+                          f"*hypatiax_defi_benchmark*seed{s}*results*.json",
+                          f"*defi_v4_*seed{s}*.json",
+                      ]
+                  if not seeds_this_shard:
+                      combined_globs += [
+                          "*hypatiax_defi_benchmark*results*.json",
+                          "*defi_v4_*.json",
+                      ]
+              else:
+                  combined_globs = [
+                      "*hypatiax_defi_benchmark*results*.json",
+                      "*defi_benchmark*results*.json",
+                  ]
+
+              found_combined = False
+              for d in search_dirs:
+                  for pat in combined_globs:
+                      hits = glob.glob(os.path.join(d, pat), recursive=True)
+                      if hits:
+                          print(f"  [{EXP}] Combined result file detected: {hits[0]}")
+                          found_combined = True
+                          break
+                  if found_combined:
+                      break
+              if found_combined:
+                  done_set.update(shard_ids)
+                  print(f"  [{EXP}] Marking all {len(shard_ids)} shard task(s) done"
+                        f" (combined-output mode).")
+              else:
+                  print(f"  [{EXP}] WARNING: combined result file NOT found in"
+                        f" {search_dirs} — 0 tasks marked done.")
+                  print(f"  [{EXP}]   Patterns searched: {combined_globs}")
+          else:
+              for tid in shard_ids:
+                  safe = tid.replace("/", "_").replace(".", "_")
+                  matches = []
+                  for d in search_dirs:
+                      matches += (
+                          glob.glob(f"{d}/**/*{safe}*.json", recursive=True) +
+                          glob.glob(f"{d}/**/*{safe}*.csv",  recursive=True)
+                      )
+                  if matches:
+                      done_set.add(tid)
+
+          with open(ckpt_path, "w") as f:
+              json.dump({
+                  "completed": sorted(done_set),
+                  "run_id_map": {tid: id_to_run_id[tid]
+                                 for tid in sorted(done_set)
+                                 if tid in id_to_run_id},
+              }, f, indent=2)
+
+          print(f"Checkpoint saved: {len(done_set)} completed tasks in shard {os.environ['SHARD_INDEX']}")
+          PYEOF
+
+      - name: Persist shard checkpoint to cache
+        if: ${{ always() && github.event.inputs.fresh_mode != 'true' }}
+        uses: actions/cache/save@v4.2.3
+        with:
+          path: checkpoint_worker_shard${{ matrix.shard }}.json
+          key: checkpoint-worker-${{ github.event.inputs.experiment }}-shard${{ matrix.shard }}-${{ github.ref_name }}-${{ github.run_id }}
+
+      - name: Copy shard checkpoint into result subdir
+        if: always()
+        env:
+          RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+          SHARD:         ${{ matrix.shard }}
+        run: |
+          CKPT_SRC="checkpoint_worker_shard${SHARD}.json"
+          CKPT_DEST="${OUT_BASE}/${RESULT_SUBDIR}/_checkpoint_shard${SHARD}.json"
+          if [[ -f "${CKPT_SRC}" ]]; then
+            cp "${CKPT_SRC}" "${CKPT_DEST}"
+            echo "Copied ${CKPT_SRC} → ${CKPT_DEST}"
+          else
+            echo "::warning::Shard checkpoint not found at ${CKPT_SRC} — skipping copy."
+          fi
+
+      - name: Pre-upload artifact file count check
+        if: always()
+        env:
+          RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+          EXP:           ${{ needs.plan.outputs.exp_id }}
+          SHARD:         ${{ matrix.shard }}
+          FOUR_WAY_SMOKE: ${{ github.event.inputs.four_way_smoke == 'true' && '1' || '' }}
+        run: |
+          # Match the exact directory passed to upload-artifact below. Protocol-30
+          # and Core-15 workers upload only their own isolated shard directory;
+          # counting the parent directory can otherwise be satisfied by stale or
+          # sibling-shard files and conceal a missing current-shard output.
+          if [[ "${EXP}" == "exp1_four_way_matched" || "${EXP}" == "exp2_protocol30_random_8020" || "${EXP}" == "exp2_protocol30_pca_4060" ]]; then
+            UPLOAD_DIR="${OUT_BASE}/${RESULT_SUBDIR}/shard${SHARD}"
+          else
+            UPLOAD_DIR="${OUT_BASE}/${RESULT_SUBDIR}"
+          fi
+          COUNT=$(find "${UPLOAD_DIR}" -type f 2>/dev/null | wc -l || echo 0)
+          echo "=== Artifact upload check: ${UPLOAD_DIR} ==="
+          echo "  Files found: ${COUNT}"
+          find "${UPLOAD_DIR}" -type f 2>/dev/null | sort || true
+          if [[ "${COUNT}" -eq 0 ]]; then
+            echo "::error::Shard ${SHARD} (${EXP}): upload directory '${UPLOAD_DIR}' is EMPTY."
+            echo "  Possible causes:"
+            echo "    1. Experiment script wrote output files with an unexpected filename prefix"
+            echo "    2. Experiment script exited non-zero before writing any files"
+            echo "    3. The runner wrote results outside this shard's isolated output directory"
+            echo "  Check 'Run experiment tasks' and the artifact upload step logs above."
+          fi
+
+          if [[ "${EXP}" == "exp1_four_way_matched" && "${FOUR_WAY_SMOKE:-}" == "1" ]]; then
+            python3 - "${UPLOAD_DIR}" <<'PY'
+          import json, sys
+          from pathlib import Path
+          output_dir = Path(sys.argv[1])
+          required = (
+              "exp1_four_way_matched_results.json",
+              "exp1_four_way_matched_checkpoint.json",
+              "exp1_four_way_matched_manifest.json",
+              "exp1_four_way_matched_summary.json",
+          )
+          missing = [name for name in required if not (output_dir / name).is_file()]
+          if missing:
+              raise SystemExit(f"missing Core-15 smoke outputs: {missing}")
+          manifest = json.loads((output_dir / required[2]).read_text())
+          summary = json.loads((output_dir / required[3]).read_text())
+          results = json.loads((output_dir / required[0]).read_text())
+          equation_rows = {
+              key: row for key, row in results.items()
+              if key != "__run_metadata__" and isinstance(row, dict) and isinstance(row.get("methods"), dict)
+          }
+          if manifest.get("smoke_test") is not True or manifest.get("official_aggregate_eligible") is not False:
+              raise SystemExit("Core-15 output is not marked artifact-only smoke")
+          if len(manifest.get("assigned_equation_ids", [])) != 1 or len(equation_rows) != 1:
+              raise SystemExit(f"expected exactly one equation row; manifest={manifest.get('assigned_equation_ids')} rows={list(equation_rows)}")
+          methods = next(iter(equation_rows.values()))["methods"]
+          expected = {"hybrid_llm_pysr", "llm_only", "pysr_only", "nn_only"}
+          if set(methods) != expected:
+              raise SystemExit(f"four-arm records missing/extra: expected={sorted(expected)} actual={sorted(methods)}")
+          malformed = [name for name in sorted(expected)
+                       if not isinstance(methods[name], dict)
+                       or not isinstance(methods[name].get("success"), bool)
+                       or (methods[name].get("success") is False and not methods[name].get("error"))]
+          if malformed:
+              raise SystemExit(f"arm records lack an explicit success/failure outcome: {malformed}")
+          failed = [name for name in sorted(expected) if methods[name].get("success") is not True]
+          if failed:
+              details = {name: methods[name].get("error") for name in failed}
+              raise SystemExit(f"one-case smoke detected failed method arm(s): {details}")
+          if summary.get("smoke_test") is not True or summary.get("official_aggregate_eligible") is not False:
+              raise SystemExit("Core-15 smoke summary is not marked artifact-only")
+          print("Validated Core-15 one-equation smoke artifact: all four arm records present; not eligible for official aggregation.")
+          PY
+          elif [[ "${EXP}" == "exp2_protocol30_smoke_random_8020" || "${EXP}" == "exp2_protocol30_smoke_pca_4060" ]]; then
+            python3 - "${UPLOAD_DIR}/protocol30_shard_manifest.json" "${UPLOAD_DIR}" <<'PY'
+          import json, sys
+          from pathlib import Path
+          manifest_path, output_dir = Path(sys.argv[1]), Path(sys.argv[2])
+          if not manifest_path.is_file():
+              raise SystemExit(f"missing smoke manifest: {manifest_path}")
+          manifest = json.loads(manifest_path.read_text())
+          indices = manifest.get("assigned_equation_indices", [])
+          count = manifest.get("expected_equation_count")
+          if manifest.get("smoke_test") is not True or manifest.get("official_aggregate_eligible") is not False:
+              raise SystemExit("smoke manifest is not explicitly marked artifact-only")
+          if not isinstance(count, int) or not 1 <= count <= 5 or count != len(indices):
+              raise SystemExit(f"invalid smoke equation count: expected={count}, assigned={len(indices)}")
+          result_file = manifest.get("result_file")
+          if not result_file or not (output_dir / result_file).is_file():
+              raise SystemExit(f"manifest result file is missing: {result_file}")
+          print(f"Validated artifact-only smoke manifest: {count} equations; result={result_file}")
+          PY
+          fi
+
+      - name: Exclude stale seed42 alias from Exp1 artifacts
+        if: ${{ needs.plan.outputs.exp_id == 'exp1' && steps.resolve_ids.outputs.has_work == 'true' }}
+        env:
+          RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+        run: |
+          set -euo pipefail
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
+          CANONICAL="${TARGET}/hypatiax_defi_benchmark_v3_results.json"
+          SEED42="${TARGET}/hypatiax_defi_benchmark_v3_results_seed42.json"
+          # The canonical Exp1 result is authoritative. If this run changed it
+          # but left the tracked seed42 alias untouched, that alias is a stale
+          # checkout copy: exclude it from this run's artifact, never from git.
+          if [[ -f "${CANONICAL}" && -f "${SEED42}" ]] \
+             && ! git diff --quiet HEAD -- "${CANONICAL}" \
+             && git diff --quiet HEAD -- "${SEED42}"; then
+            echo "Canonical Exp1 result changed; excluding unchanged seed42 alias from artifact."
+            rm "${SEED42}"
+          else
+            echo "Seed42 alias is absent or changed; preserving artifact contents."
+          fi
+      - name: Upload shard results artifact
+        if: always()
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: results-${{ github.event.inputs.experiment }}-shard${{ matrix.shard }}
+          path: ${{ (needs.plan.outputs.exp_id == 'exp1_four_way_matched' || needs.plan.outputs.exp_id == 'exp2_protocol30_random_8020' || needs.plan.outputs.exp_id == 'exp2_protocol30_pca_4060') && format('{0}/{1}/shard{2}/', env.OUT_BASE, needs.plan.outputs.result_subdir, matrix.shard) || format('{0}/{1}/', env.OUT_BASE, needs.plan.outputs.result_subdir) }}
+          if-no-files-found: error
+          retention-days: ${{ github.event.inputs.experiment == 'exp1-provenance' && 90 || 30 }}
 
       - name: Commit and push shard results to repo
         if: ${{ success() && github.event.inputs.fresh_mode != 'true' && github.event.inputs.four_way_smoke != 'true' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_random_8020' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_pca_4060' }}
