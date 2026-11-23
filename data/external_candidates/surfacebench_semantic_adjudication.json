@@ -1,0 +1,2065 @@
+{
+  "schema_version": 1,
+  "title": "SurfaceBench explicit-surface semantic adjudication (provisional)",
+  "status": "reviewed_for_obvious_formula_and_template_overlap; independent_family_adjudication_open",
+  "source": {
+    "candidate_registry_path": "data/external_candidates/surfacebench_candidate_registry.json",
+    "candidate_registry_blob_sha": "05c6dc130afa8edf1203ccada4a749cde92760ef",
+    "surfacebench_repository": "deep-symbolic-mathematics/surfacebench",
+    "surfacebench_revision": "619bcb0aa17cd80694798c5ca92283cd9a4e6ba4",
+    "symbolic_data_revision": "13b23672154e6dd6a463ad223d3f72829d21fe60",
+    "historical74_artifact_run_id": 45038667467,
+    "historical74_artifact_id": 14760901742,
+    "historical74_artifact_zip_sha256": "ddfc8fdc28a12db6615005629d01141d369d1978c5fe685e69c750b20f2aa5db",
+    "historical74_source_commit": "107fcd6da06fe15833ecdf37c6d2284da84256c8",
+    "core15_source_path": "hypatiax/experiments/benchmarks/exp1_ablation.py",
+    "core15_source_blob_sha": "05b28899120a077a5fb8edbd5f38b23b1bf7e2dc"
+  },
+  "summary": {
+    "source_records": 128,
+    "exact_unique_raw_formula_count": 127,
+    "exact_duplicate_groups": 1,
+    "exact_duplicate_ids": [
+      "NACS1",
+      "TECS7"
+    ],
+    "exact_unique_formula_count_after_dedup": 127,
+    "core15_records_screened": 15,
+    "core15_direct_formula_or_named_family_matches": 0,
+    "historical74_records_screened": 74,
+    "historical74_saved_formula_count": 70,
+    "historical74_missing_formula_ids": [
+      "Capital efficiency",
+      "Incremental VaR",
+      "Options Delta",
+      "Theta of option"
+    ],
+    "historical74_direct_formula_or_named_family_matches_among_saved_formulas": 0,
+    "historical74_missing_formula_cases": "unresolved; absence of saved formula is not evidence of no overlap",
+    "template_tags_are": "descriptive structural annotations only; not canonical equation-family IDs and not a basis for counting independent units"
+  },
+  "cross_source_method": {
+    "method": "Compare explicit SurfaceBench z=f(x,y) formula strings and mathematical form against all 15 explicit Core-15 formula definitions and the 70 saved formula expressions in the pinned historical-74 artifact; inspect historical equation IDs for the four records without saved formulas.",
+    "matching_standard": "A direct overlap requires same equation or same mathematical family under variable renaming, parameter substitution, algebraic rearrangement, or a clear shared governing relation. Generic use of exp, log, sin, cos, sqrt, ratios, or polynomials is not sufficient.",
+    "limitations": [
+      "This is a conservative formula-level screen, not a proof of global mathematical inequivalence.",
+      "The four historical records without saved formulas cannot be fully adjudicated at formula level.",
+      "Broad structural tags may group equations that are not mathematically equivalent.",
+      "No category pooling or statistical independence claim is made."
+    ]
+  },
+  "exact_duplicate_groups": [
+    {
+      "group_id": "SB-EXACT-DUP-001",
+      "ids": [
+        "NACS1",
+        "TECS7"
+      ],
+      "relation": "identical raw formula string",
+      "canonical_formula": "sin(x**2 + y**2)/(1 + x**2 + y**2)",
+      "decision": "one mathematical equation; count at most once"
+    }
+  ],
+  "template_interpretation": [
+    {
+      "tag": "radial_quadratic_invariant",
+      "meaning": "Expressions using x^2+y^2 as a radial invariant; shared argument structure alone does not imply equivalent surfaces."
+    },
+    {
+      "tag": "exponential_or_gaussian_envelope",
+      "meaning": "Exponential damping or modulation involving squared coordinates; envelopes and base oscillatory/polynomial factors differ."
+    },
+    {
+      "tag": "piecewise_or_discrete_regime",
+      "meaning": "Conditional branches, integer-grid operations, or discrete regime changes; branch functions and predicates require separate comparison."
+    },
+    {
+      "tag": "trigonometric_or_hyperbolic_component",
+      "meaning": "Trigonometric/hyperbolic components; this is a broad operator family, not a unique equation family."
+    },
+    {
+      "tag": "coupled_bivariate_interaction",
+      "meaning": "Cross-coordinate interactions such as x*y or x±y."
+    },
+    {
+      "tag": "symbolic_free_coefficients",
+      "meaning": "Expressions with free symbolic coefficients; coefficient instantiation/parameterized-template equivalence remains unresolved."
+    }
+  ],
+  "records": [
+    {
+      "source_equation_id": "NACS1",
+      "source_category": "non_canonical_3d_geometric_surfaces",
+      "raw_formula": "sin(x**2 + y**2)/(1 + x**2 + y**2)",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": "SB-EXACT-DUP-001",
+      "within_source_decision": "duplicate_of_same_equation",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "NACS2",
+      "source_category": "non_canonical_3d_geometric_surfaces",
+      "raw_formula": "(x**2 - y**2)/(1 + x**2 + y**2)",
+      "template_tags": [
+        "radial_quadratic_invariant"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "NACS3",
+      "source_category": "non_canonical_3d_geometric_surfaces",
+      "raw_formula": "atan2(y, x)*exp(-(x**2 + y**2))",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "NACS4",
+      "source_category": "non_canonical_3d_geometric_surfaces",
+      "raw_formula": "tanh(sin(x*y))",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "NACS5",
+      "source_category": "non_canonical_3d_geometric_surfaces",
+      "raw_formula": "log(1 + x**2 + y**2)*sin(x - y)",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "trigonometric_or_hyperbolic_component",
+        "logarithmic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "NACS6",
+      "source_category": "non_canonical_3d_geometric_surfaces",
+      "raw_formula": "exp(sin(x**2 + y**2))",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "NACS7",
+      "source_category": "non_canonical_3d_geometric_surfaces",
+      "raw_formula": "cos(x**2 + y)/(1 + Abs(x*y))",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "absolute_value_or_nonsmooth_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "NACS8",
+      "source_category": "non_canonical_3d_geometric_surfaces",
+      "raw_formula": "sinh(x*y)*exp(-y**2)",
+      "template_tags": [
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "NACS9",
+      "source_category": "non_canonical_3d_geometric_surfaces",
+      "raw_formula": "sin(sqrt(x**2 + y**2))/log(1 + x**2)",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "trigonometric_or_hyperbolic_component",
+        "logarithmic_component",
+        "radical_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "NACS10",
+      "source_category": "non_canonical_3d_geometric_surfaces",
+      "raw_formula": "x*exp(-x**2 - y**2)*cos(y)",
+      "template_tags": [
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "NACS11",
+      "source_category": "non_canonical_3d_geometric_surfaces",
+      "raw_formula": "sin(x*y)/(1 + x**2 + y**2)",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "PDS1",
+      "source_category": "piecewise_defined_surfaces",
+      "raw_formula": "Piecewise((x**2, x < y), (y**2, True))",
+      "template_tags": [
+        "piecewise_or_discrete_regime"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "PDS2",
+      "source_category": "piecewise_defined_surfaces",
+      "raw_formula": "Piecewise((sin(x), x < 0), (exp(y), True))",
+      "template_tags": [
+        "piecewise_or_discrete_regime",
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "PDS3",
+      "source_category": "piecewise_defined_surfaces",
+      "raw_formula": "Piecewise((x*y, x*y > 0), (-x*y, True))",
+      "template_tags": [
+        "piecewise_or_discrete_regime",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "PDS4",
+      "source_category": "piecewise_defined_surfaces",
+      "raw_formula": "Piecewise((x**2 + y**2, x < y), (x**2 - y**2, True))",
+      "template_tags": [
+        "piecewise_or_discrete_regime",
+        "radial_quadratic_invariant"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "PDS5",
+      "source_category": "piecewise_defined_surfaces",
+      "raw_formula": "Piecewise((cos(x), Abs(x) < 1), (exp(-y**2), True))",
+      "template_tags": [
+        "piecewise_or_discrete_regime",
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component",
+        "absolute_value_or_nonsmooth_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "PDS6",
+      "source_category": "piecewise_defined_surfaces",
+      "raw_formula": "Piecewise((x**3, y > 0), (-y**3, True))",
+      "template_tags": [
+        "piecewise_or_discrete_regime"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "PDS7",
+      "source_category": "piecewise_defined_surfaces",
+      "raw_formula": "Abs(x - y) + sin(x)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "absolute_value_or_nonsmooth_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "PDS8",
+      "source_category": "piecewise_defined_surfaces",
+      "raw_formula": "Piecewise((sin(x + y), x**2 + y**2 < 1), (0, True))",
+      "template_tags": [
+        "piecewise_or_discrete_regime",
+        "radial_quadratic_invariant",
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "PDS9",
+      "source_category": "piecewise_defined_surfaces",
+      "raw_formula": "Piecewise((tanh(x), x > y), (cos(y), True))",
+      "template_tags": [
+        "piecewise_or_discrete_regime",
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "PDS10",
+      "source_category": "piecewise_defined_surfaces",
+      "raw_formula": "Piecewise((x*y, Abs(x - y) < 0.5), (sin(x - y), True))",
+      "template_tags": [
+        "piecewise_or_discrete_regime",
+        "trigonometric_or_hyperbolic_component",
+        "absolute_value_or_nonsmooth_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "MTAS1",
+      "source_category": "mixed_transcendental_analytic_surfaces",
+      "raw_formula": "sin(x) + exp(-y**2)",
+      "template_tags": [
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "MTAS2",
+      "source_category": "mixed_transcendental_analytic_surfaces",
+      "raw_formula": "tanh(x*y) + x**2",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "MTAS3",
+      "source_category": "mixed_transcendental_analytic_surfaces",
+      "raw_formula": "exp(-x**2 - y**2) + cos(3*x)",
+      "template_tags": [
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "MTAS4",
+      "source_category": "mixed_transcendental_analytic_surfaces",
+      "raw_formula": "Symbol('alpha')*sin(Symbol('beta')*x) + Symbol('gamma')*log(1 + y**2)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "logarithmic_component",
+        "symbolic_free_coefficients"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "MTAS5",
+      "source_category": "mixed_transcendental_analytic_surfaces",
+      "raw_formula": "sinh(x) - tanh(y)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "MTAS6",
+      "source_category": "mixed_transcendental_analytic_surfaces",
+      "raw_formula": "sin(x**2 + y**2)*exp(-sqrt(x**2 + y**2))",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component",
+        "radical_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "MTAS7",
+      "source_category": "mixed_transcendental_analytic_surfaces",
+      "raw_formula": "tanh(x)*log(1 + y**2)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "logarithmic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "MTAS8",
+      "source_category": "mixed_transcendental_analytic_surfaces",
+      "raw_formula": "cos(x*y) + exp(-x**2 + y)",
+      "template_tags": [
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "MTAS9",
+      "source_category": "mixed_transcendental_analytic_surfaces",
+      "raw_formula": "Symbol('beta')*cos(x) + Symbol('gamma')*sin(y**2)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "symbolic_free_coefficients"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "CMRS1",
+      "source_category": "conditional_multi_regime_surfaces",
+      "raw_formula": "Piecewise((x**2, x < 0), (sin(y), True))",
+      "template_tags": [
+        "piecewise_or_discrete_regime",
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "CMRS2",
+      "source_category": "conditional_multi_regime_surfaces",
+      "raw_formula": "Piecewise((log(1 + Abs(x)), y < 0), (exp(-y**2), True))",
+      "template_tags": [
+        "piecewise_or_discrete_regime",
+        "exponential_or_gaussian_envelope",
+        "logarithmic_component",
+        "absolute_value_or_nonsmooth_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "CMRS3",
+      "source_category": "conditional_multi_regime_surfaces",
+      "raw_formula": "Piecewise((x**2 + sin(y), x*y > 0), (-x**2 - cos(y), True))",
+      "template_tags": [
+        "piecewise_or_discrete_regime",
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "CMRS4",
+      "source_category": "conditional_multi_regime_surfaces",
+      "raw_formula": "Piecewise((tanh(x - y), x > y), (0, True))",
+      "template_tags": [
+        "piecewise_or_discrete_regime",
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "CMRS5",
+      "source_category": "conditional_multi_regime_surfaces",
+      "raw_formula": "Abs(x*y) + sin(x - y)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "absolute_value_or_nonsmooth_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "CMRS6",
+      "source_category": "conditional_multi_regime_surfaces",
+      "raw_formula": "Piecewise((x**2, y > 0), (cos(y**2), True))",
+      "template_tags": [
+        "piecewise_or_discrete_regime",
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "CMRS7",
+      "source_category": "conditional_multi_regime_surfaces",
+      "raw_formula": "Piecewise((sin(x*y), x**2 + y**2 < 1), (log(1 + x**2), True))",
+      "template_tags": [
+        "piecewise_or_discrete_regime",
+        "radial_quadratic_invariant",
+        "trigonometric_or_hyperbolic_component",
+        "logarithmic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "CMRS8",
+      "source_category": "conditional_multi_regime_surfaces",
+      "raw_formula": "Piecewise((tanh(x + y), x*y < 0), (sin(x - y), True))",
+      "template_tags": [
+        "piecewise_or_discrete_regime",
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "CMRS9",
+      "source_category": "conditional_multi_regime_surfaces",
+      "raw_formula": "Piecewise((x, x > y), (y**2 + sin(x), True))",
+      "template_tags": [
+        "piecewise_or_discrete_regime",
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "OCS1",
+      "source_category": "oscillatory_composite_surfaces",
+      "raw_formula": "sin(5*x)*cos(5*y)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "OCS2",
+      "source_category": "oscillatory_composite_surfaces",
+      "raw_formula": "cos(x**2*y**2) + 0.2*sin(5*sqrt(Abs(x) + Abs(y)))",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "radical_component",
+        "absolute_value_or_nonsmooth_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "OCS3",
+      "source_category": "oscillatory_composite_surfaces",
+      "raw_formula": "sin(x*y) + 0.5*sin(3*x + 5*y)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "OCS4",
+      "source_category": "oscillatory_composite_surfaces",
+      "raw_formula": "exp(-0.1*(x**2 + y**2))*sin(x*y)",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "OCS5",
+      "source_category": "oscillatory_composite_surfaces",
+      "raw_formula": "sin(x**3 + y**3)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "OCS6",
+      "source_category": "oscillatory_composite_surfaces",
+      "raw_formula": "x*y*cos(sqrt(x**2 + y**2))",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "trigonometric_or_hyperbolic_component",
+        "radical_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "OCS7",
+      "source_category": "oscillatory_composite_surfaces",
+      "raw_formula": "sin(2**x*x)*cos(2**y*y)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "OCS8",
+      "source_category": "oscillatory_composite_surfaces",
+      "raw_formula": "exp(-Abs(x - y))*sin(3*(x + y))",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "absolute_value_or_nonsmooth_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "OCS9",
+      "source_category": "oscillatory_composite_surfaces",
+      "raw_formula": "Sum(sin(2**i*x)/i, (i, 1, 4))",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "integer_grid_or_discrete_operator"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "OCS10",
+      "source_category": "oscillatory_composite_surfaces",
+      "raw_formula": "tanh(x*y)*cos(sqrt(x**2 + y**2))",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "trigonometric_or_hyperbolic_component",
+        "radical_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "OCS11",
+      "source_category": "oscillatory_composite_surfaces",
+      "raw_formula": "sin(2*x) + Symbol('alpha')*exp(-y**2)",
+      "template_tags": [
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component",
+        "symbolic_free_coefficients"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "TECS1",
+      "source_category": "trigonometric_exponential_composition_surfaces",
+      "raw_formula": "sin(sqrt(x**2 + y**2))",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "trigonometric_or_hyperbolic_component",
+        "radical_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "TECS2",
+      "source_category": "trigonometric_exponential_composition_surfaces",
+      "raw_formula": "exp(-x**2 - y**2)*cos(3*x)",
+      "template_tags": [
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "TECS3",
+      "source_category": "trigonometric_exponential_composition_surfaces",
+      "raw_formula": "tanh(x + y)*sin(x*y)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "TECS4",
+      "source_category": "trigonometric_exponential_composition_surfaces",
+      "raw_formula": "log(1 + x**2 + y**2)*cos(x*y)",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "trigonometric_or_hyperbolic_component",
+        "logarithmic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "TECS5",
+      "source_category": "trigonometric_exponential_composition_surfaces",
+      "raw_formula": "x**2 + y**2 - sin(2*x + 2*y)",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "TECS6",
+      "source_category": "trigonometric_exponential_composition_surfaces",
+      "raw_formula": "cos(2*x)*cos(2*y)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "TECS7",
+      "source_category": "trigonometric_exponential_composition_surfaces",
+      "raw_formula": "sin(x**2 + y**2)/(1 + x**2 + y**2)",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": "SB-EXACT-DUP-001",
+      "within_source_decision": "duplicate_of_same_equation",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "TECS8",
+      "source_category": "trigonometric_exponential_composition_surfaces",
+      "raw_formula": "tanh(x**2 - y**2)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "TECS9",
+      "source_category": "trigonometric_exponential_composition_surfaces",
+      "raw_formula": "exp(-Abs(x*y))*sin(x + y)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "absolute_value_or_nonsmooth_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "TECS10",
+      "source_category": "trigonometric_exponential_composition_surfaces",
+      "raw_formula": "cos(x*y) + 0.1*(x**2 + y**2)",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "MOCS1",
+      "source_category": "multi_operator_composite_surfaces",
+      "raw_formula": "log(1 + x**2 + y**2)*cos(x - y)",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "trigonometric_or_hyperbolic_component",
+        "logarithmic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "MOCS2",
+      "source_category": "multi_operator_composite_surfaces",
+      "raw_formula": "(sin(x) + cos(y))/(1 + x**2 + y**2)",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "MOCS3",
+      "source_category": "multi_operator_composite_surfaces",
+      "raw_formula": "exp(-0.1*Abs(x*y))*tanh(x + y)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "absolute_value_or_nonsmooth_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "MOCS4",
+      "source_category": "multi_operator_composite_surfaces",
+      "raw_formula": "(x**2*y - y**2)/(1 + x**2)",
+      "template_tags": [
+        "other_bivariate_analytic_structure"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "MOCS5",
+      "source_category": "multi_operator_composite_surfaces",
+      "raw_formula": "sqrt(1 + x**2 + y**2)*sin(x*y)",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "trigonometric_or_hyperbolic_component",
+        "radical_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "MOCS6",
+      "source_category": "multi_operator_composite_surfaces",
+      "raw_formula": "(exp(x) + exp(-y))/(1 + Abs(x - y))",
+      "template_tags": [
+        "absolute_value_or_nonsmooth_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "MOCS7",
+      "source_category": "multi_operator_composite_surfaces",
+      "raw_formula": "Piecewise((x**2 + y**2, x + y < 0), (sin(x + y), True))",
+      "template_tags": [
+        "piecewise_or_discrete_regime",
+        "radial_quadratic_invariant",
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "MOCS8",
+      "source_category": "multi_operator_composite_surfaces",
+      "raw_formula": "cos(sqrt(x**2 + y**2))/(1 + exp(-x*y))",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "trigonometric_or_hyperbolic_component",
+        "radical_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "MOCS9",
+      "source_category": "multi_operator_composite_surfaces",
+      "raw_formula": "sinh(x**2 - y**2)*exp(-0.1*(x + y)**2)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "MOCS10",
+      "source_category": "multi_operator_composite_surfaces",
+      "raw_formula": "atan(x*y) + 0.2*exp(-x**2 - y**2)",
+      "template_tags": [
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "EBS1",
+      "source_category": "elementary_bivariate_surfaces",
+      "raw_formula": "x**2 + y**2",
+      "template_tags": [
+        "radial_quadratic_invariant"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "EBS2",
+      "source_category": "elementary_bivariate_surfaces",
+      "raw_formula": "sin(x)*cos(y)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "EBS3",
+      "source_category": "elementary_bivariate_surfaces",
+      "raw_formula": "exp(-x**2 - y**2)",
+      "template_tags": [
+        "exponential_or_gaussian_envelope"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "EBS4",
+      "source_category": "elementary_bivariate_surfaces",
+      "raw_formula": "x*y",
+      "template_tags": [
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "EBS5",
+      "source_category": "elementary_bivariate_surfaces",
+      "raw_formula": "tanh(x + y)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "EBS6",
+      "source_category": "elementary_bivariate_surfaces",
+      "raw_formula": "cos(x**2 + y**2)",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "EBS7",
+      "source_category": "elementary_bivariate_surfaces",
+      "raw_formula": "log(1 + x**2 + y**2)",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "logarithmic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "EBS8",
+      "source_category": "elementary_bivariate_surfaces",
+      "raw_formula": "x**2 - y**2",
+      "template_tags": [
+        "other_bivariate_analytic_structure"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "EBS9",
+      "source_category": "elementary_bivariate_surfaces",
+      "raw_formula": "sin(x*y)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "EBS10",
+      "source_category": "elementary_bivariate_surfaces",
+      "raw_formula": "exp(-Abs(x - y))",
+      "template_tags": [
+        "absolute_value_or_nonsmooth_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "DIGS1",
+      "source_category": "discrete_integer_grid_surfaces",
+      "raw_formula": "sin(i) + cos(j)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "integer_grid_or_discrete_operator"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "DIGS2",
+      "source_category": "discrete_integer_grid_surfaces",
+      "raw_formula": "(-1)**i*(-1)**j",
+      "template_tags": [
+        "integer_grid_or_discrete_operator"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "DIGS3",
+      "source_category": "discrete_integer_grid_surfaces",
+      "raw_formula": "Mod(i, 3) + Mod(j, 2)",
+      "template_tags": [
+        "piecewise_or_discrete_regime",
+        "integer_grid_or_discrete_operator"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "DIGS4",
+      "source_category": "discrete_integer_grid_surfaces",
+      "raw_formula": "floor(sqrt(i**2 + j**2))",
+      "template_tags": [
+        "piecewise_or_discrete_regime",
+        "radical_component",
+        "integer_grid_or_discrete_operator"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "DIGS5",
+      "source_category": "discrete_integer_grid_surfaces",
+      "raw_formula": "sin(i*j) + i - j",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "integer_grid_or_discrete_operator"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "DIGS6",
+      "source_category": "discrete_integer_grid_surfaces",
+      "raw_formula": "cos(i + j)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "integer_grid_or_discrete_operator"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "DIGS7",
+      "source_category": "discrete_integer_grid_surfaces",
+      "raw_formula": "Mod(i**2 + j**2, 5)",
+      "template_tags": [
+        "piecewise_or_discrete_regime",
+        "integer_grid_or_discrete_operator"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "DIGS8",
+      "source_category": "discrete_integer_grid_surfaces",
+      "raw_formula": "tanh(i - j)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "integer_grid_or_discrete_operator"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "DIGS9",
+      "source_category": "discrete_integer_grid_surfaces",
+      "raw_formula": "floor(sin(i**2 + j**2))",
+      "template_tags": [
+        "piecewise_or_discrete_regime",
+        "trigonometric_or_hyperbolic_component",
+        "integer_grid_or_discrete_operator"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "DIGS10",
+      "source_category": "discrete_integer_grid_surfaces",
+      "raw_formula": "Mod(i*j, 4)",
+      "template_tags": [
+        "piecewise_or_discrete_regime",
+        "integer_grid_or_discrete_operator"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "NCS1",
+      "source_category": "nonlinear_coupled_surfaces",
+      "raw_formula": "cosh(0.1*(x - y)) - cos(0.5*(x + y))",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "NCS2",
+      "source_category": "nonlinear_coupled_surfaces",
+      "raw_formula": "exp(-0.05*(x**2 + y**2))*(x**2 - y)*cos(y)",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "NCS3",
+      "source_category": "nonlinear_coupled_surfaces",
+      "raw_formula": "log(1 + x**2)*sin(y) - log(1 + y**2)*cos(x)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "logarithmic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "NCS4",
+      "source_category": "nonlinear_coupled_surfaces",
+      "raw_formula": "sqrt(1 + 0.1*(x**2 + y**2))*sin(0.5*(x - y))",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "trigonometric_or_hyperbolic_component",
+        "radical_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "NCS5",
+      "source_category": "nonlinear_coupled_surfaces",
+      "raw_formula": "tanh(0.2*(x**2 - y**2))",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "NCS6",
+      "source_category": "nonlinear_coupled_surfaces",
+      "raw_formula": "0.3*(x*y) - 0.2*sin(x + y)*exp(-0.05*(x**2 + y**2))",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "NCS7",
+      "source_category": "nonlinear_coupled_surfaces",
+      "raw_formula": "x**2*sin(y)/(1 + 0.2*y**2)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "NCS8",
+      "source_category": "nonlinear_coupled_surfaces",
+      "raw_formula": "sinh(0.2*x)*exp(-0.1*y**2)",
+      "template_tags": [
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "NCS9",
+      "source_category": "nonlinear_coupled_surfaces",
+      "raw_formula": "atan(x*y) - 0.3*sin(x - y)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "EMTS1",
+      "source_category": "exponentially_modulated_trigonometric_surfaces",
+      "raw_formula": "3*exp(-0.05*(x**2 + y**2))*cos(0.2*x*y) + 0.1*x",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "EMTS2",
+      "source_category": "exponentially_modulated_trigonometric_surfaces",
+      "raw_formula": "2.2*sin(0.3*x + 0.2*y)*(1 - exp(-0.1*x**2))",
+      "template_tags": [
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "EMTS3",
+      "source_category": "exponentially_modulated_trigonometric_surfaces",
+      "raw_formula": "1.8*cos(0.4*x*y)*exp(-0.1*x**2) + 0.3*y**2",
+      "template_tags": [
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "EMTS4",
+      "source_category": "exponentially_modulated_trigonometric_surfaces",
+      "raw_formula": "2*sin(0.7*x)*exp(-0.05*y**2) + 0.5*x*y",
+      "template_tags": [
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "EMTS5",
+      "source_category": "exponentially_modulated_trigonometric_surfaces",
+      "raw_formula": "3*(1 - exp(-0.15*x**2))*cos(0.3*y) + 0.2*x",
+      "template_tags": [
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "EMTS6",
+      "source_category": "exponentially_modulated_trigonometric_surfaces",
+      "raw_formula": "2.5*tanh(0.2*x*y) + 0.4*sin(0.5*x + y)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "EMTS7",
+      "source_category": "exponentially_modulated_trigonometric_surfaces",
+      "raw_formula": "1.5*exp(-0.1*(x**2 + y**2))*sin(0.6*x) + 0.3*y",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "EMTS8",
+      "source_category": "exponentially_modulated_trigonometric_surfaces",
+      "raw_formula": "4*cos(0.4*x)*(1 - exp(-0.05*y**2)) + 0.1*x**2",
+      "template_tags": [
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "EMTS9",
+      "source_category": "exponentially_modulated_trigonometric_surfaces",
+      "raw_formula": "2*x**2*exp(-0.2*Abs(y)) + 1.5*sin(0.3*x*y)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "absolute_value_or_nonsmooth_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "EMTS10",
+      "source_category": "exponentially_modulated_trigonometric_surfaces",
+      "raw_formula": "3*sin(0.5*x)*exp(-0.1*y**2) + 0.2*x*y*cos(y)",
+      "template_tags": [
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "LRDS1",
+      "source_category": "localized_radially_decaying_surfaces",
+      "raw_formula": "exp(-0.8*(x**2 + y**2))",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "exponential_or_gaussian_envelope"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "LRDS2",
+      "source_category": "localized_radially_decaying_surfaces",
+      "raw_formula": "x**2*exp(-(x**2 + y**2))",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "exponential_or_gaussian_envelope"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "LRDS3",
+      "source_category": "localized_radially_decaying_surfaces",
+      "raw_formula": "(x**2 + y**2)*exp(-0.9*(x**2 + y**2))",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "exponential_or_gaussian_envelope"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "LRDS4",
+      "source_category": "localized_radially_decaying_surfaces",
+      "raw_formula": "exp(-0.4*(x**2 + y**2))*(1.1 + cos(5*x))",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "LRDS5",
+      "source_category": "localized_radially_decaying_surfaces",
+      "raw_formula": "(cos(1.5*x)*cos(1.5*y))**2",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "LRDS6",
+      "source_category": "localized_radially_decaying_surfaces",
+      "raw_formula": "sin(3*atan(y/x))**2*exp(-sqrt(x**2 + y**2))",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component",
+        "radical_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "LRDS7",
+      "source_category": "localized_radially_decaying_surfaces",
+      "raw_formula": "1 - tanh(x**2 + y**2 - 4)",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "LRDS8",
+      "source_category": "localized_radially_decaying_surfaces",
+      "raw_formula": "(x**2 - y**2)**2*exp(-0.7*(x**2 + y**2))",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "exponential_or_gaussian_envelope"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "LRDS9",
+      "source_category": "localized_radially_decaying_surfaces",
+      "raw_formula": "sin(x + y)**2*cos(x - y)**2",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "LRDS10",
+      "source_category": "localized_radially_decaying_surfaces",
+      "raw_formula": "(1 + x**2)/(1 + (x**2 + y**2)**2)",
+      "template_tags": [
+        "radial_quadratic_invariant"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "PTM1",
+      "source_category": "polynomial_transcendental_mixtures",
+      "raw_formula": "x**3 + y**3 - 3*x*y + sin(x)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "PTM2",
+      "source_category": "polynomial_transcendental_mixtures",
+      "raw_formula": "log(1 + x**2 + y**2) - tanh(x - y)",
+      "template_tags": [
+        "radial_quadratic_invariant",
+        "trigonometric_or_hyperbolic_component",
+        "logarithmic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "PTM3",
+      "source_category": "polynomial_transcendental_mixtures",
+      "raw_formula": "exp(-x**2 - y**2)*sin(2*x + y)",
+      "template_tags": [
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "PTM4",
+      "source_category": "polynomial_transcendental_mixtures",
+      "raw_formula": "atan(x) + atan(y)",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "PTM5",
+      "source_category": "polynomial_transcendental_mixtures",
+      "raw_formula": "sin(x)*cos(y) + 0.1*x*y",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "PTM6",
+      "source_category": "polynomial_transcendental_mixtures",
+      "raw_formula": "3*sin(0.4*x)*exp(-0.05*y**2) + 0.2*x*y",
+      "template_tags": [
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "PTM7",
+      "source_category": "polynomial_transcendental_mixtures",
+      "raw_formula": "2*sin(x + y)*exp(-0.5*x**2) + y**2",
+      "template_tags": [
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "PTM8",
+      "source_category": "polynomial_transcendental_mixtures",
+      "raw_formula": "tanh(x*y) + 0.5*sin(0.5*x)*y",
+      "template_tags": [
+        "trigonometric_or_hyperbolic_component",
+        "coupled_bivariate_interaction"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    },
+    {
+      "source_equation_id": "PTM9",
+      "source_category": "polynomial_transcendental_mixtures",
+      "raw_formula": "1.5*x**2*cos(0.2*y) + 0.3*exp(-0.1*x**2)",
+      "template_tags": [
+        "exponential_or_gaussian_envelope",
+        "trigonometric_or_hyperbolic_component"
+      ],
+      "exact_duplicate_group": null,
+      "within_source_decision": "distinct_literal_formula; shared-template equivalence not established",
+      "core15_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified",
+      "historical74_formula_overlap": "no_direct_equivalent_or_same_named_equation_family_identified_against_70_saved_formulas",
+      "independence_status": "not_adjudicated",
+      "cohort_assignment": null
+    }
+  ]
+}
