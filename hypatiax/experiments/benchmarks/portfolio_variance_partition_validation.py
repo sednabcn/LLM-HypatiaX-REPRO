@@ -154,7 +154,10 @@ def main():
                     "training R2."
                 ),
                 "test_r2": "Test R2 from the selected route in test_r2_source.",
-                "test_r2_source": "Benchmark decision, e.g. nn, llm, or ensemble.",
+                "test_r2_source": (
+                    "Selected benchmark route decision, e.g. nn, llm, ensemble, "
+                    "nn_fallback, or nn_abstention_fallback."
+                ),
                 "success_test_r2_gt_0_99": "Whether test R2 exceeds 0.99.",
             },
         },
