@@ -2243,5 +2243,139 @@
       "source_line": 1940,
       "review": "Black-Scholes Greek involving normal density/CDF; no same governing relation identified among SurfaceBench formulas."
     }
-  ]
+  ],
+  "within_source_shared_template_groups": [
+    {
+      "group_id": "SB-TEMPLATE-RADIAL-GAUSSIAN-001",
+      "tag": "radial_gaussian_envelope_exp_minus_a_times_x2_plus_y2",
+      "member_ids": [
+        "NACS3",
+        "NACS10",
+        "MTAS3",
+        "NCS2",
+        "NCS6",
+        "EMTS1",
+        "EMTS7",
+        "LRDS1",
+        "LRDS2",
+        "LRDS3",
+        "LRDS4",
+        "LRDS8",
+        "PTM3",
+        "MOCS10",
+        "EBS3",
+        "TECS2"
+      ],
+      "shared_structure": "An exponential envelope of the form exp(-a*(x**2+y**2)), with different a values and different additive/multiplicative base terms.",
+      "family_decision": "shared parameterized envelope only; not one equation family"
+    },
+    {
+      "group_id": "SB-TEMPLATE-RADIAL-SQRT-001",
+      "tag": "radial_square_root_argument",
+      "member_ids": [
+        "NACS9",
+        "MTAS6",
+        "OCS6",
+        "OCS10",
+        "TECS1",
+        "MOCS5",
+        "MOCS8",
+        "NCS4",
+        "LRDS6"
+      ],
+      "shared_structure": "Square-root functions of x**2+y**2, sometimes with a scale or additive constant, appear as arguments or factors.",
+      "family_decision": "shared radial-root construction only; different functions and compositions remain distinct"
+    },
+    {
+      "group_id": "SB-TEMPLATE-LOG-RADIAL-001",
+      "tag": "log_one_plus_radial_quadratic",
+      "member_ids": [
+        "NACS5",
+        "TECS4",
+        "MOCS1",
+        "EBS7",
+        "PTM2"
+      ],
+      "shared_structure": "Shared subexpression log(1+x**2+y**2), used as a standalone surface, a factor, or an additive term.",
+      "family_decision": "shared subexpression only; not one equation family"
+    },
+    {
+      "group_id": "SB-TEMPLATE-SIN-XY-001",
+      "tag": "sine_of_coordinate_product",
+      "member_ids": [
+        "NACS4",
+        "NACS11",
+        "OCS3",
+        "OCS4",
+        "TECS3",
+        "CMRS7",
+        "EBS9"
+      ],
+      "shared_structure": "sin(x*y) occurs directly, inside tanh, in a piecewise branch, or combined with other terms/envelopes.",
+      "family_decision": "shared subexpression only; not one equation family"
+    },
+    {
+      "group_id": "SB-TEMPLATE-PIECEWISE-001",
+      "tag": "piecewise_or_discrete_regime",
+      "member_ids": [
+        "PDS1",
+        "PDS2",
+        "PDS3",
+        "PDS4",
+        "PDS5",
+        "PDS6",
+        "PDS8",
+        "PDS9",
+        "PDS10",
+        "CMRS1",
+        "CMRS2",
+        "CMRS3",
+        "CMRS4",
+        "CMRS6",
+        "CMRS7",
+        "CMRS8",
+        "CMRS9",
+        "MOCS7",
+        "DIGS3",
+        "DIGS4",
+        "DIGS7",
+        "DIGS9",
+        "DIGS10"
+      ],
+      "shared_structure": "Explicit Piecewise branches or discrete floor/modulo regime changes.",
+      "family_decision": "regime-structure grouping only; predicates and branch equations differ and require separate family review"
+    },
+    {
+      "group_id": "SB-TEMPLATE-EXP-ABS-DIFF-001",
+      "tag": "exponential_absolute_difference_envelope",
+      "member_ids": [
+        "OCS8",
+        "EBS10"
+      ],
+      "shared_structure": "Shared factor exp(-Abs(x-y)); OCS8 multiplies it by an oscillatory term, while EBS10 is the factor alone.",
+      "family_decision": "shared factor only; not one equation family"
+    },
+    {
+      "group_id": "SB-TEMPLATE-SINX-COSY-001",
+      "tag": "separable_sine_cosine_product",
+      "member_ids": [
+        "EBS2",
+        "PTM5"
+      ],
+      "shared_structure": "Shared subexpression sin(x)*cos(y); PTM5 adds a cross-coordinate polynomial term.",
+      "family_decision": "shared subexpression only; not one equation family"
+    },
+    {
+      "group_id": "SB-TEMPLATE-TANH-XY-001",
+      "tag": "hyperbolic_tangent_coordinate_product",
+      "member_ids": [
+        "MTAS2",
+        "OCS10",
+        "PTM8"
+      ],
+      "shared_structure": "Shared subexpression tanh(x*y), combined with different additional factors or terms.",
+      "family_decision": "shared subexpression only; not one equation family"
+    }
+  ],
+  "within_source_shared_template_group_policy": "These groups make repeated mathematical subexpressions and parameterized constructions auditable. Membership is not a canonical family assignment, independence judgment, or evidence that member equations are equivalent."
 }
