@@ -79,4 +79,5 @@ def test_exp1b_workflow_restores_canonical_seed_and_publishes_shard_copy():
     assert 'hypatiax_defi_benchmark_v3_results_seed${_seed}_shard${SHARD_INDEX}.json' in workflow
     assert 'git checkout -- "${_canonical}"' in workflow
     assert 'portfolio_variance_defi_seed_sweep_seed${_seed}_shard${SHARD_INDEX}.json' in workflow
+    assert 'if [[ "$fname" == "portfolio_variance_defi_seed_sweep_seed${_seed}_shard${SHARD_INDEX}.json" ]]; then' in workflow
     assert 'REPLACE: refreshing tracked exp1b per-seed portfolio artifact' not in workflow
