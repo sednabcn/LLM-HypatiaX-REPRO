@@ -161,3 +161,15 @@ def test_exp1b_clears_only_its_own_shard_outputs_before_rerun():
     assert '_SHARD=' + escaped_var + '{SHARD_INDEX:-0}' in block
     assert 'rm -f ' + quote + escaped_var + '{_OLD_BENCH_PUBLISH}' + quote in block
     assert 'rm -f ' + quote + escaped_var + '{_PV_PUBLISH}' + quote in block
+
+def test_exp1b_store_and_upload_are_gated_on_successful_worker_execution():
+    workflow = WORKFLOW.read_text()
+    assert "id: run_experiment" in workflow
+    assert "steps.run_experiment.outcome == 'success'" in workflow
+    store_start = workflow.index("- name: Store results in canonical RESULT_SUBDIR")
+    store_end = workflow.index("\n      - name:", store_start + 10)
+    upload_start = workflow.index("- name: Upload shard results artifact")
+    upload_end = workflow.index("\n      - name:", upload_start + 10)
+    assert "steps.run_experiment.outcome == 'success'" in workflow[store_start:store_end]
+    assert "steps.run_experiment.outcome == 'success'" in workflow[upload_start:upload_end]
+
