@@ -35,7 +35,7 @@ def test_defi74_catalogue_has_74_cases_and_one_intractable():
     assert benchmark._STANDARD_TOTAL == 73
 
 
-def test_complete_deFi74_result_set_passes():
+def test_complete_defi74_result_set_passes():
     records = _complete_records()
     benchmark._validate_result_records(
         records, require_il_record=True, require_complete=True
@@ -66,4 +66,15 @@ def test_partial_checkpoint_is_allowed_but_not_final_output():
     records = _complete_records()[:3]
     benchmark._validate_result_records(records, require_complete=False)
     with pytest.raises(ValueError, match="incomplete DeFi-74 result"):
+        benchmark._validate_result_records(records, require_complete=True)
+
+
+def test_validation_rejects_wrong_intractability_classification():
+    records = _complete_records()
+    il_record = next(
+        record for record in records
+        if "impermanent loss breakeven" in record["equation_id"].lower()
+    )
+    il_record["extrapolation_intractable"] = False
+    with pytest.raises(ValueError, match="extrapolation_intractable must be True"):
         benchmark._validate_result_records(records, require_complete=True)
