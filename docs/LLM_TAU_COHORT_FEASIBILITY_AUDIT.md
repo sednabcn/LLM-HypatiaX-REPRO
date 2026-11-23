@@ -194,3 +194,42 @@ A follow-up screen checked three additional public symbolic-regression / mathema
 - Even if one source yields at least 59 calibration families, a separate disjoint evaluation cohort must also meet its accepted-route precision requirement. A source pool of 100 equations cannot be split into two 59-unit cohorts.
 
 The manifest therefore remains `draft`, with empty `calibration_equations`, empty candidate thresholds, and `degradation_tau: null`. No formulas were generated, no provider calls were made, and no experiment workflow was dispatched.
+
+
+## SurfaceBench explicit-surface candidate extraction (2026-11-23)
+
+A pinned, reproducible candidate queue was added at
+[data/external_candidates/surfacebench_candidate_registry.json](../data/external_candidates/surfacebench_candidate_registry.json).
+
+- Upstream benchmark: [SurfaceBench](https://arxiv.org/abs/2511.10833), source revision
+  `deep-symbolic-mathematics/surfacebench@619bcb0aa17cd80694798c5ca92283cd9a4e6ba4`.
+- Formula catalog: `psaegert/symbolic-data@13b23672154e6dd6a463ad223d3f72829d21fe60`,
+  `assets/catalogs/surfacebench-explicit-surfaces.yaml`, blob
+  `a873546dc1935e10cf09a28a4df0a259fe203704`.
+- The catalog contains 128 explicit-surface equation IDs. Each has a paired `.ood`
+  rendering of the same equation; those paired OOD records are not counted as new units.
+- Exact raw-formula string screening finds 127 unique formulas: `NACS1` and `TECS7`
+  are an exact duplicate. The queue records the 128 source IDs, formulas, variable counts,
+  category prefixes, and blank adjudication fields.
+- The catalog attributes the formulas to Kabra et al. 2026 under CC BY 4.0. The original
+  paper describes 183 surfaces across explicit, implicit, and parametric representations;
+  this queue includes only the explicit subset, suitable for a possible separate
+  (z=f(x,y)) stratum.
+
+This is a **candidate pool, not 127 approved independent families**. Algebraic equivalence,
+shared construction templates, mathematical-family dependence, overlap with Core-15 and
+historical-74, and category representativeness still require adjudication. The raw exact-
+string count is only nine above the combined 118-unit zero-failure planning minimum for
+disjoint calibration and evaluation; any further exclusions or non-evaluable cases could
+make it insufficient. An explicit-surface stratum would not, by itself, certify routing
+for the existing scalar/mixed-domain Core-15 population.
+
+Additional source screens illustrate why row counts must be collapsed:
+- ERBench PHYBench has 270 catalog rows but only 90 formula IDs, each repeated at three
+  alpha settings; 90 is below the combined 118-unit planning minimum.
+- NewtonBench has 108 shifted-law rows but only 12 canonical source laws; easy/medium/hard
+  variants are sequential mutations of those laws, not 108 independent equation families.
+
+No candidate was assigned a canonical family ID or calibration/evaluation cohort. The
+calibration manifest remains draft and `degradation_tau` remains null. No provider calls,
+paid calibration, or experiment workflows were run.
