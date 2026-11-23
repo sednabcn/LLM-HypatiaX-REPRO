@@ -160,5 +160,6 @@ def test_exp1b_clears_only_its_own_shard_outputs_before_rerun():
 
     assert '_SHARD=' + chr(92) + '$' + '{SHARD_INDEX:-0}' in block
     assert 'rm -f "' + chr(92) + '$' + '{_OLD_BENCH_PUBLISH}"' in block
-    assert 'rm -f "' + chr(92) + '$' + '{_PV_PUBLISH}"' in block
+    assert 'rm -f ' + chr(92) + '"' + chr(92) + '
+ + '{_PV_PUBLISH}' + chr(92) + '"' in block
 
