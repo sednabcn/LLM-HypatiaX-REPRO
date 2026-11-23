@@ -181,3 +181,21 @@ def test_exp1b_store_and_upload_are_gated_on_successful_worker_execution():
     assert "steps.run_experiment.outcome == 'success'" in workflow[store_start:store_end]
     assert "steps.run_experiment.outcome == 'success'" in workflow[upload_start:upload_end]
     assert "steps.store_results.outcome == 'success'" in workflow[upload_start:upload_end]
+
+
+def test_exp1b_checkpoint_rescue_never_imports_historical_shared_outputs():
+    workflow = WORKFLOW.read_text()
+    rescue_start = workflow.index("- name: Safety-net - rescue results from shard checkpoint")
+    rescue_end = workflow.index("\n      - name: Store results in canonical RESULT_SUBDIR", rescue_start)
+    rescue = workflow[rescue_start:rescue_end]
+
+    exp1b_start = rescue.index('elif EXP == "exp1b":')
+    exp1b_end = rescue.index('elif EXP == "exp1_pca_seeds":', exp1b_start)
+    exp1b_branch = rescue[exp1b_start:exp1b_end]
+
+    assert "checkpoint rescue skipped" in exp1b_branch
+    assert "hypatiax/data/results/**/" not in exp1b_branch
+    assert "PVA_DIR}/**/" not in exp1b_branch
+    assert "glob.glob" not in exp1b_branch
+    assert "run_all.sh publishes the shard-suffixed files" in exp1b_branch
+
