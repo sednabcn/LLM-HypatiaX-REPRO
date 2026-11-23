@@ -102,7 +102,7 @@ Fix 13  LLM model updated: Sonnet 4.5 → Sonnet 4.6 (id pinned in code).
 
 Denominator fix (updated)
 ──────────────────────────
-74 cases total; 0 intractable.  The 3 formerly skipped cases are now
+74 cases total; 1 intractable (IL breakeven), leaving 73 standard cases.\nThe 3 formerly skipped cases are now
 included in the denominator, raising it from the effective 71 in v3.0
 back to the intended 74.
 
@@ -1448,7 +1448,7 @@ def build_extrap_split(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SECTION 7 — Test catalogue (74 cases, 0 intractable)
+# SECTION 7 — Test catalogue (74 cases, 1 intractable)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _get_test_cases() -> list[dict]:
@@ -1609,10 +1609,19 @@ def _validate_result_records(
         if equation_id not in expected_set:
             errors.append(f"{equation_id}: unexpected case ID")
 
+        expected_case = next(
+            (case for case in _get_test_cases() if case["name"] == equation_id),
+            None,
+        )
+        if expected_case is not None:
+            expected_intractable = _is_intractable_case(expected_case)
+            if record.get("extrapolation_intractable") is not expected_intractable:
+                errors.append(
+                    f"{equation_id}: extrapolation_intractable must be "
+                    f"{expected_intractable}"
+                )
         if "impermanent loss breakeven" in equation_id.lower():
             il_records.append(record)
-            if record.get("extrapolation_intractable") is not True:
-                errors.append(f"{equation_id}: extrapolation_intractable must be true")
 
         result_arms = record.get("results", {})
         if not isinstance(result_arms, dict):
@@ -1725,7 +1734,7 @@ def _save_final(results: list, require_il_record: bool = True):
 _INTRACTABLE_NAMES = {
     tc["name"] for tc in _get_test_cases() if _is_intractable_case(tc)
 }
-_STANDARD_TOTAL = len(_get_test_cases()) - len(_INTRACTABLE_NAMES)  # = 66 + adjustments
+_STANDARD_TOTAL = len(_get_test_cases()) - len(_INTRACTABLE_NAMES)  # 73 standard cases
 
 
 def _generate_report(results: list):
@@ -2225,6 +2234,10 @@ def report_only():
     else:
         src = FINAL_OUTPUT
     results = json.loads(src.read_text())
+    if src == FINAL_OUTPUT:
+        _validate_result_records(
+            results, require_il_record=True, require_complete=True
+        )
     _generate_report(results)
 
 
