@@ -100,7 +100,7 @@ def test_expired_deadline_prevents_starting_fold_search():
             created.append(self)
             raise AssertionError("expired fold search must not start")
 
-    with pytest.raises(TimeoutError, match="before fixed-candidate fold evaluation"):
+    with pytest.raises(TimeoutError, match="before training-fold searcher construction"):
         evaluate_pysr_search_on_training_folds(
             MustNotFit, X, y, folds, minimum_valid_folds=2,
             budget_runtime=deadline,
