@@ -172,3 +172,25 @@ Machine-readable outputs:
 - `data/external_candidates/financemath_overlap_candidate_adjudication.json` (context review of all 34 hits)
 
 This closes the all-record *named-term screening* pass, not full semantic-family adjudication of all 1,200 records. The 1,172 records outside the previously reviewed code-shape clusters still do not have mathematical-family IDs. No independence or calibration/evaluation cohort assignments are approved.
+
+
+
+## Additional external source acquisition screen (2026-11-23)
+
+A follow-up screen checked three additional public symbolic-regression / mathematical-finance sources. This expands the acquisition shortlist, but none is yet admitted as an eligible calibration or evaluation cohort.
+
+| Source | Immutable source pin / license evidence | What is actually available | Calibration disposition |
+|---|---|---|---|
+| AI Feynman implementation and Feynman Symbolic Regression Database | Repository commit `SJ001/AI-Feynman@a05bc4a5be23d6eb3e1d0b2f7eb1ab5b78a920ad`; repository metadata declares MIT. | The repository README links to the separate MIT-hosted Feynman database and says its three checked-in example files are only examples corresponding to three equations. The actual database is not checked into that repository. | Promising physics source, but not counted. The actual database revision, per-equation source identities, formula definitions, license terms for the data, and hashes must be acquired and pinned. Then deduplicate against Core-15, all historical-74 families, Protocol-30/ALL-30/Nguyen-12 and among Feynman equations. |
+| SRBench 2025 | Branch tree pin `cavalab/srbench@dc3f6daa93bf10955df8775256a6f8644f38fd93`; repository license is GPL-3.0. | The README describes 24 PMLB datasets plus first-principles regression problems, but the checked-in 2025 result artifact is a small Git-LFS pointer and the source tree does not expose a standalone, complete canonical equation-family registry suitable for direct counting. | Not counted. The benchmark's first-principles source manifests and generating equations must be located, pinned, license-reviewed, and family-adjudicated. PMLB real-world datasets without known generating equations are not eligible equation units for this protocol. |
+| formal-mathfin | Commit `formal-applied-math/formal-mathfin@cbe842dda1e71fd7173f3325971796686dbf7feb`; repository LICENSE is Apache-2.0. | README reports 906 literature results, including 866 fully proved results, 18 library wrappers, and 22 reduced cores. The corpus is a Lean theorem library; the README also records that corpus tooling moved to a private repository in the pinned commit. | Not counted as 906 independent equations. Theorems/lemmas are not independent numeric formula-generation tasks; many are variants, auxiliary results, or statements about the same model. A public, pinned theorem-to-model index plus independently reviewed numeric task construction would be required. |
+
+### Source-screen conclusion
+
+- No new source was added to the calibration registry or assigned a family count.
+- The AI Feynman database is the strongest next acquisition lead for a broad physics category, but the actual data and license/revision need to be pinned before extraction.
+- SRBench is useful as a discovery index for first-principles sources, not as a raw count of independent equation families.
+- formal-mathfin is useful for mathematical identity/correctness checks in finance, not as a ready-made numeric benchmark.
+- Even if one source yields at least 59 calibration families, a separate disjoint evaluation cohort must also meet its accepted-route precision requirement. A source pool of 100 equations cannot be split into two 59-unit cohorts.
+
+The manifest therefore remains `draft`, with empty `calibration_equations`, empty candidate thresholds, and `degradation_tau: null`. No formulas were generated, no provider calls were made, and no experiment workflow was dispatched.
