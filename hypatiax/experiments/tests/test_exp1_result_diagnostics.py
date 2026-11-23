@@ -63,7 +63,7 @@ def test_saved_result_contract_rejects_misclassified_il_case():
     record = _record()
     record["extrapolation_intractable"] = False
 
-    with pytest.raises(ValueError, match="extrapolation_intractable must be true"):
+    with pytest.raises(ValueError, match="extrapolation_intractable must be True"):
         bench._validate_result_records([record])
 
 
