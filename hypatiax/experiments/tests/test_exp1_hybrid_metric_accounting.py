@@ -4,6 +4,7 @@ import sys
 from types import SimpleNamespace
 
 import numpy as np
+import pytest
 
 from hypatiax.experiments.benchmarks import hypatiax_defi_benchmark_v3c as bench
 from hypatiax.protocols.experiment_protocol_defi import DeFiExperimentProtocol
@@ -667,3 +668,31 @@ def test_exp1_log_ridge_domain_gate_rejects_signed_or_zero_features():
     assert bench._log_ridge_domain_eligible(signed_correlation_X, positive_y) is False
     assert bench._log_ridge_domain_eligible(positive_X, np.array([1.0, 0.0, 3.0])) is False
     assert bench._log_ridge_domain_eligible(positive_X, np.array([-1.0, 2.0, 3.0])) is False
+
+
+def test_exp1_tiny_scale_varying_test_target_uses_canonical_r2_policy(monkeypatch):
+    _common(monkeypatch, "nn")
+    Xtr, ytr, Xte, _ = _inputs()
+    yte = np.linspace(1.0e-19, 2.0e-19, 10)
+    centered = yte - yte.mean()
+    y_pred_test = yte.mean() + centered / np.sqrt(2.0)
+    monkeypatch.setattr(
+        bench, "_generate_llm_formula",
+        lambda *a, **k: {"python_code": None, "llm_called": False},
+    )
+    monkeypatch.setattr(
+        bench, "_train_and_eval_nn",
+        lambda *a, **k: {
+            "train_r2": 0.8, "test_r2": 0.5, "success": True,
+            "y_pred_train": np.full(len(ytr), 0.4),
+            "y_pred_test": y_pred_test,
+        },
+    )
+
+    result = bench._hybrid_predict_and_eval(
+        "tiny-scale fixture", "defi", Xtr, ytr, Xte, yte, ["x"], {}
+    )
+
+    assert result["test_r2"] == pytest.approx(0.5)
+    assert result["test_r2_status"] == "defined"
+    assert result["success"] is True
