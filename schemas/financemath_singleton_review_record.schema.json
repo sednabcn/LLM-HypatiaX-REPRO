@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/sednabcn/LLM-HypatiaX-REPRO/blob/master/schemas/financemath_singleton_review_record.schema.json",
   "title": "FinanceMath singleton review record",
-  "description": "Shape validation for one companion review record. Passing this schema does not validate mathematical correctness, family identity, independence, or cohort eligibility.",
+  "description": "Shape validation for one companion review record. Use null source hashes only when the corresponding source item is unavailable and record that blocker in review_status/uncertainties. Passing this schema does not validate mathematical correctness, family identity, independence, or cohort eligibility.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -47,10 +47,24 @@
       "const": "bdc2b6b04252aa09630b66ec1e2a5c98e5a2794c"
     },
     "source_question_sha256": {
-      "$ref": "#/$defs/sha256"
+      "oneOf": [
+        {
+          "$ref": "#/$defs/sha256"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "source_solution_sha256": {
-      "$ref": "#/$defs/sha256"
+      "oneOf": [
+        {
+          "$ref": "#/$defs/sha256"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "table_provenance": {
       "type": "object",
