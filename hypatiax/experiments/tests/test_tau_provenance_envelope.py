@@ -145,6 +145,8 @@ def test_noncanonical_artifact_paths_are_rejected(tmp_path, path_value):
         "https://github.com/owner/repository#fragment",
         "https://github.com/owner/repo%2Fother",
         "https://github.com/-invalid/repository",
+        "https://github.com/owner/repository\\n",
+        "https://github.com/owner/repo\\tname",
     ],
 )
 def test_noncanonical_repository_urls_are_rejected(tmp_path, repository_url):
