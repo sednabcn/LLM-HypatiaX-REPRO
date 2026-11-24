@@ -53,7 +53,7 @@ def test_fixed_sequence_stops_at_first_uncertified_candidate():
             "delta_llm": 0.10 if i == 0 else 0.01,
             "bad_route": i == 0,
         }
-        for i in range(59)
+        for i in range(60)
     ]
     result = select_threshold(rows, [0.05, 0.10], 0.05, 0.05)
     assert result["selected_tau"] == 0.05
