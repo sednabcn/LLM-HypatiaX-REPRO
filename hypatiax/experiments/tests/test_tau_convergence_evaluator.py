@@ -107,3 +107,15 @@ def test_bad_route_label_required_for_eligible_records():
     payload["records"][0]["bad_route"] = None
     with pytest.raises(ValueError, match="bad_route must be boolean"):
         evaluate(payload, bootstrap_replicates=0)
+
+
+def test_non_object_calibration_payload_fails_with_validation_error():
+    with pytest.raises(ValueError, match="calibration payload must be a JSON object"):
+        evaluate(["not", "an", "object"])
+
+
+def test_non_object_calibration_protocol_fails_with_validation_error():
+    payload = _payload()
+    payload["approved_protocol"] = ["not", "an", "object"]
+    with pytest.raises(ValueError, match="approved_protocol must be an object"):
+        evaluate(payload)
