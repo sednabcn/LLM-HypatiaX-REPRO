@@ -1381,11 +1381,15 @@ def _hybrid_predict_and_eval(
         llm_test_r2 = float(llm_test_value)
 
     y_test_arr = np.asarray(y_test, dtype=float).reshape(-1)
-    if y_test_arr.size == 0 or not np.isfinite(y_test_arr).all():
+    # Use the canonical relative-degeneracy policy. An absolute range cutoff
+    # incorrectly classifies physically small but well-varying targets
+    # (e.g. portfolio quantities around 1e-19) as constant.
+    _, target_r2_status = _r2_checked(y_test_arr, y_test_arr)
+    if target_r2_status == "nonfinite_target":
         test_r2_status = "invalid_target"
-    elif float(np.ptp(y_test_arr)) <= 1e-12:
+    elif target_r2_status == "degenerate_target":
         test_r2_status = "constant_target"
-    elif np.isfinite(test_r2):
+    elif target_r2_status == "ok" and np.isfinite(test_r2):
         test_r2_status = "defined"
     else:
         test_r2_status = "nonfinite_metric_or_prediction"
