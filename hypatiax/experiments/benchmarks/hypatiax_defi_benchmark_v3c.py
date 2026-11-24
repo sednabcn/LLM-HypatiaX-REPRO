@@ -472,11 +472,22 @@ def _train_and_eval_nn(
         # The outer test partition remains untouched: validation is the
         # corresponding edge of X_train, selected only from training covariates.
         split_metadata = split_metadata or {}
-        split_type = str(split_metadata.get("split_type", "high")).lower()
+        split_type = str(
+            split_metadata.get(
+                "validation_split_type", split_metadata.get("split_type", "high")
+            )
+        ).lower()
         if split_type not in {"high", "low"}:
             raise ValueError("invalid_directional_validation_split_type")
-        realized_method = split_metadata.get("realized_method", "primary_feature_percentile")
-        split_var_idx = int(split_metadata.get("split_var_idx", 0))
+        realized_method = split_metadata.get(
+            "validation_split_realized_method",
+            split_metadata.get("realized_method", "primary_feature_percentile"),
+        )
+        split_var_idx = int(
+            split_metadata.get(
+                "validation_split_var_idx", split_metadata.get("split_var_idx", 0)
+            )
+        )
         validation_split_fallback_reason = None
         if realized_method == "row_index_fallback":
             order = np.arange(len(X_train), dtype=int)
@@ -1474,8 +1485,8 @@ def _random_split_80_20(
         "selection_rule": "seeded_random_permutation; first ceil(0.2*n) rows held out",
         # These fields describe the NN's inner training-only validation slice,
         # not the random outer train/test split.
-        "split_var_idx": 0,
-        "split_type": "high",
+        "validation_split_var_idx": 0,
+        "validation_split_type": "high",
         "train_size": int(len(train_indices)),
         "test_size": int(len(test_indices)),
     }
@@ -2063,10 +2074,10 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
             X_tr, y_tr, X_te, y_te, split_details = _random_split_80_20(
                 X_full, y_full, return_metadata=True
             )
-            split_var_idx = tc["config"].get("split_var_idx", 0)
-            split_details["split_var_name"] = (
-                var_names[split_var_idx]
-                if 0 <= split_var_idx < len(var_names) else None
+            validation_var_idx = split_details["validation_split_var_idx"]
+            split_details["validation_split_feature_name"] = (
+                var_names[validation_var_idx]
+                if 0 <= validation_var_idx < len(var_names) else None
             )
             print(f"  Split → train={len(X_tr)}, test={len(X_te)}")
 
