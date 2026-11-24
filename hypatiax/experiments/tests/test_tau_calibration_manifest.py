@@ -249,3 +249,23 @@ def test_ready_manifest_rejects_duplicate_formula_hashes_with_distinct_family_id
     ids = extract_core15_ids(SOURCE.read_text(encoding="utf-8"))
     errors = validate_manifest(manifest, ids, require_ready=True)
     assert any("duplicate calibration formula_sha256" in error for error in errors)
+
+
+def test_malformed_category_list_returns_validation_error_instead_of_crashing():
+    manifest = _manifest()
+    manifest.update({
+        "status": "ready_for_calibration",
+        "category_list": [["chemistry"]],
+    })
+    ids = extract_core15_ids(SOURCE.read_text(encoding="utf-8"))
+    errors = validate_manifest(manifest, ids, require_ready=True)
+    assert any("category_list must contain only non-empty strings" in e for e in errors)
+
+
+def test_malformed_approved_protocol_returns_validation_errors_instead_of_crashing():
+    manifest = _manifest()
+    manifest["approved_protocol"] = ["not", "an", "object"]
+    ids = extract_core15_ids(SOURCE.read_text(encoding="utf-8"))
+    errors = validate_manifest(manifest, ids)
+    assert any("approved_protocol must be an object" in e for e in errors)
+    assert any("approved_protocol.edge_r2_floor" in e for e in errors)

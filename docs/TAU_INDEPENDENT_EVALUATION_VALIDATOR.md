@@ -48,3 +48,8 @@ The default Core-15 source is hypatiax/experiments/benchmarks/exp1_ablation.py; 
 The validator checks the supplied family-ID exclusion lists and their declared hashes; it does not independently reconstruct the historical-74 registry from raw historical artifacts. The person preparing the evaluation file must ensure that the hashed exclusion registry is the reviewed, complete registry. Likewise, hashes and evidence-reference strings establish traceability fields, not mathematical truth. Independent human adjudication remains mandatory.
 
 This validator is a post-evaluation audit tool. It does not make an incomplete cohort ready, authorize paid formula generation, or change the current degradation_tau: null fail-closed policy.
+
+
+Malformed top-level JSON values are rejected as validation errors rather than
+causing uncaught attribute errors; the validator requires the payload to be an
+object before reading protocol or cohort fields.

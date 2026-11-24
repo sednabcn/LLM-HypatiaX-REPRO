@@ -89,3 +89,8 @@ A certified threshold is a calibration result, not a deployment authorization. F
 ## Current project status
 
 The manifest remains a draft with no eligible calibration family list or candidate threshold grid. The existing 74-case replay is historical and cannot be recycled as a fresh calibration cohort. No provider calls or experiment runs are authorized by this evaluator. Until the source/family, cohort, readiness, and user-authorization gates are met, do not create calibration outcomes or set a production τ.
+
+
+Malformed top-level JSON values and non-object `approved_protocol` values are
+rejected through the normal input-validation error path. The CLI therefore
+reports invalid input rather than terminating with an uncaught attribute error.

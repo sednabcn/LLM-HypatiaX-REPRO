@@ -88,6 +88,9 @@ def validate_evaluation(
     core15_ids: list[str],
 ) -> tuple[list[str], dict[str, Any]]:
     errors: list[str] = []
+    if not isinstance(payload, dict):
+        errors.append("evaluation payload must be a JSON object")
+        payload = {}
     protocol = payload.get("approved_protocol")
     if not isinstance(protocol, dict):
         errors.append("approved_protocol must be an object")

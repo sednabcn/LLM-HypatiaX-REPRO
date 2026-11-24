@@ -126,3 +126,9 @@ def test_unknown_evaluator_version_is_rejected():
     errors, report = validate_evaluation(payload, CORE15)
     assert any("evaluator_version must equal" in error for error in errors)
     assert report["generalization_claim"] is False
+
+
+def test_non_object_evaluation_payload_returns_validation_error():
+    errors, report = validate_evaluation(["not", "an", "object"], CORE15)
+    assert any("evaluation payload must be a JSON object" in error for error in errors)
+    assert report["status"] == "not_certified_or_invalid"
