@@ -65,7 +65,8 @@ def test_fixed_sequence_stops_at_first_uncertified_candidate():
 def test_evaluator_certifies_threshold_but_does_not_claim_generalization():
     result = evaluate(_payload(), bootstrap_replicates=30, seed=7)
     category = result["categories"]["continuous_bivariate"]
-    assert result["status"] == "calibration_converged_on_calibration_data"
+    assert result["status"] == "risk_certified_on_calibration_data"
+    assert result["convergence_status"] == "not_established_missing_predeclared_stability_tolerances"
     assert result["generalization_claim"] is False
     assert category["selected_tau"] == 0.10
     assert category["bootstrap_stability"]["available"] is True
@@ -75,7 +76,7 @@ def test_evaluator_certifies_threshold_but_does_not_claim_generalization():
 def test_underpowered_category_fails_closed_without_threshold():
     result = evaluate(_payload(n=58), bootstrap_replicates=0)
     category = result["categories"]["continuous_bivariate"]
-    assert result["status"] == "not_converged_or_insufficient_evidence"
+    assert result["status"] == "not_certified_or_insufficient_evidence"
     assert category["selection_status"] == "insufficient_evidence"
     assert category["selected_tau"] is None
 
