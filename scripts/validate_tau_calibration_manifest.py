@@ -185,10 +185,12 @@ def validate_manifest(
             value = manifest.get(key)
             if not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value):
                 errors.append(f"{key} must be a 64-character lowercase SHA-256")
-        for key in ("calibration_code_commit", "evaluator_version"):
-            value = manifest.get(key)
-            if not isinstance(value, str) or not value.strip():
-                errors.append(f"{key} must be recorded before calibration")
+        value = manifest.get("calibration_code_commit")
+        if not isinstance(value, str) or not re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", value):
+            errors.append("calibration_code_commit must be a full 40- or 64-character lowercase Git commit ID")
+        value = manifest.get("evaluator_version")
+        if not isinstance(value, str) or not value.strip():
+            errors.append("evaluator_version must be recorded before calibration")
         seen_formula_hashes: set[str] = set()
         for index, item in enumerate(equations):
             if not isinstance(item, dict):
