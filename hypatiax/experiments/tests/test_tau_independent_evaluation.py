@@ -52,7 +52,7 @@ def _payload(records):
         "historical_74_registry_sha256": HASH,
         "calibration_code_commit": "abc123",
         "evaluation_code_commit": "def456",
-        "evaluator_version": "frozen-evaluator-v1",
+        "evaluator_version": "tau-independent-evaluation-validator-v1",
         "calibration_family_ids": ["cal-family-1"],
         "historical_74_family_ids": ["historical-family-1"],
         "core15_exclusion_ids": CORE15,
@@ -116,4 +116,13 @@ def test_duplicate_formula_hashes_are_rejected_even_with_distinct_ids():
     records[1]["formula_sha256"] = records[0]["formula_sha256"]
     errors, report = validate_evaluation(_payload(records), CORE15)
     assert any("duplicate evaluation formula_sha256" in error for error in errors)
+    assert report["generalization_claim"] is False
+
+
+
+def test_unknown_evaluator_version_is_rejected():
+    payload = _payload([_record(i) for i in range(59)])
+    payload["evaluator_version"] = "unrecognized-or-stale-evaluator"
+    errors, report = validate_evaluation(payload, CORE15)
+    assert any("evaluator_version must equal" in error for error in errors)
     assert report["generalization_claim"] is False
