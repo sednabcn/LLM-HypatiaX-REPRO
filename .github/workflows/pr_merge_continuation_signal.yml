@@ -15,7 +15,6 @@ on:
 permissions:
   contents: read
   pull-requests: read
-  issues: write
 
 concurrency:
   group: pr-merge-continuation-${{ github.event.pull_request.number || inputs.pr_number || github.run_id }}
@@ -55,39 +54,27 @@ jobs:
               prs = data.filter(pr => new Date(pr.updated_at).getTime() >= cutoff);
             }
 
+            await core.summary
+              .addHeading("HypatiaX PR continuation signals")
+              .addRaw("This run records PR state in the Actions run summary. It does not attempt to write PR comments or wake an external ChatGPT session.")
+              .addEOL();
+
             for (const pr of prs) {
-              const marker = "<!-- hypatiax-pr-continuation-signal -->";
-              const { data: comments } = await github.rest.issues.listComments({
-                owner: context.repo.owner, repo: context.repo.repo,
-                issue_number: pr.number, per_page: 100
-              });
-              const prior = comments.find(comment => comment.body && comment.body.includes(marker));
               const state = pr.merged ? "MERGED" : pr.state === "closed" ? "CLOSED_NOT_MERGED" : "OPEN";
-              const body = [
-                marker,
-                "## HypatiaX PR continuation signal",
-                "",
-                `**Detected state:** ${state}`,
-                `**PR:** #${pr.number} — ${pr.title}`,
-                `**Head:** ${pr.head.sha}`,
-                pr.merged ? `**Merge commit:** ${pr.merge_commit_sha || "not supplied by GitHub"}` : "**Merge commit:** not applicable",
-                "",
-                pr.merged
-                  ? "Merged. On the next assistant session, verify merge-commit checks and resume the next safe repository task. Do not launch experiments, paid provider calls, calibration, or seed sweeps without explicit approval."
-                  : "Not merged. Do not treat this PR as completed.",
-                "",
-                "Durable GitHub signal only; this does not wake an external ChatGPT conversation."
-              ].join("\n");
-              if (prior) {
-                await github.rest.issues.updateComment({
-                  owner: context.repo.owner, repo: context.repo.repo,
-                  comment_id: prior.id, body
-                });
-              } else {
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner, repo: context.repo.repo,
-                  issue_number: pr.number, body
-                });
-              }
-              core.notice(`PR #${pr.number}: ${state}`);
+              core.summary
+                .addHeading(`PR #${pr.number}: ${state}`, 2)
+                .addTable([
+                  [{data:"Field",header:true},{data:"Value",header:true}],
+                  ["Title", pr.title],
+                  ["Head SHA", pr.head.sha],
+                  ["Base SHA", pr.base.sha],
+                  ["Merge commit", pr.merge_commit_sha || "not applicable"]
+                ])
+                .addEOL();
+              core.notice(`PR #${pr.number}: ${state}; head=${pr.head.sha}; merge=${pr.merge_commit_sha || "none"}`);
             }
+
+            if (prs.length === 0) {
+              core.summary.addRaw("No recently updated closed PRs found in the reconciliation window.").addEOL();
+            }
+            await core.summary.write();
