@@ -95,8 +95,8 @@ benchmarks:
     enabled: true
     script: "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py"
     output_subdir: "defi"
-    split: "primary_feature_40_60"
-    train_frac: 0.40
+    split: "random_80_20"
+    train_frac: 0.80
   core15:
     enabled: true
     script: "hypatiax/experiments/benchmarks/exp1_ablation.py"
