@@ -128,7 +128,7 @@ def test_ready_manifest_rejects_unreviewed_family_even_with_unique_ids():
         "independence_justification": "Family-level review protocol.",
         "frozen_edge_definition": "Frozen edge construction and scoring protocol.",
         "calibration_data_manifest_sha256": "a" * 64,
-        "calibration_code_commit": "abc123",
+        "calibration_code_commit": "a" * 40,
         "evaluator_version": "tau-convergence-evaluator-v1",
     })
     manifest["calibration_equations"] = [{
@@ -171,7 +171,7 @@ def test_ready_manifest_requires_family_id_to_match_independent_unit():
         "independence_justification": "Family-level review protocol.",
         "frozen_edge_definition": "Frozen edge construction and scoring protocol.",
         "calibration_data_manifest_sha256": "a" * 64,
-        "calibration_code_commit": "abc123",
+        "calibration_code_commit": "a" * 40,
         "evaluator_version": "tau-convergence-evaluator-v1",
     })
     manifest["calibration_equations"] = [{
@@ -209,7 +209,7 @@ def test_ready_manifest_rejects_duplicate_formula_hashes_with_distinct_family_id
         "independence_justification": "Family-level review protocol.",
         "frozen_edge_definition": "Frozen edge construction and scoring protocol.",
         "calibration_data_manifest_sha256": "a" * 64,
-        "calibration_code_commit": "abc123",
+        "calibration_code_commit": "a" * 40,
         "evaluator_version": "tau-convergence-evaluator-v1",
     })
     base = {
@@ -269,3 +269,21 @@ def test_malformed_approved_protocol_returns_validation_errors_instead_of_crashi
     errors = validate_manifest(manifest, ids)
     assert any("approved_protocol must be an object" in e for e in errors)
     assert any("approved_protocol.edge_r2_floor" in e for e in errors)
+
+
+def test_ready_manifest_rejects_abbreviated_calibration_code_commit():
+    manifest = _manifest()
+    manifest.update({
+        "status": "ready_for_calibration",
+        "candidate_tau_values": [0.05],
+        "category_list": ["chemistry"],
+        "category_definition": "One predeclared mathematical stratum.",
+        "independence_justification": "Family-level review protocol.",
+        "frozen_edge_definition": "Frozen edge construction and scoring protocol.",
+        "calibration_data_manifest_sha256": "a" * 64,
+        "calibration_code_commit": "abc123",
+        "evaluator_version": "tau-convergence-evaluator-v1",
+    })
+    ids = extract_core15_ids(SOURCE.read_text(encoding="utf-8"))
+    errors = validate_manifest(manifest, ids, require_ready=True)
+    assert any("calibration_code_commit must be a full" in error for error in errors)

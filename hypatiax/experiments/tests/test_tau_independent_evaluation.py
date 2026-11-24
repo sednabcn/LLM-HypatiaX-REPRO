@@ -50,8 +50,8 @@ def _payload(records):
         "evaluation_manifest_sha256": HASH,
         "calibration_manifest_sha256": HASH,
         "historical_74_registry_sha256": HASH,
-        "calibration_code_commit": "abc123",
-        "evaluation_code_commit": "def456",
+        "calibration_code_commit": "a" * 40,
+        "evaluation_code_commit": "b" * 40,
         "evaluator_version": "tau-independent-evaluation-validator-v1",
         "calibration_family_ids": ["cal-family-1"],
         "historical_74_family_ids": ["historical-family-1"],
@@ -132,3 +132,13 @@ def test_non_object_evaluation_payload_returns_validation_error():
     errors, report = validate_evaluation(["not", "an", "object"], CORE15)
     assert any("evaluation payload must be a JSON object" in error for error in errors)
     assert report["status"] == "not_certified_or_invalid"
+
+
+def test_abbreviated_code_commit_ids_are_rejected():
+    payload = _payload([_record(i) for i in range(59)])
+    payload["calibration_code_commit"] = "abc123"
+    payload["evaluation_code_commit"] = "def456"
+    errors, report = validate_evaluation(payload, CORE15)
+    assert any("calibration_code_commit must be a full" in error for error in errors)
+    assert any("evaluation_code_commit must be a full" in error for error in errors)
+    assert report["generalization_claim"] is False

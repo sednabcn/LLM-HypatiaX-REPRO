@@ -281,3 +281,12 @@ or duplicate categories. The top-level manifest is also checked to be an object.
 
 This changes input robustness only; it does not relax readiness requirements or
 alter any protocol constants, cohort assignments, or the empty draft manifest.
+
+
+## Full Git commit identity validation (2026-11-24)
+
+Calibration readiness now requires `calibration_code_commit` to be a full
+40-character SHA-1 or 64-character SHA-256 Git object ID, rather than any
+non-empty string. Abbreviated labels such as `abc123` are rejected. This
+validates identifier shape only; it does not independently prove that the
+referenced revision produced the recorded outcomes.
