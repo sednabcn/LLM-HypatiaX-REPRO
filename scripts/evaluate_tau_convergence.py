@@ -18,7 +18,6 @@ import json
 import math
 import random
 import sys
-from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -231,7 +230,6 @@ def _sensitivity(rows: list[dict], tau: float, perturbation: float) -> dict:
     denominator = len(eligible)
     def fraction(changed: set[str]) -> float | None:
         return len(changed) / denominator if denominator else None
-    ids = {r["independent_unit_id"] for r in eligible}
     return {
         "perturbation": perturbation,
         "eligible_units": denominator,
