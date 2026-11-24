@@ -58,7 +58,12 @@ def validate_manifest(
 ) -> list[str]:
     """Return validation errors; an empty list means the requested checks pass."""
     errors: list[str] = []
+    if not isinstance(manifest, dict):
+        return ["manifest must be a JSON object"]
     protocol = manifest.get("approved_protocol", {})
+    if not isinstance(protocol, dict):
+        errors.append("approved_protocol must be an object")
+        protocol = {}
     for key, expected in APPROVED.items():
         actual = protocol.get(key)
         if actual != expected:
@@ -156,6 +161,16 @@ def validate_manifest(
         category_list = manifest.get("category_list")
         if not isinstance(category_list, list) or not category_list:
             errors.append("category_list must be a non-empty predeclared list")
+            category_list = []
+        else:
+            if any(not isinstance(value, str) or not value.strip() for value in category_list):
+                errors.append("category_list must contain only non-empty strings")
+            category_list = [
+                value for value in category_list
+                if isinstance(value, str) and value.strip()
+            ]
+            if len(set(category_list)) != len(category_list):
+                errors.append("category_list must not contain duplicates")
         if selection_name != "fixed_sequence_exact_binomial":
             errors.append("selection_procedure.name must be fixed_sequence_exact_binomial")
         if isinstance(selection, dict) and not selection.get("implementation_or_spec_ref"):
@@ -223,16 +238,14 @@ def validate_manifest(
                         f"calibration_equations[{index}].{field} must cite the "
                         "documented human adjudication"
                     )
-        declared_categories = manifest.get("category_list", [])
-        if isinstance(declared_categories, list):
-            if len(set(declared_categories)) != len(declared_categories):
-                errors.append("category_list must not contain duplicates")
-            undeclared = sorted(set(counts_by_category) - set(declared_categories))
-            if undeclared:
-                errors.append(f"calibration equations use undeclared categories: {undeclared}")
-            category_counts = {category: counts_by_category.get(category, 0) for category in declared_categories}
-        else:
-            category_counts = dict(counts_by_category)
+        declared_categories = category_list
+        undeclared = sorted(set(counts_by_category) - set(declared_categories))
+        if undeclared:
+            errors.append(f"calibration equations use undeclared categories: {undeclared}")
+        category_counts = {
+            category: counts_by_category.get(category, 0)
+            for category in declared_categories
+        }
         epsilon = protocol.get("tolerated_bad_route_rate_epsilon")
         delta = protocol.get("family_wise_error_delta")
         try:
