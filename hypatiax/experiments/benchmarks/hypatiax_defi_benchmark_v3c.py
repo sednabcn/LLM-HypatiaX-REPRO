@@ -472,11 +472,22 @@ def _train_and_eval_nn(
         # The outer test partition remains untouched: validation is the
         # corresponding edge of X_train, selected only from training covariates.
         split_metadata = split_metadata or {}
-        split_type = str(split_metadata.get("split_type", "high")).lower()
+        split_type = str(
+            split_metadata.get(
+                "validation_split_type", split_metadata.get("split_type", "high")
+            )
+        ).lower()
         if split_type not in {"high", "low"}:
             raise ValueError("invalid_directional_validation_split_type")
-        realized_method = split_metadata.get("realized_method", "primary_feature_percentile")
-        split_var_idx = int(split_metadata.get("split_var_idx", 0))
+        realized_method = split_metadata.get(
+            "validation_split_realized_method",
+            split_metadata.get("realized_method", "primary_feature_percentile"),
+        )
+        split_var_idx = int(
+            split_metadata.get(
+                "validation_split_var_idx", split_metadata.get("split_var_idx", 0)
+            )
+        )
         validation_split_fallback_reason = None
         if realized_method == "row_index_fallback":
             order = np.arange(len(X_train), dtype=int)
@@ -1438,83 +1449,48 @@ def _hybrid_predict_and_eval(
 # SECTION 6 — Data splitting
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _aggressive_split(
-    X: np.ndarray, y: np.ndarray, config: dict, return_metadata: bool = False
+def _random_split_80_20(
+    X: np.ndarray,
+    y: np.ndarray,
+    random_state: int | None = None,
+    return_metadata: bool = False,
 ):
-    """
-    Train on the configured primary-feature 40/60 extrapolation split.
+    """Create the canonical shuffled random 80/20 outer split for standard Exp1."""
+    X = np.asarray(X)
+    y = np.asarray(y)
+    if X.ndim < 2 or len(X) != len(y):
+        raise ValueError("random_split_requires_aligned_2d_features_and_targets")
+    n_rows = len(X)
+    if n_rows < 2:
+        raise ValueError("random_split_requires_at_least_two_rows")
 
-    The historical index-based fallback is preserved exactly, but when used it
-    is identified in optional metadata so result artifacts never mislabel it as
-    a percentile split.
-    """
-    var_idx    = config.get("split_var_idx", 0)
-    split_type = config.get("split_type", "high")
-    vals       = X[:, var_idx] if (X.ndim >= 2 and X.shape[1] > var_idx) else X.flatten()
+    seed = int(SEED if random_state is None else random_state)
+    permutation = np.random.RandomState(seed).permutation(n_rows)
+    n_test = max(1, int(_math.ceil(0.2 * n_rows)))
+    test_indices = permutation[:n_test]
+    train_indices = permutation[n_test:]
+    if not len(train_indices):
+        raise ValueError("random_split_requires_nonempty_train_and_test")
 
-    if split_type == "high":
-        quantile = 40
-        thresh = np.percentile(vals, quantile)
-        train_mask = vals <= thresh
-        test_mask = vals > thresh
-        selection_rule = "feature_value <= threshold"
-    else:
-        quantile = 60
-        thresh = np.percentile(vals, quantile)
-        train_mask = vals >= thresh
-        test_mask = vals < thresh
-        selection_rule = "feature_value >= threshold"
-
-    fallback_used = bool(train_mask.sum() < 20 or test_mask.sum() < 20)
-    fallback_reason = None
-    realized_method = "primary_feature_percentile"
-    if fallback_used:
-        idx = np.arange(len(X))
-        train_mask = idx < int(0.4 * len(X))
-        test_mask = ~train_mask
-        realized_method = "row_index_fallback"
-        fallback_reason = "percentile_partition_has_fewer_than_20_rows"
-        selection_rule = "row_index < int(0.4 * n_rows)"
-
-    result = (X[train_mask], y[train_mask], X[test_mask], y[test_mask])
+    result = (X[train_indices], y[train_indices], X[test_indices], y[test_indices])
     if not return_metadata:
         return result
 
     metadata = {
-        "requested_method": "primary_feature_percentile",
-        "realized_method": realized_method,
-        "split_var_idx": int(var_idx),
-        "split_type": split_type,
-        "quantile_percent": int(quantile),
-        "threshold": float(thresh),
-        "selection_rule": selection_rule,
-        "fallback_used": fallback_used,
-        "fallback_reason": fallback_reason,
-        "train_size": int(train_mask.sum()),
-        "test_size": int(test_mask.sum()),
+        "requested_method": "random_permutation",
+        "realized_method": "random_permutation",
+        "random_state": seed,
+        "shuffle": True,
+        "test_fraction": 0.2,
+        "selection_rule": "seeded_random_permutation; first ceil(0.2*n) rows held out",
+        # These fields describe the NN's inner training-only validation slice,
+        # not the random outer train/test split.
+        "validation_split_var_idx": 0,
+        "validation_split_type": "high",
+        "train_size": int(len(train_indices)),
+        "test_size": int(len(test_indices)),
     }
     return (*result, metadata)
-
-
-# FIX-C3/DISCLOSURE: Gate B requires every DeFi benchmark to expose either
-# pca_directed_split or build_extrap_split as the protocol split function.
-# _aggressive_split IS the 40/60 extrapolation split for v3c (percentile on the
-# primary variable axis, same intent as build_extrap_split).  Alias it here so
-# Gate B's static scan finds the required name without changing any call sites.
-def build_extrap_split(
-    X: np.ndarray, y: np.ndarray,
-    extrap_train_frac: float = 0.4,
-    **kwargs,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """FIX-C3/DISCLOSURE wrapper: delegates to _aggressive_split.
-
-    Exposes the build_extrap_split name required by Gate B of
-    ci_runner_disclosure.yml so the CI scan confirms this script uses
-    the standard 40/60 extrapolation-split protocol.
-    """
-    config = {"split_var_idx": 0, "split_type": "high"}
-    config.update(kwargs)
-    return _aggressive_split(X, y, config)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2095,13 +2071,13 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
             )
             tc.setdefault("description", desc)
 
-            X_tr, y_tr, X_te, y_te, split_details = _aggressive_split(
-                X_full, y_full, tc["config"], return_metadata=True
+            X_tr, y_tr, X_te, y_te, split_details = _random_split_80_20(
+                X_full, y_full, return_metadata=True
             )
-            split_var_idx = tc["config"].get("split_var_idx", 0)
-            split_details["split_var_name"] = (
-                var_names[split_var_idx]
-                if 0 <= split_var_idx < len(var_names) else None
+            validation_var_idx = split_details["validation_split_var_idx"]
+            split_details["validation_split_feature_name"] = (
+                var_names[validation_var_idx]
+                if 0 <= validation_var_idx < len(var_names) else None
             )
             print(f"  Split → train={len(X_tr)}, test={len(X_te)}")
 
@@ -2270,7 +2246,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 "extrapolation_intractable": metadata["extrapolation_intractable"],
                 "results":              case_results,
                 "split_protocol": {
-                    "name": "aggressive_extrapolation_40_60",
+                    "name": "random_80_20",
                     **split_details,
                     # Keep the canonical sizes explicit for source-level
                     # protocol/rescoring contracts; values match split_details.

@@ -359,8 +359,8 @@ def run(output: Path, max_calls: int, resume: bool = True) -> dict:
                 raise ValueError("protocol_case_not_found")
             description, X_full, y_full, var_names, metadata = match
             metadata = dict(metadata or {})
-            X_train, y_train, _, _, outer_split = benchmark._aggressive_split(
-                X_full, y_full, case["config"], return_metadata=True
+            X_train, y_train, _, _, outer_split = benchmark._random_split_80_20(
+                X_full, y_full, return_metadata=True
             )
             core_idx, edge_idx = training_edge_split_indices(
                 X_train, EDGE_FRACTION

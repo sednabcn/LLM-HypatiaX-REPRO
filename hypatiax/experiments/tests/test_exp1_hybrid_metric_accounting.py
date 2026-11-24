@@ -232,19 +232,31 @@ def test_exp1_provider_failure_after_request_entry_keeps_attempt_provenance(monk
     assert "simulated provider timeout" in result["error"]
 
 
-def test_exp1_split_metadata_discloses_row_index_fallback():
-    X = np.ones((100, 1), dtype=float)
+def test_exp1_random_split_is_seeded_exact_80_20_and_audited():
+    X = np.arange(500, dtype=float).reshape(100, 5)
     y = np.arange(100, dtype=float)
-    _, _, _, _, audit = bench._aggressive_split(
-        X, y, {"split_var_idx": 0, "split_type": "high"}, return_metadata=True
-    )
 
-    assert audit["requested_method"] == "primary_feature_percentile"
-    assert audit["realized_method"] == "row_index_fallback"
-    assert audit["fallback_used"] is True
-    assert audit["fallback_reason"] == "percentile_partition_has_fewer_than_20_rows"
-    assert audit["train_size"] == 40
-    assert audit["test_size"] == 60
+    first = bench._random_split_80_20(X, y, random_state=17, return_metadata=True)
+    second = bench._random_split_80_20(X, y, random_state=17, return_metadata=True)
+    different_seed = bench._random_split_80_20(X, y, random_state=18, return_metadata=True)
+
+    X_train, y_train, X_test, y_test, audit = first
+    np.testing.assert_array_equal(X_train, second[0])
+    np.testing.assert_array_equal(X_test, second[2])
+    np.testing.assert_array_equal(y_train, second[1])
+    np.testing.assert_array_equal(y_test, second[3])
+    assert not np.array_equal(X_test, different_seed[2])
+    assert len(X_train) == 80
+    assert len(X_test) == 20
+    assert set(X_train[:, 0]).isdisjoint(set(X_test[:, 0]))
+    assert set(X_train[:, 0]) | set(X_test[:, 0]) == set(X[:, 0])
+    assert audit["requested_method"] == "random_permutation"
+    assert audit["realized_method"] == "random_permutation"
+    assert audit["random_state"] == 17
+    assert audit["shuffle"] is True
+    assert audit["test_fraction"] == 0.2
+    assert audit["train_size"] == 80
+    assert audit["test_size"] == 20
 
 
 

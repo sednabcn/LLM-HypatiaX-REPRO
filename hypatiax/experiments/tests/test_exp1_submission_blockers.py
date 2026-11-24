@@ -61,12 +61,13 @@ def test_exp1_llm_request_honours_timeout_without_hidden_retries():
     assert 'temperature_sent": hy_m.get("llm_temperature_sent")' in source
 
 
-def test_exp1_configuration_matches_the_v3c_primary_feature_split():
+def test_exp1_configuration_matches_the_v3c_random_80_20_split():
     root = Path(__file__).resolve().parents[3]
     for name in ("repro.yaml", "fresh_rerun.yaml"):
         config = (root / "config" / name).read_text()
         assert 'script: "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py"' in config
-        assert 'split: "primary_feature_40_60"' in config
+        assert 'split: "random_80_20"' in config
+        assert "train_frac: 0.80" in config
 
 
 def test_exp1c_is_an_alias_of_the_existing_protocol30_pca_stage():
@@ -92,6 +93,6 @@ def test_case_record_identifies_the_protocol_split_for_rescoring():
     runner = _function_source(tree, "run_benchmark")
 
     assert '"split_protocol": {' in runner
-    assert '"name": "aggressive_extrapolation_40_60"' in runner
+    assert '"name": "random_80_20"' in runner
     assert '"train_size": int(len(X_tr))' in runner
     assert '"test_size": int(len(X_te))' in runner
