@@ -1346,6 +1346,17 @@ def _hybrid_predict_and_eval(
                 else "nn_training_failed_or_metrics_undefined"
             )
 
+    # Report the generated formula's held-out score separately from the
+    # selected route's test_r2. This is an audit metric only: it is computed
+    # after route selection and never feeds routing, blending, or fallback.
+    llm_test_r2 = float("nan")
+    if has_formula:
+        llm_test_value, llm_test_ok = _eval_formula_r2(
+            llm_code, X_test, y_test, constants=constants
+        )
+        if llm_test_ok and np.isfinite(llm_test_value):
+            llm_test_r2 = float(llm_test_value)
+
     y_test_arr = np.asarray(y_test, dtype=float).reshape(-1)
     if y_test_arr.size == 0 or not np.isfinite(y_test_arr).all():
         test_r2_status = "invalid_target"
@@ -1362,7 +1373,9 @@ def _hybrid_predict_and_eval(
         "train_r2_source": train_r2_source, "train_r2_status": train_r2_status,
         "test_r2_status": test_r2_status,
         "decision": decision, "llm_code": llm_code if has_formula else None,
-        "llm_train_r2": _metric(llm_train_r2), "route_reason": route_reason,
+        "llm_train_r2": _metric(llm_train_r2),
+        "llm_test_r2": _metric(llm_test_r2),
+        "route_reason": route_reason,
         "route_execution_status": route_execution_status,
         "structural_risk_flag": structural_risk_flag,
         "structural_risk_tokens": structural_tokens,
