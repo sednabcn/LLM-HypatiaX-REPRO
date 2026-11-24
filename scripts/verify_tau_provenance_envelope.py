@@ -14,6 +14,7 @@ import re
 import sys
 from pathlib import Path, PurePosixPath
 from typing import Any
+from urllib.parse import urlsplit
 
 
 SCHEMA_VERSION = 1
@@ -23,6 +24,36 @@ _GIT_OBJECT_ID = re.compile(r"(?:[0-9a-f]{40}|[0-9a-f]{64})\Z")
 
 def _nonempty_string(value: Any) -> bool:
     return isinstance(value, str) and bool(value.strip())
+
+
+def _canonical_github_repository_url(value: Any) -> bool:
+    """Accept only canonical HTTPS URLs of the form github.com/owner/repository."""
+    if not isinstance(value, str):
+        return False
+    try:
+        parsed = urlsplit(value)
+        if (
+            parsed.scheme != "https"
+            or parsed.netloc != "github.com"
+            or parsed.query
+            or parsed.fragment
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.port is not None
+        ):
+            return False
+    except ValueError:
+        return False
+    parts = parsed.path.split("/")
+    if len(parts) != 3 or parts[0] != "" or not parts[1] or not parts[2]:
+        return False
+    owner, repository = parts[1], parts[2]
+    return bool(
+        _GITHUB_OWNER.fullmatch(owner)
+        and _GITHUB_REPOSITORY.fullmatch(repository)
+        and repository not in (".", "..")
+        and not repository.endswith(".")
+    )
 
 
 def _artifact_error(entry: Any, label: str, root: Path) -> tuple[str | None, str | None]:
@@ -35,12 +66,15 @@ def _artifact_error(entry: Any, label: str, root: Path) -> tuple[str | None, str
         return None, f"{label}.path must be a non-empty relative path"
     if not isinstance(digest, str) or not _SHA256.fullmatch(digest):
         return None, f"{label}.sha256 must be a 64-character lowercase SHA-256"
+    if "\\" in path_value or "\\x00" in path_value or ":" in path_value:
+        return None, f"{label}.path must use portable forward-slash relative paths"
+    raw_parts = path_value.split("/")
+    if path_value.startswith("/") or any(part in ("", ".", "..") for part in raw_parts):
+        return None, f"{label}.path must be a normalized relative path without empty or dot segments"
     posix_path = PurePosixPath(path_value)
-    if posix_path.is_absolute() or any(part in ("", ".", "..") for part in posix_path.parts):
-        return None, f"{label}.path must be a normalized relative path without dot segments"
-    if "\\" in path_value:
-        return None, f"{label}.path must use forward-slash separators"
-    candidate = root.joinpath(*posix_path.parts)
+    if posix_path.is_absolute() or posix_path.as_posix() != path_value:
+        return None, f"{label}.path must be a canonical normalized relative path"
+    candidate = root.joinpath(*raw_parts)
     current = root
     for part in posix_path.parts:
         current = current / part
@@ -81,8 +115,8 @@ def verify_envelope(envelope: Any, artifact_root: Path) -> dict[str, Any]:
     if not isinstance(repository, dict):
         errors.append("repository must be an object")
         repository = {}
-    if not _nonempty_string(repository.get("url")):
-        errors.append("repository.url must be a non-empty canonical repository URL")
+    if not _canonical_github_repository_url(repository.get("url")):
+        errors.append("repository.url must be a canonical https://github.com/owner/repository URL")
     commit = repository.get("commit")
     if not isinstance(commit, str) or not _GIT_OBJECT_ID.fullmatch(commit):
         errors.append("repository.commit must be a full lowercase 40- or 64-character Git object ID")
