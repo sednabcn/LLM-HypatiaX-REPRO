@@ -255,3 +255,18 @@ Regression tests cover arbitrary unique IDs with unreviewed status and mismatche
 An offline post-evaluation validator is now provided at [scripts/validate_tau_independent_evaluation.py](../scripts/validate_tau_independent_evaluation.py), with its input contract and limitations documented in [TAU_INDEPENDENT_EVALUATION_VALIDATOR.md](TAU_INDEPENDENT_EVALUATION_VALIDATOR.md). It rejects calibration-family, historical-74-family, and Core-15 overlap; requires reviewed family evidence and pinned provenance fields; and tests the accepted routes against the frozen per-category tau using the exact one-sided binomial risk test. Abstentions and invalid/ineligible cases remain assigned records but do not count toward accepted-route precision. With zero bad accepted routes, at least 59 accepted independent families are required; observed failures increase the required count through the exact test.
 
 The validator consumes a supplied, hash-identified historical-74 exclusion registry; it does not reconstruct that registry itself. Hash fields and reviewer references are traceability requirements, not proof of mathematical independence. The tool does not generate formulas, call providers, choose or retune tau, or change routing. No evaluation data or calibration outcomes were created as part of this addition.
+
+
+## Calibration manifest exact-formula duplicate gate (2026-11-24)
+
+The calibration --require-ready validator now rejects repeated
+formula_sha256 values across calibration records, even when their equation IDs
+and declared canonical family IDs differ. This mirrors the exact serialized
+formula-duplicate guard in the independent-evaluation validator and prevents
+one byte-identical canonical formula from being counted twice at cohort entry.
+
+This is deliberately a narrow integrity check: a SHA-256 match detects identical
+serialized formula content, not algebraic equivalence, reparameterization, shared
+generators, or statistical dependence. Those remain subject to the mandatory
+human family/equivalence adjudication. The empty draft manifest is unchanged;
+no candidates were promoted and no calibration or experiment was run.

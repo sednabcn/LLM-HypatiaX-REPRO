@@ -197,3 +197,55 @@ def test_ready_manifest_requires_family_id_to_match_independent_unit():
     ids = extract_core15_ids(SOURCE.read_text(encoding="utf-8"))
     errors = validate_manifest(manifest, ids, require_ready=True)
     assert any("must equal the adjudicated canonical_equation_family_id" in e for e in errors)
+
+
+def test_ready_manifest_rejects_duplicate_formula_hashes_with_distinct_family_ids():
+    manifest = _manifest()
+    manifest.update({
+        "status": "ready_for_calibration",
+        "candidate_tau_values": [0.05],
+        "category_list": ["chemistry"],
+        "category_definition": "One predeclared mathematical stratum.",
+        "independence_justification": "Family-level review protocol.",
+        "frozen_edge_definition": "Frozen edge construction and scoring protocol.",
+        "calibration_data_manifest_sha256": "a" * 64,
+        "calibration_code_commit": "abc123",
+        "evaluator_version": "tau-convergence-evaluator-v1",
+    })
+    base = {
+        "category": "chemistry",
+        "provenance": "pinned source",
+        "source_ref": "source#candidate",
+        "source_sha256": "b" * 64,
+        "formula_sha256": "c" * 64,
+        "training_rows_sha256": "d" * 64,
+        "uses_training_data_only": True,
+        "family_review_status": "adjudicated",
+        "formula_equivalence_review_status": "complete",
+        "core15_overlap_status": "clear",
+        "historical_74_overlap_status": "clear",
+        "cross_registry_overlap_status": "clear",
+        "independence_status": "independent",
+        "family_review_reference": "docs/review.md#family",
+        "independence_justification": "Distinct reviewed family.",
+    }
+    manifest["calibration_equations"] = [
+        dict(
+            base,
+            equation_id="candidate-001",
+            independent_unit_id="family-001",
+            canonical_equation_family_id="family-001",
+        ),
+        dict(
+            base,
+            equation_id="candidate-002",
+            independent_unit_id="family-002",
+            canonical_equation_family_id="family-002",
+            source_ref="source#candidate-002",
+            source_sha256="e" * 64,
+            training_rows_sha256="f" * 64,
+        ),
+    ]
+    ids = extract_core15_ids(SOURCE.read_text(encoding="utf-8"))
+    errors = validate_manifest(manifest, ids, require_ready=True)
+    assert any("duplicate calibration formula_sha256" in error for error in errors)
