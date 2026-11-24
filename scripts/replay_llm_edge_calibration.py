@@ -56,9 +56,9 @@ def replay(input_path: Path, output_path: Path) -> dict:
         if match is None:
             raise RuntimeError(f"Protocol case no longer resolves: {name}")
         _, X_full, y_full, _, metadata = match
-        X_train, y_train, _, _, outer_split = benchmark._aggressive_split(
-            X_full, y_full, case["config"], return_metadata=True
-        )
+        X_train, y_train, _, _, outer_split = benchmark._random_split_80_20(
+                X_full, y_full, return_metadata=True
+            )
         core_idx, edge_idx = training_edge_split_indices(X_train, 0.15)
 
         # A replay is only valid if the exact inputs match the generation run.
