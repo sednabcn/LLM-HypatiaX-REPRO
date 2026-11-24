@@ -1,4 +1,6 @@
 import hashlib
+
+import pytest
 from pathlib import Path
 
 from scripts.verify_tau_provenance_envelope import verify_envelope
@@ -107,3 +109,54 @@ def test_non_object_envelope_is_rejected(tmp_path):
     report = verify_envelope(["not", "an", "object"], root)
     assert report["verification_status"] == "invalid"
     assert report["errors"] == ["envelope must be a JSON object"]
+
+
+@pytest.mark.parametrize(
+    "path_value",
+    [
+        "inputs//manifest.json",
+        "inputs/./manifest.json",
+        "inputs/../manifest.json",
+        "/inputs/manifest.json",
+        "inputs/manifest.json/",
+        "C:/outside.json",
+        r"inputs\\manifest.json",
+    ],
+)
+def test_noncanonical_artifact_paths_are_rejected(tmp_path, path_value):
+    root, envelope = _fixture(tmp_path)
+    envelope["inputs"][0]["path"] = path_value
+    report = verify_envelope(envelope, root)
+    assert report["verification_status"] == "invalid"
+    assert any("path" in error and ("normalized" in error or "portable" in error or "canonical" in error)
+               for error in report["errors"])
+
+
+@pytest.mark.parametrize(
+    "repository_url",
+    [
+        "http://github.com/owner/repository",
+        "https://github.com/owner",
+        "https://github.com/owner/repository/",
+        "https://github.com/owner/repository.git",
+        "https://github.com.evil.example/owner/repository",
+        "https://user@github.com/owner/repository",
+        "https://github.com/owner/repository?redirect=elsewhere",
+        "https://github.com/owner/repository#fragment",
+        "https://github.com/owner/repo%2Fother",
+        "https://github.com/-invalid/repository",
+    ],
+)
+def test_noncanonical_repository_urls_are_rejected(tmp_path, repository_url):
+    root, envelope = _fixture(tmp_path)
+    envelope["repository"]["url"] = repository_url
+    report = verify_envelope(envelope, root)
+    assert report["verification_status"] == "invalid"
+    assert any("repository.url must be a canonical" in error for error in report["errors"])
+
+
+def test_canonical_github_repository_url_is_accepted(tmp_path):
+    root, envelope = _fixture(tmp_path)
+    envelope["repository"]["url"] = "https://github.com/valid-owner/repository_name.v2"
+    report = verify_envelope(envelope, root)
+    assert report["verification_status"] == "artifact_digests_verified"
