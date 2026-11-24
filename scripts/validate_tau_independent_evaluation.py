@@ -212,7 +212,7 @@ def validate_evaluation(
         ):
             errors.append(f"{prefix}.delta_llm must be finite for eligible rows")
             continue
-        if category in by_category:
+        if isinstance(category, str) and category in by_category:
             by_category[category].append({
                 "equation_id": equation_id,
                 "family_id": family_id,
