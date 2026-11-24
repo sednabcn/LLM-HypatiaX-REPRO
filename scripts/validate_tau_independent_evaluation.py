@@ -147,6 +147,7 @@ def validate_evaluation(
         records = []
 
     seen_equations: set[str] = set()
+    seen_formula_hashes: set[str] = set()
     seen_families: set[str] = set()
     by_category: dict[str, list[dict[str, Any]]] = {category: [] for category in categories}
     required_review = {
@@ -199,6 +200,10 @@ def validate_evaluation(
             value = row.get(field)
             if not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value):
                 errors.append(f"{prefix}.{field} must be a 64-character lowercase SHA-256")
+            elif field == "formula_sha256":
+                if value in seen_formula_hashes:
+                    errors.append(f"duplicate evaluation formula_sha256: {value}")
+                seen_formula_hashes.add(value)
 
         eligible = row.get("llm_eligible")
         if not isinstance(eligible, bool):

@@ -1,3 +1,5 @@
+import hashlib
+
 from scripts.validate_tau_independent_evaluation import (
     exact_bad_route_test,
     validate_evaluation,
@@ -17,7 +19,7 @@ def _record(index, *, family_id=None, bad_route=False, eligible=True, delta=0.1)
         "category": "finance",
         "source_ref": f"pinned-source#equation-{index}",
         "source_sha256": HASH,
-        "formula_sha256": HASH,
+        "formula_sha256": hashlib.sha256(f"formula-{index}".encode()).hexdigest(),
         "training_rows_sha256": HASH,
         "family_review_status": "adjudicated",
         "formula_equivalence_review_status": "complete",
@@ -106,3 +108,12 @@ def test_core15_equation_overlap_is_rejected():
 
 def test_one_bad_route_among_59_is_not_certified():
     assert exact_bad_route_test(1, 59)["certified"] is False
+
+
+
+def test_duplicate_formula_hashes_are_rejected_even_with_distinct_ids():
+    records = [_record(i) for i in range(59)]
+    records[1]["formula_sha256"] = records[0]["formula_sha256"]
+    errors, report = validate_evaluation(_payload(records), CORE15)
+    assert any("duplicate evaluation formula_sha256" in error for error in errors)
+    assert report["generalization_claim"] is False
