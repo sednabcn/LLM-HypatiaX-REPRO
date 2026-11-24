@@ -233,3 +233,18 @@ Additional source screens illustrate why row counts must be collapsed:
 No candidate was assigned a canonical family ID or calibration/evaluation cohort. The
 calibration manifest remains draft and `degradation_tau` remains null. No provider calls,
 paid calibration, or experiment workflows were run.
+
+
+## Readiness-validator hardening (2026-11-24)
+
+The calibration manifest's `--require-ready` gate now requires evidence of family-level adjudication for every candidate, not merely unique identifier strings. Each record must provide:
+
+- a non-empty `canonical_equation_family_id`, equal to its `independent_unit_id`;
+- `family_review_status: adjudicated` and `formula_equivalence_review_status: complete`;
+- explicit `core15_overlap_status: clear`, `historical_74_overlap_status: clear`, and `cross_registry_overlap_status: clear`;
+- `independence_status: independent`;
+- non-empty `family_review_reference` and record-level `independence_justification`.
+
+The validator rejects missing, unreviewed, unresolved, or non-clear values. This is an evidence-presence gate, not an automated proof that a reviewer is correct; the referenced review must document canonicalization, equivalence checks, source coverage, family-boundary reasoning, and reviewer rationale. A family ID must not be assigned merely to satisfy the schema.
+
+Regression tests cover arbitrary unique IDs with unreviewed status and mismatches between the canonical family ID and independent-unit ID. The existing empty draft manifest remains unchanged. No candidate family was promoted, no calibration data were generated, and no experiment/provider workflow was run.

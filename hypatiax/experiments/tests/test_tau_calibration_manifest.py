@@ -116,3 +116,84 @@ def test_candidate_grid_must_be_strictest_to_laxest():
     ids = extract_core15_ids(SOURCE.read_text(encoding="utf-8"))
     errors = validate_manifest(manifest, ids)
     assert any("strictest-to-laxest" in e for e in errors)
+
+
+def test_ready_manifest_rejects_unreviewed_family_even_with_unique_ids():
+    manifest = _manifest()
+    manifest.update({
+        "status": "ready_for_calibration",
+        "candidate_tau_values": [0.05],
+        "category_list": ["chemistry"],
+        "category_definition": "One predeclared mathematical stratum.",
+        "independence_justification": "Family-level review protocol.",
+        "frozen_edge_definition": "Frozen edge construction and scoring protocol.",
+        "calibration_data_manifest_sha256": "a" * 64,
+        "calibration_code_commit": "abc123",
+        "evaluator_version": "tau-convergence-evaluator-v1",
+    })
+    manifest["calibration_equations"] = [{
+        "equation_id": "candidate-001",
+        "category": "chemistry",
+        "independent_unit_id": "invented-unique-id",
+        "canonical_equation_family_id": "invented-unique-id",
+        "provenance": "pinned source",
+        "source_ref": "source#candidate-001",
+        "source_sha256": "b" * 64,
+        "formula_sha256": "c" * 64,
+        "training_rows_sha256": "d" * 64,
+        "uses_training_data_only": True,
+        "family_review_status": "unreviewed",
+        "formula_equivalence_review_status": "not_checked",
+        "core15_overlap_status": "not_checked",
+        "historical_74_overlap_status": "not_checked",
+        "cross_registry_overlap_status": "not_checked",
+        "independence_status": "not_adjudicated",
+    }]
+    ids = extract_core15_ids(SOURCE.read_text(encoding="utf-8"))
+    errors = validate_manifest(manifest, ids, require_ready=True)
+    assert any("family_review_status must be 'adjudicated'" in e for e in errors)
+    assert any("formula_equivalence_review_status must be 'complete'" in e for e in errors)
+    assert any("core15_overlap_status must be 'clear'" in e for e in errors)
+    assert any("historical_74_overlap_status must be 'clear'" in e for e in errors)
+    assert any("cross_registry_overlap_status must be 'clear'" in e for e in errors)
+    assert any("independence_status must be 'independent'" in e for e in errors)
+    assert any("family_review_reference" in e for e in errors)
+    assert any("independence_justification" in e for e in errors)
+
+
+def test_ready_manifest_requires_family_id_to_match_independent_unit():
+    manifest = _manifest()
+    manifest.update({
+        "status": "ready_for_calibration",
+        "candidate_tau_values": [0.05],
+        "category_list": ["chemistry"],
+        "category_definition": "One predeclared mathematical stratum.",
+        "independence_justification": "Family-level review protocol.",
+        "frozen_edge_definition": "Frozen edge construction and scoring protocol.",
+        "calibration_data_manifest_sha256": "a" * 64,
+        "calibration_code_commit": "abc123",
+        "evaluator_version": "tau-convergence-evaluator-v1",
+    })
+    manifest["calibration_equations"] = [{
+        "equation_id": "candidate-001",
+        "category": "chemistry",
+        "independent_unit_id": "family-001",
+        "canonical_equation_family_id": "family-002",
+        "provenance": "pinned source",
+        "source_ref": "source#candidate-001",
+        "source_sha256": "b" * 64,
+        "formula_sha256": "c" * 64,
+        "training_rows_sha256": "d" * 64,
+        "uses_training_data_only": True,
+        "family_review_status": "adjudicated",
+        "formula_equivalence_review_status": "complete",
+        "core15_overlap_status": "clear",
+        "historical_74_overlap_status": "clear",
+        "cross_registry_overlap_status": "clear",
+        "independence_status": "independent",
+        "family_review_reference": "docs/review.md#family-001",
+        "independence_justification": "Distinct reviewed equation family.",
+    }]
+    ids = extract_core15_ids(SOURCE.read_text(encoding="utf-8"))
+    errors = validate_manifest(manifest, ids, require_ready=True)
+    assert any("must equal the adjudicated canonical_equation_family_id" in e for e in errors)

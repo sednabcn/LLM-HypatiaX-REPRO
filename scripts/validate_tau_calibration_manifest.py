@@ -186,6 +186,38 @@ def validate_manifest(
             source_ref = item.get("source_ref")
             if not isinstance(source_ref, str) or not source_ref.strip():
                 errors.append(f"calibration_equations[{index}].source_ref is required")
+
+            # A unique string is not evidence of an independent mathematical family.
+            family_id = item.get("canonical_equation_family_id")
+            if not isinstance(family_id, str) or not family_id.strip():
+                errors.append(
+                    f"calibration_equations[{index}].canonical_equation_family_id is required"
+                )
+            elif family_id != item.get("independent_unit_id"):
+                errors.append(
+                    f"calibration_equations[{index}].independent_unit_id must equal "
+                    "the adjudicated canonical_equation_family_id"
+                )
+            required_adjudications = {
+                "family_review_status": "adjudicated",
+                "formula_equivalence_review_status": "complete",
+                "core15_overlap_status": "clear",
+                "historical_74_overlap_status": "clear",
+                "cross_registry_overlap_status": "clear",
+                "independence_status": "independent",
+            }
+            for field, expected in required_adjudications.items():
+                if item.get(field) != expected:
+                    errors.append(
+                        f"calibration_equations[{index}].{field} must be {expected!r}"
+                    )
+            for field in ("family_review_reference", "independence_justification"):
+                value = item.get(field)
+                if not isinstance(value, str) or not value.strip():
+                    errors.append(
+                        f"calibration_equations[{index}].{field} must cite the "
+                        "documented human adjudication"
+                    )
         declared_categories = manifest.get("category_list", [])
         if isinstance(declared_categories, list):
             if len(set(declared_categories)) != len(declared_categories):
