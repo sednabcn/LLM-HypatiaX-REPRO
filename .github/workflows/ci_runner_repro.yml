@@ -1946,6 +1946,9 @@ jobs:
                           "  [exp1b] checkpoint rescue skipped: only the current "
                           "run's explicitly published shard outputs are eligible."
                       )
+                      # This experiment deliberately does not rescue via globs.
+                      # Keep the common rescue loop below a no-op for exp1b.
+                      combined_globs = []
                   elif EXP == "exp1_pca_seeds":
                       # same one-seed-per-shard rule as exp1b_seeds; PCA output filename families.
                       shard_ids_local = json.loads(os.environ.get("SHARD_IDS") or "[]")
