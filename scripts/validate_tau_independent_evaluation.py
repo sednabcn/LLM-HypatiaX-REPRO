@@ -108,10 +108,12 @@ def validate_evaluation(
         value = payload.get(field)
         if not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value):
             errors.append(f"{field} must be a 64-character lowercase SHA-256")
-    for field in ("calibration_code_commit", "evaluation_code_commit", "evaluator_version"):
+    for field in ("calibration_code_commit", "evaluation_code_commit"):
         value = payload.get(field)
         if not isinstance(value, str) or not value.strip():
             errors.append(f"{field} must be recorded")
+    if payload.get("evaluator_version") != EVALUATOR_VERSION:
+        errors.append(f"evaluator_version must equal {EVALUATOR_VERSION!r}")
 
     calibration_ids = set(_string_list(
         payload.get("calibration_family_ids"), "calibration_family_ids", errors
