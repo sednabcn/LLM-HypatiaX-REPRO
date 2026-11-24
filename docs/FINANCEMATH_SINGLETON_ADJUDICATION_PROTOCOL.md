@@ -42,8 +42,11 @@ Every reviewed source row should retain the following fields (or a lossless equi
 | `normalized_equation` | Reviewer-derived expression(s), with variable definitions and assumptions |
 | `mathematical_category` | Predeclared category; use `unclassified` until taxonomy review |
 | `within_source_relation` | Relation to other FinanceMath records, with referenced IDs |
+| `formula_equivalence_review` | Explicit equation-equivalence decision, evidence, and reviewer rationale |
 | `core15_overlap` | Exact reference and relation, or `not_identified_after_review` |
 | `historical74_overlap` | Exact reference and relation, or `not_identified_after_review` |
+| `cross_registry_overlap` | Review against other candidate registries, with exact IDs/evidence or unresolved status |
+| `independence_status` | `not_adjudicated` until a separate family-level independence review is complete |
 | `canonical_equation_family_id` | Null until family grouping is reviewed and approved |
 | `reviewer_id`, `reviewed_at` | Reviewer and timestamp |
 | `rationale` | Short mathematical explanation, not keyword-only reasoning |
@@ -119,7 +122,7 @@ The existing 34-record FinanceMath overlap triage is a lead list, not an exclusi
 
 ## 8. Family identity and second review
 
-Assign a family ID only after comparing the candidate against the already reviewed pool, including both source splits and the existing 28-record review. Family IDs must be global across FinanceMath, stable, and supported by a written equation-level rationale.
+Assign a family ID only after comparing the candidate against the already reviewed pool, including both source splits and the existing 28-record review. Family IDs must be global across FinanceMath, stable, and supported by a written equation-level rationale. Record formula-equivalence review, Core-15 overlap, historical-74 overlap, cross-registry overlap, and independence status as separate fields; do not collapse them into one family decision. In particular, set `independence_status` to `not_adjudicated` until the separate independence protocol is completed.
 
 Require an independent second reviewer for:
 
