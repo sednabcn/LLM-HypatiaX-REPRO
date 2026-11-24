@@ -364,6 +364,18 @@ _NN_MAX_TIME_S = 120  # Wall-clock cap per NN training run (Issue 2 fix).
                       # PySR timeout_in_seconds used in Experiments 1–3.
 
 
+def _log_ridge_domain_eligible(X_train: np.ndarray, y_train: np.ndarray) -> bool:
+    """Return whether the positive-domain log-linear Ridge candidate is defined.
+
+    This is a domain check only; it does not fit a model or establish that the
+    candidate generalizes. Signed inputs (for example, correlations) are
+    intentionally ineligible for this log transform.
+    """
+    X_train = np.asarray(X_train, dtype=float)
+    y_train = np.asarray(y_train, dtype=float).reshape(-1)
+    return bool(np.all(X_train > 0) and np.all(y_train > 0))
+
+
 def _feature_augmentation_schema(X: np.ndarray) -> tuple[tuple[bool, ...], tuple[bool, ...]]:
     """Fit the optional log/sqrt feature layout from training rows only."""
     X = np.asarray(X, dtype=float)
@@ -495,7 +507,7 @@ def _train_and_eval_nn(
         # A log-linear Ridge candidate captures positive power-law/product/
         # ratio relationships. Eligibility and all fitting use training rows only.
         ridge_edge_r2 = float("nan")
-        ridge_eligible = bool(np.all(X_train > 0) and np.all(y_train > 0))
+        ridge_eligible = _log_ridge_domain_eligible(X_train, y_train)
         if ridge_eligible:
             try:
                 ridge_probe = Ridge(alpha=1.0)
