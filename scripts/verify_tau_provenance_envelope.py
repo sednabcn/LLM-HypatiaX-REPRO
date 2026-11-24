@@ -30,7 +30,11 @@ def _nonempty_string(value: Any) -> bool:
 
 def _canonical_github_repository_url(value: Any) -> bool:
     """Accept only canonical HTTPS URLs of the form github.com/owner/repository."""
-    if not isinstance(value, str):
+    if (
+        not isinstance(value, str)
+        or value != value.strip()
+        or any(ord(char) <= 0x20 or ord(char) == 0x7F for char in value)
+    ):
         return False
     try:
         parsed = urlsplit(value)
