@@ -55,6 +55,8 @@ Every reviewed source row should retain the following fields (or a lossless equi
 
 Do not overwrite source registry fields in place merely because an individual review is complete. Keep review evidence in a versioned companion artifact and preserve an auditable link to the source row.
 
+A machine-readable shape contract for one companion record is provided at `schemas/financemath_singleton_review_record.schema.json` (JSON Schema 2020-12). It permits null source hashes only when the source item is unavailable and that blocker is recorded. Schema validation checks structure only; it cannot establish that an equation, overlap judgment, family assignment, or independence claim is correct.
+
 ## 4. Controlled review statuses
 
 Use only these statuses, or an explicitly versioned extension:
