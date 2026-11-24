@@ -53,3 +53,9 @@ This validator is a post-evaluation audit tool. It does not make an incomplete c
 Malformed top-level JSON values are rejected as validation errors rather than
 causing uncaught attribute errors; the validator requires the payload to be an
 object before reading protocol or cohort fields.
+
+
+Both `calibration_code_commit` and `evaluation_code_commit` must be full
+40-character SHA-1 or 64-character SHA-256 Git object IDs. Short labels are
+rejected. The format check improves traceability but does not independently
+verify the runtime or prove that the referenced revision generated the data.
