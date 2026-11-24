@@ -618,3 +618,17 @@ def test_exp1_nn_probe_never_drives_the_llm_degradation_gate(monkeypatch):
     assert result["llm_degradation_delta"] is None
     assert result["llm_degradation_status"] == "not_calibrated"
     assert result["decision"] == "ensemble"
+
+
+def test_exp1_log_ridge_domain_gate_rejects_signed_or_zero_features():
+    # This pure eligibility check does not fit a model. Correlation-like
+    # signed features must not enter a log transform, while positive inputs
+    # retain the existing candidate domain.
+    positive_X = np.array([[0.1, 1.0], [0.5, 2.0], [0.9, 3.0]])
+    positive_y = np.array([1.0, 2.0, 3.0])
+    signed_correlation_X = np.array([[0.1, -0.5], [0.5, 0.0], [0.9, 0.4]])
+
+    assert bench._log_ridge_domain_eligible(positive_X, positive_y) is True
+    assert bench._log_ridge_domain_eligible(signed_correlation_X, positive_y) is False
+    assert bench._log_ridge_domain_eligible(positive_X, np.array([1.0, 0.0, 3.0])) is False
+    assert bench._log_ridge_domain_eligible(positive_X, np.array([-1.0, 2.0, 3.0])) is False
