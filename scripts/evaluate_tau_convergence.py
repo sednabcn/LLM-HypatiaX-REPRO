@@ -158,8 +158,9 @@ def _validate_input(payload: dict[str, Any]) -> tuple[list[dict], list[float], l
             errors.append(f"independent unit reused: {unit_id}")
         else:
             seen_units.add(unit_id)
-        if category not in categories:
-            errors.append(f"{prefix}.category is not in category_list: {category!r}")
+        if not isinstance(category, str) or category not in categories:
+            errors.append(f"{prefix}.category must be a declared category string; got {category!r}")
+            category = None
         eligible = row.get("llm_eligible")
         if not isinstance(eligible, bool):
             errors.append(f"{prefix}.llm_eligible must be boolean")
