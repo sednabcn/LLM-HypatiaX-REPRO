@@ -1,0 +1,371 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/sednabcn/LLM-HypatiaX-REPRO/blob/master/schemas/financemath_singleton_review_record.schema.json",
+  "title": "FinanceMath singleton review record",
+  "description": "Shape validation for one companion review record. Use null source hashes only when the corresponding source item is unavailable and record that blocker in review_status/uncertainties. Passing this schema does not validate mathematical correctness, family identity, independence, or cohort eligibility.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "source_question_id",
+    "source_split",
+    "source_revision",
+    "source_question_sha256",
+    "source_solution_sha256",
+    "table_provenance",
+    "review_status",
+    "normalized_equations",
+    "mathematical_category",
+    "within_source_relations",
+    "formula_equivalence_review",
+    "core15_overlap",
+    "historical74_overlap",
+    "cross_registry_overlap",
+    "canonical_equation_family_id",
+    "independence_status",
+    "reviewer_id",
+    "reviewed_at",
+    "rationale",
+    "uncertainties",
+    "second_review"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "source_question_id": {
+      "type": "string",
+      "pattern": "^(validation|test)-[0-9]+$"
+    },
+    "source_split": {
+      "enum": [
+        "validation",
+        "test"
+      ]
+    },
+    "source_revision": {
+      "const": "bdc2b6b04252aa09630b66ec1e2a5c98e5a2794c"
+    },
+    "source_question_sha256": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/sha256"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "source_solution_sha256": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/sha256"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "table_provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "references"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "not_applicable",
+            "verified",
+            "unavailable",
+            "unresolved"
+          ]
+        },
+        "references": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "review_status": {
+      "enum": [
+        "not_reviewed",
+        "source_unavailable",
+        "needs_table_review",
+        "needs_math_review",
+        "reviewed_family_candidate",
+        "reviewed_overlap_hold",
+        "reviewed_related_not_same_equation",
+        "reviewed_false_positive",
+        "reviewed_non_equation_or_procedure",
+        "second_review_required",
+        "adjudicated_family_relation"
+      ]
+    },
+    "normalized_equations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "expression",
+          "variables",
+          "assumptions",
+          "domain_restrictions",
+          "units"
+        ],
+        "properties": {
+          "expression": {
+            "type": "string",
+            "minLength": 1
+          },
+          "variables": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "assumptions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "domain_restrictions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "units": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "mathematical_category": {
+      "type": "string",
+      "minLength": 1
+    },
+    "within_source_relations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/relation"
+      }
+    },
+    "formula_equivalence_review": {
+      "$ref": "#/$defs/review"
+    },
+    "core15_overlap": {
+      "$ref": "#/$defs/overlap"
+    },
+    "historical74_overlap": {
+      "$ref": "#/$defs/overlap"
+    },
+    "cross_registry_overlap": {
+      "$ref": "#/$defs/overlap"
+    },
+    "canonical_equation_family_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "independence_status": {
+      "enum": [
+        "not_adjudicated",
+        "independent",
+        "dependent",
+        "unresolved"
+      ]
+    },
+    "reviewer_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "reviewed_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "rationale": {
+      "type": "string"
+    },
+    "uncertainties": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "second_review": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reviewer_id",
+            "reviewed_at",
+            "decision",
+            "rationale"
+          ],
+          "properties": {
+            "reviewer_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "reviewed_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "decision": {
+              "enum": [
+                "agree",
+                "disagree",
+                "unresolved"
+              ]
+            },
+            "rationale": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "evidence_references",
+        "rationale"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "not_checked",
+            "complete",
+            "unresolved",
+            "not_applicable"
+          ]
+        },
+        "evidence_references": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "rationale": {
+          "type": "string"
+        }
+      }
+    },
+    "overlap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "matches",
+        "rationale"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "not_checked",
+            "clear",
+            "possible_overlap",
+            "confirmed_overlap",
+            "unresolved",
+            "not_applicable"
+          ]
+        },
+        "matches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "reference_id",
+              "relation_type",
+              "evidence_reference"
+            ],
+            "properties": {
+              "reference_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "relation_type": {
+                "enum": [
+                  "exact_duplicate",
+                  "algebraic_equivalence",
+                  "same_family_template",
+                  "shared_component",
+                  "related_concept",
+                  "unresolved"
+                ]
+              },
+              "evidence_reference": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "rationale": {
+          "type": "string"
+        }
+      }
+    },
+    "relation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_question_id",
+        "relation_type",
+        "rationale"
+      ],
+      "properties": {
+        "source_question_id": {
+          "type": "string",
+          "pattern": "^(validation|test)-[0-9]+$"
+        },
+        "relation_type": {
+          "enum": [
+            "exact_duplicate",
+            "algebraic_equivalence",
+            "same_family_template",
+            "shared_component",
+            "related_concept",
+            "no_overlap_identified",
+            "unresolved"
+          ]
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}
