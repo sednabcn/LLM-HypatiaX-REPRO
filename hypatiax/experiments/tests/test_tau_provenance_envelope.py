@@ -120,7 +120,7 @@ def test_non_object_envelope_is_rejected(tmp_path):
         "/inputs/manifest.json",
         "inputs/manifest.json/",
         "C:/outside.json",
-        "inputs/bad\\x00name.json",
+        "inputs/bad\x00name.json",
         r"inputs\\manifest.json",
     ],
 )
