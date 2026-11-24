@@ -119,3 +119,10 @@ def test_non_object_calibration_protocol_fails_with_validation_error():
     payload["approved_protocol"] = ["not", "an", "object"]
     with pytest.raises(ValueError, match="approved_protocol must be an object"):
         evaluate(payload)
+
+def test_unhashable_record_category_is_rejected_cleanly():
+    payload = _payload()
+    payload["records"][0]["category"] = ["continuous_bivariate"]
+    with pytest.raises(ValueError, match="category must be a declared category string"):
+        evaluate(payload, bootstrap_replicates=0)
+
