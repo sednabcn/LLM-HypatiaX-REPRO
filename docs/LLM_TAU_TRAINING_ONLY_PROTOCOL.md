@@ -150,3 +150,8 @@ This document does not authorize any provider calls or workflow dispatch. Until 
 The existing NN-derived `_extrapolation_probe` remains a separate NN robustness diagnostic. Its delta must not be substituted for `delta_llm`. The LLM-specific formula diagnostic API now provides categorized parse/execution/output failures while preserving the legacy evaluator contract; use that API for all future calibration scoring.
 
 The replayed 74-case artifact remains a historical audit input only. Its 47 exact replay matches establish reproducibility of those saved scores, not that the formula cohort is suitable for threshold calibration.
+
+
+## Independent evaluation validator
+
+The frozen-threshold evaluation audit is implemented by [scripts/validate_tau_independent_evaluation.py](../scripts/validate_tau_independent_evaluation.py). It must be run only after the evaluation cohort, frozen tau, evaluator, and historical-74 exclusion registry have been pinned. It checks disjoint family IDs against calibration and historical-74 lists, Core-15 exclusion, family-review evidence, and the exact one-sided binomial risk test on accepted routes. Only accepted/evaluable independent families enter that denominator; abstentions and invalid/ineligible rows remain in the assigned cohort count but do not improve accepted-route precision. See [the validator contract](TAU_INDEPENDENT_EVALUATION_VALIDATOR.md) for the required input and provenance limitations. This is an offline audit tool, not authorization to generate formulas or run calibration.
