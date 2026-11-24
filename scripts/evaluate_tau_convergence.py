@@ -95,7 +95,12 @@ def select_threshold(
 
 def _validate_input(payload: dict[str, Any]) -> tuple[list[dict], list[float], list[str], list[str]]:
     errors: list[str] = []
+    if not isinstance(payload, dict):
+        return [], [], [], ["calibration payload must be a JSON object"]
     protocol = payload.get("approved_protocol", {})
+    if not isinstance(protocol, dict):
+        errors.append("approved_protocol must be an object")
+        protocol = {}
     for key, expected in APPROVED.items():
         if protocol.get(key) != expected:
             errors.append(f"approved_protocol.{key} must equal {expected!r}")
