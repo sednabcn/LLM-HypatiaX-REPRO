@@ -3,6 +3,8 @@ name: PR merge continuation signal
 on:
   pull_request:
     types: [closed]
+  schedule:
+    - cron: '*/15 * * * *'
   workflow_dispatch:
     inputs:
       pr_number:
@@ -13,7 +15,6 @@ on:
 permissions:
   contents: read
   pull-requests: read
-  issues: write
 
 concurrency:
   group: pr-merge-continuation-${{ github.event.pull_request.number || inputs.pr_number || github.run_id }}
@@ -27,69 +28,53 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const number = context.eventName === "workflow_dispatch"
-              ? Number(context.payload.inputs.pr_number)
-              : context.payload.pull_request.number;
-
-            if (!Number.isInteger(number) || number < 1) {
-              core.setFailed("A valid pull request number is required.");
-              return;
-            }
-
-            const { data: pr } = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: number
-            });
-
-            const marker = "<!-- hypatiax-pr-continuation-signal -->";
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: number,
-              per_page: 100
-            });
-
-            const prior = comments.find(comment =>
-              comment.body && comment.body.includes(marker)
-            );
-
-            const state = pr.merged
-              ? "MERGED"
-              : pr.state === "closed" ? "CLOSED_NOT_MERGED" : "OPEN";
-
-            const body = [
-              marker,
-              "## HypatiaX PR continuation signal",
-              "",
-              `**Detected state:** ${state}`,
-              `**PR:** #${pr.number} — ${pr.title}`,
-              `**Head:** ${pr.head.sha}`,
-              pr.merged
-                ? `**Merge commit:** ${pr.merge_commit_sha || "not supplied by GitHub"}`
-                : "**Merge commit:** not applicable",
-              "",
-              pr.merged
-                ? "This PR is merged. On the next assistant session, verify the merge commit and its checks, then resume the repository's next safe task from the project handoff. Do not launch experiments, paid provider calls, calibration, or seed sweeps without explicit approval."
-                : "This PR is not merged. Do not treat it as completed; inspect checks and review state before proceeding.",
-              "",
-              "This comment is a durable GitHub signal. It does not send a message to or wake an external ChatGPT conversation."
-            ].join("\n");
-
-            if (prior) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: prior.id,
-                body
+            let prs;
+            if (context.eventName === "workflow_dispatch") {
+              const number = Number(context.payload.inputs.pr_number);
+              if (!Number.isInteger(number) || number < 1) {
+                core.setFailed("A valid pull request number is required.");
+                return;
+              }
+              const { data: pr } = await github.rest.pulls.get({
+                owner: context.repo.owner, repo: context.repo.repo, pull_number: number
               });
+              prs = [pr];
+            } else if (context.eventName === "pull_request") {
+              const { data: pr } = await github.rest.pulls.get({
+                owner: context.repo.owner, repo: context.repo.repo,
+                pull_number: context.payload.pull_request.number
+              });
+              prs = [pr];
             } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: number,
-                body
+              const { data } = await github.rest.pulls.list({
+                owner: context.repo.owner, repo: context.repo.repo,
+                state: "closed", sort: "updated", direction: "desc", per_page: 100
               });
+              const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+              prs = data.filter(pr => new Date(pr.updated_at).getTime() >= cutoff);
             }
 
-            core.notice(`PR #${number} state recorded as ${state}.`);
+            await core.summary
+              .addHeading("HypatiaX PR continuation signals")
+              .addRaw("This run records PR state in the Actions run summary. It does not attempt to write PR comments or wake an external ChatGPT session.")
+              .addEOL();
+
+            for (const pr of prs) {
+              const state = pr.merged ? "MERGED" : pr.state === "closed" ? "CLOSED_NOT_MERGED" : "OPEN";
+              core.summary
+                .addHeading(`PR #${pr.number}: ${state}`, 2)
+                .addTable([
+                  [{data:"Field",header:true},{data:"Value",header:true}],
+                  ["Title", pr.title],
+                  ["Head SHA", pr.head.sha],
+                  ["Base SHA", pr.base.sha],
+                  ["Merge commit", pr.merge_commit_sha || "not applicable"]
+                ])
+                .addEOL();
+              core.notice(`PR #${pr.number}: ${state}; head=${pr.head.sha}; merge=${pr.merge_commit_sha || "none"}`);
+            }
+
+            if (prs.length === 0) {
+              core.summary.addRaw("No recently updated closed PRs found in the reconciliation window.").addEOL();
+            }
+            await core.summary.write();
