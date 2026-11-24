@@ -21,7 +21,7 @@ The validator requires each record's independent_unit_id to equal its canonical_
 
 ## Checks and interpretation
 
-1. Reject duplicate evaluation equations or families.
+1. Reject duplicate evaluation equation IDs, canonical family IDs, and byte-identical formula hashes. Formula-hash uniqueness catches exact serialized duplicates; it does not establish algebraic equivalence, which still requires the documented human adjudication.
 2. Reject any family ID shared with calibration or the historical-74 exclusion list.
 3. Reject equation/family IDs matching Core-15.
 4. Require the same predeclared categories and frozen tau values.
