@@ -17,8 +17,8 @@ from typing import Any
 
 
 SCHEMA_VERSION = 1
-_SHA256 = re.compile(r"[0-9a-f]{64}\\Z")
-_GIT_OBJECT_ID = re.compile(r"(?:[0-9a-f]{40}|[0-9a-f]{64})\\Z")
+_SHA256 = re.compile(r"[0-9a-f]{64}\Z")
+_GIT_OBJECT_ID = re.compile(r"(?:[0-9a-f]{40}|[0-9a-f]{64})\Z")
 
 
 def _nonempty_string(value: Any) -> bool:
@@ -38,10 +38,9 @@ def _artifact_error(entry: Any, label: str, root: Path) -> tuple[str | None, str
     posix_path = PurePosixPath(path_value)
     if posix_path.is_absolute() or any(part in ("", ".", "..") for part in posix_path.parts):
         return None, f"{label}.path must be a normalized relative path without dot segments"
-    if "\\\\" in path_value:
+    if "\\" in path_value:
         return None, f"{label}.path must use forward-slash separators"
     candidate = root.joinpath(*posix_path.parts)
-    # Reject symlinks in every component, including links that remain inside root.
     current = root
     for part in posix_path.parts:
         current = current / part
@@ -75,7 +74,6 @@ def verify_envelope(envelope: Any, artifact_root: Path) -> dict[str, Any]:
             "execution_attestation": "not_performed",
             "scientific_adjudication": "not_performed",
         }
-
     if envelope.get("schema_version") != SCHEMA_VERSION:
         errors.append(f"schema_version must equal {SCHEMA_VERSION}")
 
@@ -109,9 +107,8 @@ def verify_envelope(envelope: Any, artifact_root: Path) -> dict[str, Any]:
         errors.append("execution.python_version must be a non-empty string")
     if not _nonempty_string(execution.get("command")):
         errors.append("execution.command must be a non-empty string")
-    if not isinstance(execution.get("arguments"), list) or any(
-        not isinstance(arg, str) for arg in execution.get("arguments", [])
-    ):
+    arguments = execution.get("arguments")
+    if not isinstance(arguments, list) or any(not isinstance(arg, str) for arg in arguments):
         errors.append("execution.arguments must be a list of strings")
     dependency_lock = execution.get("dependency_lock")
     if not isinstance(dependency_lock, dict):
@@ -128,7 +125,6 @@ def verify_envelope(envelope: Any, artifact_root: Path) -> dict[str, Any]:
     if not root.is_dir():
         errors.append("artifact root must be an existing directory")
     verified_paths: set[str] = set()
-
     entries: list[tuple[str, Any]] = []
     if isinstance(evaluator_files, list):
         entries.extend((f"evaluator.source_files[{i}]", item) for i, item in enumerate(evaluator_files))
@@ -155,7 +151,6 @@ def verify_envelope(envelope: Any, artifact_root: Path) -> dict[str, Any]:
         "verified_artifact_count": len(verified_paths) if not errors else 0,
         "verified_artifact_paths": sorted(verified_paths) if not errors else [],
         "errors": errors,
-        # These are intentionally never inferred from a matching digest.
         "repository_commit_resolution": "not_performed",
         "execution_attestation": "not_performed",
         "scientific_adjudication": "not_performed",
@@ -170,14 +165,14 @@ def verify_envelope(envelope: Any, artifact_root: Path) -> dict[str, Any]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--envelope", type=Path, required=True, help="Versioned provenance-envelope JSON")
-    parser.add_argument("--artifact-root", type=Path, required=True, help="Root containing all referenced files")
-    parser.add_argument("--report", type=Path, help="Optional path for a JSON verification report")
+    parser.add_argument("--envelope", type=Path, required=True)
+    parser.add_argument("--artifact-root", type=Path, required=True)
+    parser.add_argument("--report", type=Path)
     args = parser.parse_args()
     try:
         envelope = json.loads(args.envelope.read_text(encoding="utf-8"))
         report = verify_envelope(envelope, args.artifact_root)
-        rendered = json.dumps(report, indent=2, allow_nan=False) + "\\n"
+        rendered = json.dumps(report, indent=2, allow_nan=False) + "\n"
         if args.report:
             args.report.parent.mkdir(parents=True, exist_ok=True)
             args.report.write_text(rendered, encoding="utf-8")
