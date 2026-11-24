@@ -18,7 +18,7 @@ The report explicitly keeps commit resolution, execution attestation, and scient
 
 ## Version 1 envelope
 
-All paths are normalized, relative paths beneath `--artifact-root`. Absolute paths, dot-segment traversal, symlinks, missing files, non-files, duplicate paths, malformed hashes, and byte/hash mismatches are rejected.
+All artifact paths must use canonical, portable forward-slash relative syntax beneath `--artifact-root`: empty segments (including repeated or trailing slashes), absolute paths, `.`/`..` segments, backslashes, NULs, and drive-style colons are rejected before filesystem access. Symlinks, missing files, non-files, duplicate paths, malformed hashes, and byte/hash mismatches are also rejected. The repository URL must be a canonical HTTPS GitHub URL of the form `https://github.com/owner/repository` (no credentials, port, query, fragment, trailing slash, or `.git` suffix). This validates URL shape only; it does not resolve or verify the repository.
 
 ```json
 {
@@ -53,7 +53,7 @@ All paths are normalized, relative paths beneath `--artifact-root`. Absolute pat
 }
 ```
 
-The values above are illustrative placeholders, not a valid evidence package. The referenced files must exist and their actual SHA-256 values must be supplied. The envelope itself should be retained alongside the artifacts; its digest and immutable storage location belong in the surrounding run record.
+The repository URL and all other values above are illustrative placeholders, not a valid evidence package. The referenced files must exist and their actual SHA-256 values must be supplied. The envelope itself should be retained alongside the artifacts; its digest and immutable storage location belong in the surrounding run record.
 
 ## CLI
 
