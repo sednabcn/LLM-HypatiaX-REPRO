@@ -11,7 +11,7 @@ The JSON document must contain:
 - schema_version 1 and status evaluation_complete.
 - The exact approved_protocol constants from the calibration protocol.
 - SHA-256 values for the frozen evaluation manifest, calibration manifest, and historical-74 exclusion registry.
-- Calibration/evaluation code commit identifiers and evaluator version.
+- Calibration/evaluation code commit identifiers and the exact supported evaluator version (`tau-independent-evaluation-validator-v1`). Unknown or stale evaluator versions are rejected.
 - calibration_family_ids and historical_74_family_ids, each a unique list of canonical family IDs.
 - core15_exclusion_ids, exactly matching the current Core-15 catalogue.
 - A predeclared category_list and selected_tau_by_category mapping. The selected values must be the frozen calibration outputs; this validator does not select them.
