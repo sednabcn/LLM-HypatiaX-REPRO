@@ -270,3 +270,14 @@ serialized formula content, not algebraic equivalence, reparameterization, share
 generators, or statistical dependence. Those remain subject to the mandatory
 human family/equivalence adjudication. The empty draft manifest is unchanged;
 no candidates were promoted and no calibration or experiment was run.
+
+
+## Calibration manifest malformed-input hardening (2026-11-24)
+
+The calibration manifest validator now treats a non-object `approved_protocol`
+or a `category_list` containing non-string/unhashable entries as validation
+errors rather than raising an uncaught exception while checking dictionary keys
+or duplicate categories. The top-level manifest is also checked to be an object.
+
+This changes input robustness only; it does not relax readiness requirements or
+alter any protocol constants, cohort assignments, or the empty draft manifest.
