@@ -1159,8 +1159,6 @@ def _hybrid_predict_and_eval(
     selected_train_r2 = float("nan")
     train_r2_source = "unavailable"
     test_r2 = float("nan")
-    ensemble_train_r2 = float("nan")
-    ensemble_test_r2 = float("nan")
     llm_test_preds_for_metric = None
     llm_test_evaluation_attempted = False
 
@@ -1193,24 +1191,13 @@ def _hybrid_predict_and_eval(
                 candidate["train_r2"] = float(_r2_checked(np.asarray(y_train).reshape(-1), pred_train)[0])
                 candidate["test_r2"] = float(_r2_checked(np.asarray(y_test).reshape(-1), pred_test)[0])
                 candidate["physical_bounds_applied"] = list(bounds)
-            if (
-                pred_train.shape != np.asarray(y_train).reshape(-1).shape
-                or pred_test.shape != np.asarray(y_test).reshape(-1).shape
-                or not np.isfinite(pred_train).all()
-                or not np.isfinite(pred_test).all()
-            ):
-                return False
-            # Never trust cached/stale component metrics: score the exact
-            # predictions that this route would select on the supplied targets.
-            train_r2 = _metric(_compute_metrics(
-                np.asarray(y_train, dtype=float).reshape(-1), pred_train
-            ).get("r2"))
-            test_r2 = _metric(_compute_metrics(
-                np.asarray(y_test, dtype=float).reshape(-1), pred_test
-            ).get("r2"))
-            candidate["train_r2"] = train_r2
-            candidate["test_r2"] = test_r2
-            return bool(np.isfinite(train_r2) and np.isfinite(test_r2))
+            return bool(
+                pred_train.shape == np.asarray(y_train).reshape(-1).shape
+                and pred_test.shape == np.asarray(y_test).reshape(-1).shape
+                and np.isfinite(pred_train).all() and np.isfinite(pred_test).all()
+                and np.isfinite(_metric(candidate.get("train_r2")))
+                and np.isfinite(_metric(candidate.get("test_r2")))
+            )
         except (TypeError, ValueError):
             return False
 
@@ -1324,11 +1311,9 @@ def _hybrid_predict_and_eval(
                 llm_pred_train=llm_train_preds, nn_pred_train=nn_m["y_pred_train"],
                 y_train=y_train, llm_r2=llm_train_r2, nn_r2=nn_m.get("train_r2"),
             )
-            ensemble_train_r2 = _metric(_compute_metrics(y_train, ensemble_train).get("r2"))
-            ensemble_test_r2 = _metric(_compute_metrics(y_test, ensemble_test).get("r2"))
-            selected_train_r2 = ensemble_train_r2
+            selected_train_r2 = _metric(_compute_metrics(y_train, ensemble_train).get("r2"))
             train_r2_source = "ensemble_training_residual_blend"
-            test_r2 = ensemble_test_r2
+            test_r2 = _metric(_compute_metrics(y_test, ensemble_test).get("r2"))
             route_execution_status = (
                 "ensemble_executed"
                 if np.isfinite(selected_train_r2) and np.isfinite(test_r2)
@@ -1428,11 +1413,6 @@ def _hybrid_predict_and_eval(
         "decision": decision, "llm_code": llm_code if has_formula else None,
         "llm_train_r2": _metric(llm_train_r2),
         "llm_test_r2": _metric(llm_test_r2),
-        "ensemble_train_r2": _metric(ensemble_train_r2),
-        "ensemble_test_r2": _metric(ensemble_test_r2),
-        "selected_predictor_train_r2": _metric(selected_train_r2),
-        "selected_predictor_test_r2": _metric(test_r2),
-        "selected_predictor_source": train_r2_source,
         "route_reason": route_reason,
         "route_execution_status": route_execution_status,
         "structural_risk_flag": structural_risk_flag,
@@ -2199,12 +2179,6 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     # independent rescoring on the identical protocol split.
                     "formula":         hy_m.get("llm_code"),
                     "llm_train_r2":    hy_m.get("llm_train_r2"),
-                    "llm_test_r2":     hy_m.get("llm_test_r2"),
-                    "ensemble_train_r2": hy_m.get("ensemble_train_r2"),
-                    "ensemble_test_r2": hy_m.get("ensemble_test_r2"),
-                    "selected_predictor_train_r2": hy_m.get("selected_predictor_train_r2"),
-                    "selected_predictor_test_r2": hy_m.get("selected_predictor_test_r2"),
-                    "selected_predictor_source": hy_m.get("selected_predictor_source"),
                     "success":         bool(hy_m.get("success", not (_nan(_train_r2) or _nan(_test_r2)))),
                     "time_s":          round(hyb_time, 3),
                     "nn_rerun_time_s": hy_m.get("nn_rerun_time_s", 0.0),
