@@ -4,7 +4,6 @@ import sys
 from types import SimpleNamespace
 
 import numpy as np
-import pytest
 
 from hypatiax.experiments.benchmarks import hypatiax_defi_benchmark_v3c as bench
 from hypatiax.protocols.experiment_protocol_defi import DeFiExperimentProtocol
@@ -693,6 +692,6 @@ def test_exp1_tiny_scale_varying_test_target_uses_canonical_r2_policy(monkeypatc
         "tiny-scale fixture", "defi", Xtr, ytr, Xte, yte, ["x"], {}
     )
 
-    assert result["test_r2"] == pytest.approx(0.5)
+    assert np.isclose(result["test_r2"], 0.5)
     assert result["test_r2_status"] == "defined"
     assert result["success"] is True
