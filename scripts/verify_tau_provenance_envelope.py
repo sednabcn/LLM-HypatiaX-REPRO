@@ -73,7 +73,7 @@ def _artifact_error(entry: Any, label: str, root: Path) -> tuple[str | None, str
         return None, f"{label}.path must be a non-empty relative path"
     if not isinstance(digest, str) or not _SHA256.fullmatch(digest):
         return None, f"{label}.sha256 must be a 64-character lowercase SHA-256"
-    if "\\" in path_value or "\\x00" in path_value or ":" in path_value:
+    if "\\" in path_value or "\x00" in path_value or ":" in path_value:
         return None, f"{label}.path must use portable forward-slash relative paths"
     raw_parts = path_value.split("/")
     if path_value.startswith("/") or any(part in ("", ".", "..") for part in raw_parts):
