@@ -174,6 +174,7 @@ def validate_manifest(
             value = manifest.get(key)
             if not isinstance(value, str) or not value.strip():
                 errors.append(f"{key} must be recorded before calibration")
+        seen_formula_hashes: set[str] = set()
         for index, item in enumerate(equations):
             if not isinstance(item, dict):
                 continue
@@ -183,6 +184,10 @@ def validate_manifest(
                     errors.append(
                         f"calibration_equations[{index}].{key} must be a 64-character lowercase SHA-256"
                     )
+                elif key == "formula_sha256":
+                    if value in seen_formula_hashes:
+                        errors.append(f"duplicate calibration formula_sha256: {value}")
+                    seen_formula_hashes.add(value)
             source_ref = item.get("source_ref")
             if not isinstance(source_ref, str) or not source_ref.strip():
                 errors.append(f"calibration_equations[{index}].source_ref is required")
