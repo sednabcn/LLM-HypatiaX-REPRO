@@ -477,12 +477,33 @@ def test_exp1_hybrid_abstention_bypasses_ensemble_and_records_zero_nn_weight(mon
     assert result["decision"] == "nn_abstention_fallback"
     # The generated formula's score is diagnostic only; the selected
     # replacement predictor retains its own independent test_r2.
-    assert result["llm_test_r2"] == 0.8
+    expected_formula_r2 = bench._compute_metrics(
+        yte, np.full(len(yte), 0.5)
+    )["r2"]
+    assert result["llm_test_r2"] == expected_formula_r2
     assert result["test_r2"] == 0.15
     assert result["blend_weights"]["nn"] == [0.0] * len(yte)
     assert result["blend_weights"]["llm"] == [0.0] * len(yte)
     assert result["blend_weights"]["replacement"] == [1.0] * len(yte)
     assert result["nn_selected_model"] == "log_ridge"
+
+
+def test_exp1_llm_route_reuses_one_held_out_formula_execution(monkeypatch):
+    _common(monkeypatch, "fitted_llm")
+    Xtr, ytr, Xte, yte = _inputs()
+    calls = []
+
+    def execute_formula(code, X, **kwargs):
+        calls.append(len(X))
+        return np.full(len(X), 0.5)
+
+    monkeypatch.setattr(bench, "_execute_formula", execute_formula)
+    result = bench._hybrid_predict_and_eval(
+        "fixture", "defi", Xtr, ytr, Xte, yte, ["x"], {},
+    )
+
+    assert calls == [len(Xte)]
+    assert result["test_r2"] == result["llm_test_r2"]
 
 
 def test_exp1_llm_failure_abstention_fallback_records_zero_nn_weight(monkeypatch):
