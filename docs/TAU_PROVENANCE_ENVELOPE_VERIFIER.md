@@ -4,7 +4,7 @@
 
 ## Scope and claim boundary
 
-Run \`scripts/verify_tau_provenance_envelope.py\` against a JSON envelope and an artifact directory. The verifier recomputes SHA-256 for every referenced evaluator source file, dependency lockfile, input artifact, and output artifact.
+Run `scripts/verify_tau_provenance_envelope.py` against a JSON envelope and an artifact directory. The verifier recomputes SHA-256 for every referenced evaluator source file, dependency lockfile, input artifact, and output artifact.
 
 A successful result means only that the declared bytes are present under the supplied root and match the declared digests. It does **not** prove:
 
@@ -14,13 +14,13 @@ A successful result means only that the declared bytes are present under the sup
 - that the evaluator was executed from the source files whose hashes are listed; or
 - that any equation families are mathematically independent or properly adjudicated.
 
-The report explicitly keeps commit resolution, execution attestation, and scientific adjudication as \`not_performed\`.
+The report explicitly keeps commit resolution, execution attestation, and scientific adjudication as `not_performed`.
 
 ## Version 1 envelope
 
-All paths are normalized, relative paths beneath \`--artifact-root\`. Absolute paths, dot-segment traversal, symlinks, missing files, non-files, duplicate paths, malformed hashes, and byte/hash mismatches are rejected.
+All paths are normalized, relative paths beneath `--artifact-root`. Absolute paths, dot-segment traversal, symlinks, missing files, non-files, duplicate paths, malformed hashes, and byte/hash mismatches are rejected.
 
-\`\`\`json
+```json
 {
   "schema_version": 1,
   "repository": {
@@ -51,24 +51,24 @@ All paths are normalized, relative paths beneath \`--artifact-root\`. Absolute p
     "sha256": "<64 lowercase hex characters>"
   }
 }
-\`\`\`
+```
 
 The values above are illustrative placeholders, not a valid evidence package. The referenced files must exist and their actual SHA-256 values must be supplied. The envelope itself should be retained alongside the artifacts; its digest and immutable storage location belong in the surrounding run record.
 
 ## CLI
 
-\`\`\`bash
+```bash
 python scripts/verify_tau_provenance_envelope.py \\
   --envelope provenance-envelope.json \\
   --artifact-root frozen-artifacts/ \\
   --report provenance-verification.json
-\`\`\`
+```
 
 Exit codes:
 
-- \`0\`: every declared artifact digest and schema check passed;
-- \`1\`: envelope or artifact validation failed;
-- \`2\`: envelope/report I/O or JSON parsing failed.
+- `0`: every declared artifact digest and schema check passed;
+- `1`: envelope or artifact validation failed;
+- `2`: envelope/report I/O or JSON parsing failed.
 
 ## Security and retention notes
 
