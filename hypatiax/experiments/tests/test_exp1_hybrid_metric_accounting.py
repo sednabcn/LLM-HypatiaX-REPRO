@@ -118,6 +118,9 @@ def test_exp1_nn_fallback_reports_nn_training_metric(monkeypatch):
         return (0.8, True) if len(y) == len(ytr) else (float("nan"), False)
 
     monkeypatch.setattr(bench, "_eval_formula_r2", eval_formula)
+    # The held-out formula execution itself fails; a mocked metric helper
+    # alone does not control the production prediction path.
+    monkeypatch.setattr(bench, "_execute_formula", lambda *a, **k: None)
     monkeypatch.setattr(
         bench, "_train_and_eval_nn",
         lambda *a, **k: {
@@ -309,6 +312,8 @@ def test_exp1_hybrid_reuses_valid_standalone_nn_for_fallback(monkeypatch):
         "y_pred_test": np.full(len(yte), 0.4),
     }
     monkeypatch.setattr(bench, "_eval_formula_r2", eval_formula)
+    # Exercise the actual held-out execution failure that triggers fallback.
+    monkeypatch.setattr(bench, "_execute_formula", lambda *a, **k: None)
     monkeypatch.setattr(
         bench, "_train_and_eval_nn",
         lambda *a, **k: (_ for _ in ()).throw(AssertionError("unexpected NN retraining")),
@@ -338,6 +343,8 @@ def test_exp1_hybrid_rejects_invalid_nn_fallback_predictions(monkeypatch):
         "y_pred_test": np.full(len(yte), 0.4),
     }
     monkeypatch.setattr(bench, "_eval_formula_r2", eval_formula)
+    # Force the formula's held-out execution to fail, reaching NN fallback.
+    monkeypatch.setattr(bench, "_execute_formula", lambda *a, **k: None)
     monkeypatch.setattr(bench, "_train_and_eval_nn", lambda *a, **k: invalid_nn)
 
     result = bench._hybrid_predict_and_eval(
@@ -477,12 +484,33 @@ def test_exp1_hybrid_abstention_bypasses_ensemble_and_records_zero_nn_weight(mon
     assert result["decision"] == "nn_abstention_fallback"
     # The generated formula's score is diagnostic only; the selected
     # replacement predictor retains its own independent test_r2.
-    assert result["llm_test_r2"] == 0.8
+    expected_formula_r2 = bench._compute_metrics(
+        yte, np.full(len(yte), 0.5)
+    )["r2"]
+    assert result["llm_test_r2"] == expected_formula_r2
     assert result["test_r2"] == 0.15
     assert result["blend_weights"]["nn"] == [0.0] * len(yte)
     assert result["blend_weights"]["llm"] == [0.0] * len(yte)
     assert result["blend_weights"]["replacement"] == [1.0] * len(yte)
     assert result["nn_selected_model"] == "log_ridge"
+
+
+def test_exp1_llm_route_reuses_one_held_out_formula_execution(monkeypatch):
+    _common(monkeypatch, "fitted_llm")
+    Xtr, ytr, Xte, yte = _inputs()
+    calls = []
+
+    def execute_formula(code, X, **kwargs):
+        calls.append(len(X))
+        return np.full(len(X), 0.5)
+
+    monkeypatch.setattr(bench, "_execute_formula", execute_formula)
+    result = bench._hybrid_predict_and_eval(
+        "fixture", "defi", Xtr, ytr, Xte, yte, ["x"], {},
+    )
+
+    assert calls == [len(Xte)]
+    assert result["test_r2"] == result["llm_test_r2"]
 
 
 def test_exp1_llm_failure_abstention_fallback_records_zero_nn_weight(monkeypatch):
@@ -491,6 +519,9 @@ def test_exp1_llm_failure_abstention_fallback_records_zero_nn_weight(monkeypatch
         bench, "_eval_formula_r2",
         lambda *a, **k: (float("nan"), False),
     )
+    # The fitted route's held-out formula execution fails, so NN abstention
+    # must remain the selected replacement predictor.
+    monkeypatch.setattr(bench, "_execute_formula", lambda *a, **k: None)
     Xtr, ytr, Xte, yte = _inputs()
     nn_result = {
         "train_r2": 0.25, "test_r2": 0.15, "success": True,

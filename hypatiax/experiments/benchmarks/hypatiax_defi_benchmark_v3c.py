@@ -1148,6 +1148,8 @@ def _hybrid_predict_and_eval(
     selected_train_r2 = float("nan")
     train_r2_source = "unavailable"
     test_r2 = float("nan")
+    llm_test_preds_for_metric = None
+    llm_test_evaluation_attempted = False
 
     def _metric(value):
         try:
@@ -1237,8 +1239,15 @@ def _hybrid_predict_and_eval(
     if decision == "llm":
         selected_train_r2 = _metric(llm_train_r2)
         train_r2_source = "llm_formula"
-        test_r2, ok = _eval_formula_r2(llm_code, X_test, y_test, constants=constants)
-        test_r2 = _metric(test_r2) if ok else float("nan")
+        llm_test_evaluation_attempted = True
+        llm_test_preds_for_metric = _execute_formula(
+            llm_code, X_test, constants=constants
+        )
+        ok = llm_test_preds_for_metric is not None
+        test_r2 = (
+            _metric(_compute_metrics(y_test, llm_test_preds_for_metric).get("r2"))
+            if ok else float("nan")
+        )
         if not np.isfinite(test_r2):
             nn_m = _raw_nn()
             _use_nn_fallback(
@@ -1251,6 +1260,8 @@ def _hybrid_predict_and_eval(
 
     elif decision == "ensemble" and has_formula:
         llm_test_preds = _execute_formula(llm_code, X_test, constants=constants)
+        llm_test_evaluation_attempted = True
+        llm_test_preds_for_metric = llm_test_preds
         nn_m = _raw_nn()
         llm_train_preds = _execute_formula(llm_code, X_train, constants=constants)
         if (llm_test_preds is None or llm_train_preds is None
@@ -1302,6 +1313,8 @@ def _hybrid_predict_and_eval(
             try:
                 llm_train_preds = _execute_formula(llm_code, X_train, constants=constants)
                 llm_test_preds = _execute_formula(llm_code, X_test, constants=constants)
+                llm_test_evaluation_attempted = True
+                llm_test_preds_for_metric = llm_test_preds
                 if llm_train_preds is not None and llm_test_preds is not None:
                     t0 = time.time()
                     nn_m = _train_and_eval_nn(
@@ -1350,12 +1363,22 @@ def _hybrid_predict_and_eval(
     # selected route's test_r2. This is an audit metric only: it is computed
     # after route selection and never feeds routing, blending, or fallback.
     llm_test_r2 = float("nan")
-    if has_formula:
+    if llm_test_preds_for_metric is not None:
+        llm_test_value = _compute_metrics(
+            y_test, llm_test_preds_for_metric
+        ).get("r2")
+        llm_test_ok = True
+    elif has_formula and not llm_test_evaluation_attempted:
+        # Fallback routes that did not otherwise execute the formula still
+        # receive one diagnostic evaluation; failed route evaluations are
+        # not retried, and existing predictions are never recomputed.
         llm_test_value, llm_test_ok = _eval_formula_r2(
             llm_code, X_test, y_test, constants=constants
         )
-        if llm_test_ok and np.isfinite(llm_test_value):
-            llm_test_r2 = float(llm_test_value)
+    else:
+        llm_test_value, llm_test_ok = float("nan"), False
+    if llm_test_ok and np.isfinite(llm_test_value):
+        llm_test_r2 = float(llm_test_value)
 
     y_test_arr = np.asarray(y_test, dtype=float).reshape(-1)
     if y_test_arr.size == 0 or not np.isfinite(y_test_arr).all():
