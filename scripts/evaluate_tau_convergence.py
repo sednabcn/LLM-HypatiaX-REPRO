@@ -288,14 +288,20 @@ def evaluate(payload: dict[str, Any], *, bootstrap_replicates: int = 2000,
             summary["local_decision_sensitivity"] = None
         results[category] = summary
 
-    all_ready = all(
+    all_certified = all(
         item["selection_status"] == "certified"
         and item["minimum_units_met"]
         for item in results.values()
     )
     return {
         "evaluator_version": EVALUATOR_VERSION,
-        "status": "calibration_converged_on_calibration_data" if all_ready else "not_converged_or_insufficient_evidence",
+        "status": "risk_certified_on_calibration_data" if all_certified else "not_certified_or_insufficient_evidence",
+        "convergence_status": "not_established_missing_predeclared_stability_tolerances",
+        "convergence_note": (
+            "Bootstrap threshold variability and local route sensitivity are reported, "
+            "but no repository-approved numeric acceptance tolerances are currently "
+            "declared. Therefore this tool does not label calibration converged."
+        ),
         "generalization_claim": False,
         "approved_protocol": APPROVED,
         "candidate_tau_values": candidates,
@@ -344,7 +350,7 @@ def main() -> int:
             for key, value in result["categories"].items()
         },
     }, indent=2))
-    return 0 if result["status"] == "calibration_converged_on_calibration_data" else 1
+    return 0 if result["status"] == "risk_certified_on_calibration_data" else 1
 
 
 if __name__ == "__main__":
