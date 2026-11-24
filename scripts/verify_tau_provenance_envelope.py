@@ -20,6 +20,8 @@ from urllib.parse import urlsplit
 SCHEMA_VERSION = 1
 _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 _GIT_OBJECT_ID = re.compile(r"(?:[0-9a-f]{40}|[0-9a-f]{64})\Z")
+_GITHUB_OWNER = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?\Z")
+_GITHUB_REPOSITORY = re.compile(r"[A-Za-z0-9_.-]{1,100}\Z")
 
 
 def _nonempty_string(value: Any) -> bool:
@@ -53,6 +55,7 @@ def _canonical_github_repository_url(value: Any) -> bool:
         and _GITHUB_REPOSITORY.fullmatch(repository)
         and repository not in (".", "..")
         and not repository.endswith(".")
+        and not repository.endswith(".git")
     )
 
 
