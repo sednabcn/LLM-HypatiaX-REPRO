@@ -37,9 +37,23 @@ def test_exp1_has_no_standalone_pure_llm_comparison_arm():
 def test_hybrid_formula_and_provenance_are_written_to_case_results():
     tree = ast.parse(BENCHMARK.read_text())
     runner = _function_source(tree, "run_benchmark")
+    provenance = _function_source(tree, "_hybrid_metric_provenance_record")
+
+    # The runner must use the serializer helper, and that helper must retain
+    # every component-specific score and selected-route identity.
+    assert "_hybrid_metric_provenance_record(hy_m)" in runner
+    for field in (
+        "llm_train_r2",
+        "llm_test_r2",
+        "ensemble_train_r2",
+        "ensemble_test_r2",
+        "selected_predictor_train_r2",
+        "selected_predictor_test_r2",
+        "selected_predictor_source",
+    ):
+        assert f'"{field}": hy_m.get("{field}")' in provenance
 
     assert '"formula":         hy_m.get("llm_code")' in runner
-    assert '"llm_train_r2":    hy_m.get("llm_train_r2")' in runner
     assert '"formula_context": {' in runner
     assert '"llm_model": LLM_MODEL' in runner
     assert '"audit_data": {' in runner
