@@ -2126,6 +2126,22 @@ def _generate_report(results: list):
                 f"median={np.median(api_times):.3f}s (n={len(api_times)})"
             )
 
+    paired_api = []
+    for record in results:
+        pure_api = record.get("results", {}).get("pure_llm", {}).get("api_request_time_s")
+        hybrid_api = record.get("results", {}).get("hybrid", {}).get("llm_api_request_time_s")
+        if (pure_api is not None and hybrid_api is not None
+                and np.isfinite(pure_api) and np.isfinite(hybrid_api)
+                and pure_api > 0 and hybrid_api > 0):
+            paired_api.append((float(pure_api), float(hybrid_api)))
+    if paired_api:
+        api_ratios = np.asarray([hybrid / pure for pure, hybrid in paired_api])
+        print(
+            f"  Hybrid / Pure LLM paired provider-latency ratio: "
+            f"mean={np.mean(api_ratios):.3f}×, median={np.median(api_ratios):.3f}× "
+            f"(n={len(paired_api)})"
+        )
+
     # Provider token accounting is reported separately from wall-clock time.
     token_rows = [r.get("results", {}).get("pure_llm", {}) for r in results]
     token_rows = [x for x in token_rows if x.get("input_tokens") is not None
@@ -2638,6 +2654,16 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "variable_names": list(var_names),
                     "constants": metadata.get("constants") or {},
                     "llm_model": LLM_MODEL,
+                },
+                "llm_comparison_protocol": {
+                    "model": LLM_MODEL,
+                    "temperature": 0.25,
+                    "timeout_s": float(os.environ.get("LLM_METHOD_TIMEOUT", "120")),
+                    "max_retries": 0,
+                    "pure_llm_max_tokens": 4000,
+                    "hybrid_max_tokens": 1000,
+                    "prompt_templates": "arm_specific",
+                    "split_shared": True,
                 },
                 "audit_data": {
                     "X_train": X_tr.tolist(),
