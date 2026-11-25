@@ -2440,11 +2440,13 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 "y_pred_train": None, "y_pred_test": None,
                 "failure_reason": "standalone_nn_fit_raised",
             }
+            _nn_wall = 0.0
             try:
-                _t0_nn = time.time()
+                _t0_nn = time.perf_counter()
                 nn_m = _train_and_eval_nn(
                     X_tr, y_tr, X_te, y_te, split_metadata=split_details
                 )
+                _nn_wall = time.perf_counter() - _t0_nn
                 case_results["neural_network"] = {
                     "train_r2":    nn_m["train_r2"] if np.isfinite(nn_m["train_r2"]) else None,
                     "test_r2":     nn_m["test_r2"] if np.isfinite(nn_m["test_r2"]) else None,
@@ -2462,7 +2464,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "nn_abstained": nn_m.get("abstained", False),
                     "nn_selected_model": nn_m.get("selected_model", "nn"),
                     "failure_reason": nn_m.get("failure_reason"),
-                    "time_s":      round(time.time() - _t0_nn, 6),
+                    "time_s":      round(_nn_wall, 6),
                     "y_pred_train": nn_m["y_pred_train"].tolist() if nn_m.get("y_pred_train") is not None else None,
                     "y_pred_test":  nn_m["y_pred_test"].tolist() if nn_m.get("y_pred_test") is not None else None,
                 }
@@ -2478,19 +2480,20 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
             # ── Hybrid (all Fixes applied) ────────────────────────────────────
             hybrid_llm_state = {}
             try:
-                _t0_hyb = time.time()
+                _t0_hyb = time.perf_counter()
                 hy_m = _hybrid_predict_and_eval(
                     desc, tc["domain"], X_tr, y_tr, X_te, y_te, var_names, metadata,
                     llm_attempt_state=hybrid_llm_state,
                     nn_result=nn_m,
                     split_metadata=split_details,
                 )
-                _hyb_wall = round(time.time() - _t0_hyb, 6)
+                _hyb_wall = time.perf_counter() - _t0_hyb
 
-                # _hyb_wall already includes any NN rerun performed inside
-                # _hybrid_predict_and_eval. Keep nn_rerun_time_s as a subset
-                # diagnostic; adding it again would double-count wall time.
-                hyb_time = _hyb_wall
+                # The end-to-end Hybrid arm includes the initial NN fit plus
+                # the hybrid LLM/routing/evaluation stage. _hyb_wall already
+                # includes any NN rerun performed inside the latter stage.
+                # nn_rerun_time_s is a subset diagnostic and is not added again.
+                hyb_time = _nn_wall + _hyb_wall
 
                 _train_r2 = hy_m["train_r2"]
                 _test_r2  = hy_m["test_r2"]
@@ -2539,6 +2542,9 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "nn_rerun_time_s": hy_m.get("nn_rerun_time_s", 0.0),
                 }
             except Exception as e:
+                _hyb_exception_wall = (
+                    time.perf_counter() - _t0_hyb if "_t0_hyb" in locals() else 0.0
+                )
                 case_results["hybrid"] = {
                     "train_r2": None, "test_r2": None,
                     "llm_called": bool(hybrid_llm_state.get("llm_called", False)),
@@ -2562,7 +2568,11 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                         "schema_version": 1, "status": "not_available_after_exception",
                         "reported_success": None, "metrics_recomputed": False,
                     },
-                    "success": False, "time_s": 0.0, "error": str(e), "reason": "fit_or_metric_failed",
+                    "success": False,
+                    "time_s": round(_nn_wall + _hyb_exception_wall, 6),
+                    "nn_component_time_s": round(_nn_wall, 6),
+                    "hybrid_component_time_s": round(_hyb_exception_wall, 6),
+                    "error": str(e), "reason": "fit_or_metric_failed",
                     "blend_weights": None, "nn_abstained": None,
                     "nn_selected_model": None, "nn_edge_r2": None,
                     "ridge_edge_r2": None,
@@ -2664,6 +2674,8 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "hybrid_max_tokens": 1000,
                     "prompt_templates": "arm_specific",
                     "split_shared": True,
+                    "pure_llm_time_scope": "client initialization + generation + train/test formula evaluation",
+                    "hybrid_time_scope": "NN fit + hybrid LLM generation/routing/evaluation",
                 },
                 "audit_data": {
                     "X_train": X_tr.tolist(),
