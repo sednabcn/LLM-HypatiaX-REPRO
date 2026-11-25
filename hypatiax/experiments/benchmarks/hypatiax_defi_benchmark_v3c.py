@@ -1843,6 +1843,12 @@ def _validate_result_records(
                 for field in _DIAGNOSTIC_FIELDS:
                     if field not in data:
                         errors.append(f"{equation_id} {arm}: missing {field}")
+                if arm == "hybrid":
+                    for field in ("nn_component_time_s", "hybrid_component_time_s",
+                                  "llm_api_request_time_s", "llm_input_tokens",
+                                  "llm_output_tokens"):
+                        if field not in data:
+                            errors.append(f"{equation_id} hybrid: missing {field}")
             elif arm == "pure_llm":
                 for field in ("time_s", "generation_time_s", "evaluation_time_s",
                               "api_request_time_s", "llm_called", "model",
@@ -2108,6 +2114,24 @@ def _generate_report(results: list):
         )
         total_ratio = sum(hybrid for _, hybrid in paired) / sum(pure for pure, _ in paired)
         print(f"  Hybrid / Pure LLM paired total wall-time ratio: {total_ratio:.3f}×")
+
+    hybrid_nn_parts = [
+        r.get("results", {}).get("hybrid", {}).get("nn_component_time_s")
+        for r in results
+    ]
+    hybrid_llm_parts = [
+        r.get("results", {}).get("hybrid", {}).get("hybrid_component_time_s")
+        for r in results
+    ]
+    hybrid_nn_parts = [float(v) for v in hybrid_nn_parts
+                       if v is not None and np.isfinite(v) and v >= 0]
+    hybrid_llm_parts = [float(v) for v in hybrid_llm_parts
+                        if v is not None and np.isfinite(v) and v >= 0]
+    if hybrid_nn_parts and hybrid_llm_parts:
+        print(
+            f"  Hybrid end-to-end components: NN={sum(hybrid_nn_parts):.3f}s, "
+            f"LLM/routing/evaluation={sum(hybrid_llm_parts):.3f}s"
+        )
 
     # Provider request latency is measured independently from parsing,
     # formula evaluation, and NN/hybrid orchestration.
