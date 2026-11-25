@@ -1081,17 +1081,23 @@ def formula({var_list}):
 """
     call_info = {}
     api_attempted = False
+    api_request_time_s = None
+    usage = None
+    api_start = None
     try:
         from hypatiax.core.llm_call import create_message, last_call_info  # UNIFIED-TEMPERATURE
         # Set immediately before entering the single-attempt API wrapper. A
         # timeout/provider error is still an attempted live request.
         api_attempted = True
+        api_start = time.perf_counter()
         resp = create_message(
             client,
             model=LLM_MODEL,
             max_tokens=1000,
             messages=[{"role": "user", "content": prompt}],
         )
+        api_request_time_s = time.perf_counter() - api_start
+        usage = getattr(resp, "usage", None)
         call_info = last_call_info()
         code = resp.content[0].text.strip()
         # Strip markdown fences if present
@@ -1103,15 +1109,23 @@ def formula({var_list}):
                 "success": "def formula" in code, "error": None,
                 "llm_called": True, "bypass_kind": "live",
                 "llm_source": "v3c_builtin", "timeout_s": timeout_s,
+                "api_request_time_s": api_request_time_s,
+                "input_tokens": getattr(usage, "input_tokens", None),
+                "output_tokens": getattr(usage, "output_tokens", None),
                 "temperature_requested": call_info.get("temperature_requested"),
                 "temperature_sent": call_info.get("temperature_sent", False)}
     except Exception as e:
+        if api_start is not None and api_request_time_s is None:
+            api_request_time_s = time.perf_counter() - api_start
         if "last_call_info" in locals():
             call_info = last_call_info()
         return {"python_code": None, "formula": None,
                 "success": False, "error": str(e),
                 "llm_called": api_attempted, "bypass_kind": "none",
                 "llm_source": "v3c_builtin_failed", "timeout_s": timeout_s,
+                "api_request_time_s": api_request_time_s,
+                "input_tokens": getattr(usage, "input_tokens", None),
+                "output_tokens": getattr(usage, "output_tokens", None),
                 "temperature_requested": call_info.get("temperature_requested"),
                 "temperature_sent": call_info.get("temperature_sent", False)}
 
@@ -1162,6 +1176,9 @@ def _hybrid_predict_and_eval(
             "bypass_kind": llm_result.get("bypass_kind", "none"),
             "llm_source": llm_result.get("llm_source", "unknown"),
             "llm_timeout_s": llm_result.get("timeout_s"),
+            "llm_api_request_time_s": llm_result.get("api_request_time_s"),
+            "llm_input_tokens": llm_result.get("input_tokens"),
+            "llm_output_tokens": llm_result.get("output_tokens"),
             "llm_temperature_requested": llm_result.get("temperature_requested"),
             "llm_temperature_sent": llm_result.get("temperature_sent", False),
             "llm_code": llm_code if has_formula else None,
@@ -1576,6 +1593,9 @@ def _hybrid_predict_and_eval(
         "bypass_kind": llm_result.get("bypass_kind", "none"),
         "llm_source": llm_result.get("llm_source", "unknown"),
         "llm_timeout_s": llm_result.get("timeout_s"),
+        "llm_api_request_time_s": llm_result.get("api_request_time_s"),
+        "llm_input_tokens": llm_result.get("input_tokens"),
+        "llm_output_tokens": llm_result.get("output_tokens"),
         "llm_temperature_requested": llm_result.get("temperature_requested"),
         "llm_temperature_sent": llm_result.get("temperature_sent", False),
         "success": success,
@@ -1819,10 +1839,16 @@ def _validate_result_records(
             if not isinstance(data, dict):
                 errors.append(f"{equation_id}: missing results.{arm}")
                 continue
-            for field in _DIAGNOSTIC_FIELDS:
-                if field not in data:
-                    errors.append(f"{equation_id} {arm}: missing {field}")
-
+            if arm in ("neural_network", "hybrid"):
+                for field in _DIAGNOSTIC_FIELDS:
+                    if field not in data:
+                        errors.append(f"{equation_id} {arm}: missing {field}")
+                if arm == "hybrid":
+                    for field in ("nn_component_time_s", "hybrid_component_time_s",
+                                  "llm_api_request_time_s", "llm_input_tokens",
+                                  "llm_output_tokens"):
+                        if field not in data:
+                            errors.append(f"{equation_id} hybrid: missing {field}")
             selected = data.get("nn_selected_model")
             if selected is not None and selected not in _ALLOWED_NN_MODELS:
                 errors.append(f"{equation_id} {arm}: invalid nn_selected_model={selected!r}")
@@ -1977,10 +2003,13 @@ def _generate_report(results: list):
     print("NOTE: All percentages use FIXED denominator (standard cases only).")
     print("      NaN / failure counts as 0 toward the denominator.\\n")
 
-    for method in ["neural_network", "hybrid"]:
+    method_labels = {
+        "neural_network": "Neural Network",
+        "hybrid": "Hybrid",
+    }
+    for method in ("neural_network", "hybrid"):
         s = _stats(_r2s(standard, method), denom)
-        label = {"neural_network": "Neural Network",
-                 "hybrid":   "Hybrid        "}[method]
+        label = method_labels[method]
         print(f"  {label}: median={s['median']:.4f}, "
               f"mean(clip-{abs(CLIP_LO):.0f})={s['mean_clip']:.4f}, "
               f">0.9: {s['pct_09']:.1f}%, "
@@ -1990,10 +2019,15 @@ def _generate_report(results: list):
     if intractable:
         print(f"\n── Intractable cases ({len(intractable)}) ─────────────────────────────────────")
         for r in intractable:
-            hy = r["results"].get("hybrid", {}).get("test_r2")
             case_name = str(r.get("equation_id", r.get("test_case", "<unknown>")))
-            print(f"  {case_name[:55]:<55}  hybrid test R² = "
-                  f"{'nan' if hy is None or (isinstance(hy, float) and np.isnan(hy)) else f'{hy:.4f}'}")
+            values = []
+            for method in ("neural_network", "hybrid"):
+                score = r["results"].get(method, {}).get("test_r2")
+                values.append(
+                    f"{method_labels[method]}="
+                    f"{'nan' if score is None or (isinstance(score, float) and np.isnan(score)) else f'{score:.4f}'}"
+                )
+            print(f"  {case_name[:42]:<42}  " + " | ".join(values))
 
     # By-difficulty breakdown
     print("\n── By difficulty ─────────────────────────────────────────────────────────")
@@ -2001,67 +2035,73 @@ def _generate_report(results: list):
         subset = [r for r in standard if r.get("difficulty") == diff]
         if not subset:
             continue
-        for method in ["neural_network", "hybrid"]:
+        for method in ("neural_network", "hybrid"):
             s = _stats(_r2s(subset, method), max(len(subset), 1))
             print(f"  {diff:6s} | {method:14s}: median={s['median']:.4f}, "
                   f">0.99: {s['pct_099']:.1f}%  (n={len(subset)})")
 
-    # ── Timing and speedup ─────────────────────────────────────────────────
-    print("\n── Timing summary (per-case mean) ────────────────────────────────────────")
 
-    # Identify timed-out NN cases (Issue 2)
-    timed_out_cases = [
-        r["equation_id"] for r in results
-        if r["results"].get("neural_network", {}).get("timed_out", False)
-    ]
-    if timed_out_cases:
-        print(f"  ⚠️  NN wall-clock limit hit ({_NN_MAX_TIME_S}s) in "
-              f"{len(timed_out_cases)} case(s): {', '.join(timed_out_cases)}")
-
-    for method in ["neural_network", "hybrid"]:
-        times = [
-            r["results"].get(method, {}).get("time_s", 0.0)
+    # ── Two-arm timing summary ─────────────────────────────────────────────
+    print("\n── Timing summary (per-case wall time) ──────────────────────────────────")
+    timing = {}
+    for method in ("neural_network", "hybrid"):
+        values = [
+            r.get("results", {}).get(method, {}).get("time_s")
             for r in results
-            if r["results"].get(method, {}).get("time_s") is not None
         ]
-        times = [t for t in times if t and t > 0]
-        if times:
-            label = {"neural_network": "Neural Network",
-                     "hybrid":   "Hybrid        "}[method]
-            print(f"  {label}: mean={np.mean(times):.1f}s, "
-                  f"median={np.median(times):.1f}s  (n={len(times)})")
+        values = [float(v) for v in values if v is not None and np.isfinite(v) and v > 0]
+        if values:
+            timing[method] = values
+            print(
+                f"  {method_labels[method]:14s}: total={sum(values):.3f}s, "
+                f"mean={np.mean(values):.3f}s, median={np.median(values):.3f}s "
+                f"(n={len(values)})"
+            )
 
-    nn_times  = [r["results"].get("neural_network", {}).get("time_s", 0.0) or 0.0 for r in results]
-    hyb_times = [r["results"].get("hybrid",         {}).get("time_s", 0.0) or 0.0 for r in results]
-    nn_times  = [t for t in nn_times  if t > 0]
-    hyb_times = [t for t in hyb_times if t > 0]
-    if nn_times and hyb_times and len(nn_times) == len(hyb_times):
-        speedup_mean   = np.mean(nn_times) / np.mean(hyb_times)
-        speedup_median = np.median(nn_times) / np.median(hyb_times)
-        verdict = (f"Hybrid {speedup_mean:.2f}× faster than NN (mean)"
-                   if speedup_mean > 1 else f"Hybrid {1/speedup_mean:.2f}× slower than NN (mean)")
-        print(f"  Hybrid vs NN speedup: {verdict}")
-        print(f"  Hybrid vs NN speedup (median): {speedup_median:.2f}×")
-        print("  (Paper claims 73% reduction = 3.7×)")
-        reduction_mean   = (1 - np.mean(hyb_times) / np.mean(nn_times)) * 100
-        reduction_median = (1 - np.median(hyb_times) / np.median(nn_times)) * 100
-        print(f"  This run: mean-based {reduction_mean:.1f}% reduction, "
-              f"median-based {reduction_median:.1f}% reduction")
+    hybrid_nn_parts = [
+        r.get("results", {}).get("hybrid", {}).get("nn_component_time_s")
+        for r in results
+    ]
+    hybrid_llm_parts = [
+        r.get("results", {}).get("hybrid", {}).get("hybrid_component_time_s")
+        for r in results
+    ]
+    hybrid_nn_parts = [float(v) for v in hybrid_nn_parts
+                       if v is not None and np.isfinite(v) and v >= 0]
+    hybrid_llm_parts = [float(v) for v in hybrid_llm_parts
+                        if v is not None and np.isfinite(v) and v >= 0]
+    if hybrid_nn_parts and hybrid_llm_parts:
+        print(
+            f"  Hybrid end-to-end components: NN={sum(hybrid_nn_parts):.3f}s, "
+            f"LLM/routing/evaluation={sum(hybrid_llm_parts):.3f}s"
+        )
 
-        # Issue 3: also report hybrid speedup excluding NN-fallback cases
-        # (these are LLM-routed Hybrid cases, compared with standalone NN time)
-        llm_only_nn   = [r["results"].get("neural_network", {}).get("time_s", 0.0) or 0.0
-                          for r in results
-                          if r["results"].get("hybrid", {}).get("decision", "") not in
-                          ("nn", "nn_fallback", "fail") and r["results"].get("neural_network")]
-        llm_only_hyb  = [r["results"].get("hybrid", {}).get("time_s", 0.0) or 0.0
-                          for r in results
-                          if r["results"].get("hybrid", {}).get("decision", "") not in
-                          ("nn", "nn_fallback", "fail") and r["results"].get("hybrid")]
-        if llm_only_nn and llm_only_hyb and len(llm_only_nn) == len(llm_only_hyb):
-            sp_llm = np.mean(llm_only_nn) / np.mean(llm_only_hyb)
-            print(f"  Hybrid vs NN speedup (LLM-routed cases only, n={len(llm_only_nn)}): "
-                  f"{sp_llm:.2f}× — this is the cleanest comparison for the paper")
+    # Provider request latency is measured independently from parsing,
+    # formula evaluation, and NN/hybrid orchestration.
+    for method, field in (("hybrid", "llm_api_request_time_s"),):
+        api_times = [
+            r.get("results", {}).get(method, {}).get(field)
+            for r in results
+        ]
+        api_times = [float(v) for v in api_times
+                     if v is not None and np.isfinite(v) and v >= 0]
+        if api_times:
+            print(
+                f"  {method_labels[method]} provider request: "
+                f"total={sum(api_times):.3f}s, mean={np.mean(api_times):.3f}s, "
+                f"median={np.median(api_times):.3f}s (n={len(api_times)})"
+            )
+
+    hybrid_token_rows = [r.get("results", {}).get("hybrid", {}) for r in results]
+    hybrid_in = [int(x["llm_input_tokens"]) for x in hybrid_token_rows
+                 if x.get("llm_input_tokens") is not None]
+    hybrid_out = [int(x["llm_output_tokens"]) for x in hybrid_token_rows
+                  if x.get("llm_output_tokens") is not None]
+    if hybrid_in or hybrid_out:
+        print(
+            f"  Hybrid LLM token usage: input={sum(hybrid_in)} "
+            f"(n={len(hybrid_in)}), output={sum(hybrid_out)} (n={len(hybrid_out)})"
+        )
 
     print("\n" + "=" * 80)
 
@@ -2281,11 +2321,13 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 "y_pred_train": None, "y_pred_test": None,
                 "failure_reason": "standalone_nn_fit_raised",
             }
+            _nn_wall = 0.0
             try:
-                _t0_nn = time.time()
+                _t0_nn = time.perf_counter()
                 nn_m = _train_and_eval_nn(
                     X_tr, y_tr, X_te, y_te, split_metadata=split_details
                 )
+                _nn_wall = time.perf_counter() - _t0_nn
                 case_results["neural_network"] = {
                     "train_r2":    nn_m["train_r2"] if np.isfinite(nn_m["train_r2"]) else None,
                     "test_r2":     nn_m["test_r2"] if np.isfinite(nn_m["test_r2"]) else None,
@@ -2303,7 +2345,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "nn_abstained": nn_m.get("abstained", False),
                     "nn_selected_model": nn_m.get("selected_model", "nn"),
                     "failure_reason": nn_m.get("failure_reason"),
-                    "time_s":      round(time.time() - _t0_nn, 3),
+                    "time_s":      round(_nn_wall, 6),
                     "y_pred_train": nn_m["y_pred_train"].tolist() if nn_m.get("y_pred_train") is not None else None,
                     "y_pred_test":  nn_m["y_pred_test"].tolist() if nn_m.get("y_pred_test") is not None else None,
                 }
@@ -2319,19 +2361,20 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
             # ── Hybrid (all Fixes applied) ────────────────────────────────────
             hybrid_llm_state = {}
             try:
-                _t0_hyb = time.time()
+                _t0_hyb = time.perf_counter()
                 hy_m = _hybrid_predict_and_eval(
                     desc, tc["domain"], X_tr, y_tr, X_te, y_te, var_names, metadata,
                     llm_attempt_state=hybrid_llm_state,
                     nn_result=nn_m,
                     split_metadata=split_details,
                 )
-                _hyb_wall = round(time.time() - _t0_hyb, 3)
+                _hyb_wall = time.perf_counter() - _t0_hyb
 
-                # _hyb_wall already includes any NN rerun performed inside
-                # _hybrid_predict_and_eval. Keep nn_rerun_time_s as a subset
-                # diagnostic; adding it again would double-count wall time.
-                hyb_time = _hyb_wall
+                # The end-to-end Hybrid arm includes the initial NN fit plus
+                # the hybrid LLM/routing/evaluation stage. _hyb_wall already
+                # includes any NN rerun performed inside the latter stage.
+                # nn_rerun_time_s is a subset diagnostic and is not added again.
+                hyb_time = _nn_wall + _hyb_wall
 
                 _train_r2 = hy_m["train_r2"]
                 _test_r2  = hy_m["test_r2"]
@@ -2366,6 +2409,9 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "bypass_kind":     hy_m.get("bypass_kind"),     # B2
                     "llm_source":      hy_m.get("llm_source"),
                     "llm_timeout_s":   hy_m.get("llm_timeout_s"),
+                    "llm_api_request_time_s": hy_m.get("llm_api_request_time_s"),
+                    "llm_input_tokens": hy_m.get("llm_input_tokens"),
+                    "llm_output_tokens": hy_m.get("llm_output_tokens"),
                     "llm_temperature_requested": hy_m.get("llm_temperature_requested"),
                     "llm_temperature_sent": hy_m.get("llm_temperature_sent"),
                     # Retain the exact generated Python formula for audit and
@@ -2373,16 +2419,22 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "formula":         hy_m.get("llm_code"),
                     **_hybrid_metric_provenance_record(hy_m),
                     "success":         bool(hy_m.get("success", not (_nan(_train_r2) or _nan(_test_r2)))),
-                    "time_s":          round(hyb_time, 3),
+                    "time_s":          round(hyb_time, 6),
                     "nn_rerun_time_s": hy_m.get("nn_rerun_time_s", 0.0),
                 }
             except Exception as e:
+                _hyb_exception_wall = (
+                    time.perf_counter() - _t0_hyb if "_t0_hyb" in locals() else 0.0
+                )
                 case_results["hybrid"] = {
                     "train_r2": None, "test_r2": None,
                     "llm_called": bool(hybrid_llm_state.get("llm_called", False)),
                     "bypass_kind": hybrid_llm_state.get("bypass_kind", "none"),
                     "llm_source": hybrid_llm_state.get("llm_source", "unknown"),
                     "llm_timeout_s": hybrid_llm_state.get("llm_timeout_s"),
+                    "llm_api_request_time_s": hybrid_llm_state.get("llm_api_request_time_s"),
+                    "llm_input_tokens": hybrid_llm_state.get("llm_input_tokens"),
+                    "llm_output_tokens": hybrid_llm_state.get("llm_output_tokens"),
                     "llm_temperature_requested": hybrid_llm_state.get("llm_temperature_requested"),
                     "llm_temperature_sent": hybrid_llm_state.get("llm_temperature_sent", False),
                     "formula": hybrid_llm_state.get("llm_code"),
@@ -2397,7 +2449,11 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                         "schema_version": 1, "status": "not_available_after_exception",
                         "reported_success": None, "metrics_recomputed": False,
                     },
-                    "success": False, "time_s": 0.0, "error": str(e), "reason": "fit_or_metric_failed",
+                    "success": False,
+                    "time_s": round(_nn_wall + _hyb_exception_wall, 6),
+                    "nn_component_time_s": round(_nn_wall, 6),
+                    "hybrid_component_time_s": round(_hyb_exception_wall, 6),
+                    "error": str(e), "reason": "fit_or_metric_failed",
                     "blend_weights": None, "nn_abstained": None,
                     "nn_selected_model": None, "nn_edge_r2": None,
                     "ridge_edge_r2": None,
@@ -2463,6 +2519,15 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "variable_names": list(var_names),
                     "constants": metadata.get("constants") or {},
                     "llm_model": LLM_MODEL,
+                },
+                "llm_comparison_protocol": {
+                    "model": LLM_MODEL,
+                    "temperature": 0.25,
+                    "timeout_s": float(os.environ.get("LLM_METHOD_TIMEOUT", "120")),
+                    "max_retries": 0,
+                    "hybrid_max_tokens": 1000,
+                    "split_shared": True,
+                    "hybrid_time_scope": "NN fit + hybrid LLM generation/routing/evaluation",
                 },
                 "audit_data": {
                     "X_train": X_tr.tolist(),

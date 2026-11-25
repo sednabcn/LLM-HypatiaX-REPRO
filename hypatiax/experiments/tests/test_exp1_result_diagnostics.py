@@ -1,6 +1,7 @@
 """Regression tests for the serialized Exp1 result contract."""
 
 import copy
+import json
 
 import pytest
 
@@ -25,6 +26,11 @@ def _record():
                 "nn_abstained": True,
                 "nn_edge_r2": -0.2,
                 "ridge_edge_r2": 0.8,
+                "nn_component_time_s": 0.2,
+                "hybrid_component_time_s": 0.4,
+                "llm_api_request_time_s": 0.1,
+                "llm_input_tokens": 90,
+                "llm_output_tokens": 40,
                 "blend_weights": {"llm": [1.0, 1.0], "nn": [0.0, 0.0]},
             },
         },
@@ -85,3 +91,17 @@ def test_legacy_resume_record_is_backfilled_without_overwriting_values():
     for arm in ("neural_network", "hybrid"):
         for field in bench._DIAGNOSTIC_FIELDS:
             assert field in normalized["results"][arm]
+    assert "pure_llm" not in normalized["results"]
+
+
+
+def test_legacy_two_arm_checkpoint_is_accepted_and_normalized(tmp_path, monkeypatch):
+    checkpoint = tmp_path / "legacy.json"
+    checkpoint.write_text(json.dumps([_record()]))
+    monkeypatch.setattr(bench, "CHECKPOINT_FILE", checkpoint)
+
+    records, completed = bench._load_checkpoint()
+
+    assert len(records) == 1
+    assert completed == 1
+    assert "pure_llm" not in records[0]["results"]
