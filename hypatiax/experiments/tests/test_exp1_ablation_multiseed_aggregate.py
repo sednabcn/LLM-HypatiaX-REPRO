@@ -27,7 +27,8 @@ def _fixtures():
         results[seed] = rows
         provenance[seed] = {
             "seed": seed, "benchmark_script_sha256": "a" * 64,
-            "source_revision": "deadbeef",
+            "source_revision": "deadbeef", "engine_version": "test",
+            "populations": 30, "niterations": 1000, "model_string": "test", "flags": {},
         }
     return results, provenance
 
