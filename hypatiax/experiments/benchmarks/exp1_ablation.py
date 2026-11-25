@@ -443,13 +443,13 @@ def generate_data(eq, N=200, noise_level=0.05, seed=42):
     return X_train, X_test, y_train, y_test, X, y
 
 
-def generate_extrap_data(eq, regime="medium", N=100, seed=42):
+def generate_extrap_data(eq, regime="medium", N=100, seed=42, domain_validated=False):
     """Generate deterministic OOD samples, honouring constrained domains."""
     rng = np.random.RandomState(seed + 999)
     n_vars = len(eq["vars"])
     if regime == "medium":
         ranges = eq["extrap_range"]
-    elif regime in (eq.get("extrapolation_ranges") or {}):
+    elif domain_validated and regime in (eq.get("extrapolation_ranges") or {}):
         ranges = eq["extrapolation_ranges"][regime]
     else:
         mult_lo, mult_hi = {"near": (1.0, 1.5), "far": (4.0, 6.0)}[regime]
@@ -734,7 +734,9 @@ def run_condition(eq, condition, seed=42, niterations=None,
         )
         extrap_sets = {}
         for regime_name, _ in EXTRAP_REGIMES:
-            X_e, y_e = generate_extrap_data(eq, regime=regime_name, N=100, seed=eq_seed)
+            X_e, y_e = generate_extrap_data(
+                eq, regime=regime_name, N=100, seed=eq_seed, domain_validated=True
+            )
             extrap_sets[regime_name] = (X_e, y_e)
     else:
         # Core-295 supplies the exact pre-generated arrays whose hashes are recorded.
