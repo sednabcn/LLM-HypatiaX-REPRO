@@ -132,6 +132,8 @@ def aggregate(root: Path):
         paired_deltas = []
         arm_values = {arm: [] for arm in ARMS}
         statuses = Counter()
+        metric_statuses = Counter()
+        clipped_values = {arm: [] for arm in ARMS}
         for eq in sorted(reference_ids):
             rec = by_seed[seed][eq]
             results = rec.get("results") if isinstance(rec.get("results"), dict) else {}
@@ -140,13 +142,20 @@ def aggregate(root: Path):
             intractable = bool(rec.get("extrapolation_intractable", False))
             nn_r2 = _finite(nn.get(METRIC))
             hy_r2 = _finite(hy.get(METRIC))
-            status = ("intractable" if intractable else
-                      "undefined_metric" if nn_r2 is None or hy_r2 is None else "scorable")
+            status = "intractable" if intractable else "standard"
+            metric_status = (
+                "undefined_both" if nn_r2 is None and hy_r2 is None else
+                "undefined_nn" if nn_r2 is None else
+                "undefined_hybrid" if hy_r2 is None else "finite_pair"
+            )
             statuses[status] += 1
+            metric_statuses[metric_status] += 1
             if nn_r2 is not None:
                 arm_values["neural_network"].append(nn_r2)
+                clipped_values["neural_network"].append(max(-10.0, min(1.0, nn_r2)))
             if hy_r2 is not None:
                 arm_values["hybrid"].append(hy_r2)
+                clipped_values["hybrid"].append(max(-10.0, min(1.0, hy_r2)))
             delta = (hy_r2 - nn_r2) if nn_r2 is not None and hy_r2 is not None else None
             if delta is not None:
                 paired_deltas.append(delta)
@@ -164,10 +173,17 @@ def aggregate(root: Path):
                 "seed": seed, "equation_id": eq, "difficulty": rec.get("difficulty"),
                 "formula_type": rec.get("formula_type"),
                 "extrapolation_intractable": intractable, "case_status": status,
+                "metric_status": metric_status,
                 "nn_success": nn.get("success"), "hybrid_success": hy.get("success"),
                 "nn_test_r2": nn_r2, "hybrid_test_r2": hy_r2,
+                "nn_test_r2_clipped_minus10_1": None if nn_r2 is None else max(-10.0, min(1.0, nn_r2)),
+                "hybrid_test_r2_clipped_minus10_1": None if hy_r2 is None else max(-10.0, min(1.0, hy_r2)),
                 "hybrid_minus_nn_test_r2": delta,
                 "hybrid_route": route,
+                "hybrid_route_reason": hy.get("route_reason"),
+                "hybrid_route_execution_status": hy.get("route_execution_status"),
+                "nn_test_r2_source": nn.get("test_r2_source"),
+                "hybrid_test_r2_source": hy.get("test_r2_source"),
                 "nn_time_s": _finite(nn.get("time_s")),
                 "hybrid_time_s": _finite(hy.get("time_s")),
                 "nn_component_time_s": _finite(hy.get("nn_component_time_s")),
@@ -182,8 +198,17 @@ def aggregate(root: Path):
         seed_summaries[str(seed)] = {
             "case_count": len(seed_records),
             "case_status_counts": dict(sorted(statuses.items())),
+            "metric_status_counts": dict(sorted(metric_statuses.items())),
             "neural_network_test_r2": _stats(arm_values["neural_network"]),
             "hybrid_test_r2": _stats(arm_values["hybrid"]),
+            "neural_network_test_r2_clipped_minus10_1": _stats(clipped_values["neural_network"]),
+            "hybrid_test_r2_clipped_minus10_1": _stats(clipped_values["hybrid"]),
+            "threshold_rates": {
+                "nn_gt_0_9": sum(v > 0.9 for v in arm_values["neural_network"]) / len(arm_values["neural_network"]) if arm_values["neural_network"] else None,
+                "hybrid_gt_0_9": sum(v > 0.9 for v in arm_values["hybrid"]) / len(arm_values["hybrid"]) if arm_values["hybrid"] else None,
+                "nn_gt_0_99": sum(v > 0.99 for v in arm_values["neural_network"]) / len(arm_values["neural_network"]) if arm_values["neural_network"] else None,
+                "hybrid_gt_0_99": sum(v > 0.99 for v in arm_values["hybrid"]) / len(arm_values["hybrid"]) if arm_values["hybrid"] else None,
+            },
             "paired_hybrid_minus_nn_test_r2": _stats(paired_deltas),
             "paired_counts": {
                 "n": len(paired_deltas),
@@ -207,8 +232,10 @@ def aggregate(root: Path):
             "neural_network_test_r2": _stats(nn_vals),
             "hybrid_test_r2": _stats(hy_vals),
             "paired_hybrid_minus_nn_test_r2": _stats(deltas),
+            "neural_network_test_r2_clipped_minus10_1": _stats(r["nn_test_r2_clipped_minus10_1"] for r in rows),
+            "hybrid_test_r2_clipped_minus10_1": _stats(r["hybrid_test_r2_clipped_minus10_1"] for r in rows),
             "seed_results": [
-                {k: r[k] for k in ("seed", "case_status", "nn_success", "hybrid_success",
+                {k: r[k] for k in ("seed", "case_status", "metric_status", "nn_success", "hybrid_success",
                                    "nn_test_r2", "hybrid_test_r2", "hybrid_minus_nn_test_r2",
                                    "hybrid_route")}
                 for r in rows
@@ -286,12 +313,14 @@ def main():
             stream.write("- Repeated seeds are not counted as independent equation families.\n")
             stream.write("- Undefined metrics and intractable cases remain explicit in the CSV and JSON.\n\n")
             stream.write("## Per-seed results\n\n")
-            stream.write("| Seed | NN median test R² | Hybrid median test R² | NN mean test R² | Hybrid mean test R² | Paired n | Better / tie / worse |\n")
+            stream.write("| Seed | NN median test R² | Hybrid median test R² | NN mean clipped R² [-10,1] | Hybrid mean clipped R² [-10,1] | Paired n | Better / tie / worse |\n")
             stream.write("|---:|---:|---:|---:|---:|---:|---:|\n")
             for seed, s in summary["per_seed"].items():
                 nn, hy, pair = s["neural_network_test_r2"], s["hybrid_test_r2"], s["paired_counts"]
                 fmt = lambda x: "NA" if x is None else f"{x:.6f}"
-                stream.write(f"| {seed} | {fmt(nn['median'])} | {fmt(hy['median'])} | {fmt(nn['mean'])} | {fmt(hy['mean'])} | {pair['n']} | {pair['hybrid_better']} / {pair['tie']} / {pair['hybrid_worse']} |\n")
+                nn_clip = s["neural_network_test_r2_clipped_minus10_1"]["mean"]
+                hy_clip = s["hybrid_test_r2_clipped_minus10_1"]["mean"]
+                stream.write(f"| {seed} | {fmt(nn['median'])} | {fmt(hy['median'])} | {fmt(nn_clip)} | {fmt(hy_clip)} | {pair['n']} | {pair['hybrid_better']} / {pair['tie']} / {pair['hybrid_worse']} |\n")
             stream.write("\n## Interpretation limits\n\n")
             stream.write(summary["interpretation"] + "\n")
             stream.write("The paired delta counts are descriptive only; no inferential test treats seeds as independent samples.\n")
