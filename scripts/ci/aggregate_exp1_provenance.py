@@ -134,6 +134,8 @@ def aggregate(root: Path):
         statuses = Counter()
         metric_statuses = Counter()
         clipped_values = {arm: [] for arm in ARMS}
+        intractable_values = {arm: [] for arm in ARMS}
+        intractable_deltas = []
         for eq in sorted(reference_ids):
             rec = by_seed[seed][eq]
             results = rec.get("results") if isinstance(rec.get("results"), dict) else {}
@@ -150,15 +152,19 @@ def aggregate(root: Path):
             )
             statuses[status] += 1
             metric_statuses[metric_status] += 1
+            target_values = intractable_values if intractable else arm_values
+            target_clipped = None if intractable else clipped_values
             if nn_r2 is not None:
-                arm_values["neural_network"].append(nn_r2)
-                clipped_values["neural_network"].append(max(-10.0, min(1.0, nn_r2)))
+                target_values["neural_network"].append(nn_r2)
+                if target_clipped is not None:
+                    target_clipped["neural_network"].append(max(-10.0, min(1.0, nn_r2)))
             if hy_r2 is not None:
-                arm_values["hybrid"].append(hy_r2)
-                clipped_values["hybrid"].append(max(-10.0, min(1.0, hy_r2)))
+                target_values["hybrid"].append(hy_r2)
+                if target_clipped is not None:
+                    target_clipped["hybrid"].append(max(-10.0, min(1.0, hy_r2)))
             delta = (hy_r2 - nn_r2) if nn_r2 is not None and hy_r2 is not None else None
             if delta is not None:
-                paired_deltas.append(delta)
+                (intractable_deltas if intractable else paired_deltas).append(delta)
             route = hy.get("decision") or hy.get("route") or hy.get("selected_route")
             if route is not None:
                 route_counts[str(route)] += 1
@@ -203,6 +209,12 @@ def aggregate(root: Path):
             "hybrid_test_r2": _stats(arm_values["hybrid"]),
             "neural_network_test_r2_clipped_minus10_1": _stats(clipped_values["neural_network"]),
             "hybrid_test_r2_clipped_minus10_1": _stats(clipped_values["hybrid"]),
+            "intractable_separate": {
+                "case_count": statuses.get("intractable", 0),
+                "neural_network_test_r2": _stats(intractable_values["neural_network"]),
+                "hybrid_test_r2": _stats(intractable_values["hybrid"]),
+                "paired_hybrid_minus_nn_test_r2": _stats(intractable_deltas),
+            },
             "threshold_rates": {
                 "nn_gt_0_9": sum(v > 0.9 for v in arm_values["neural_network"]) / len(arm_values["neural_network"]) if arm_values["neural_network"] else None,
                 "hybrid_gt_0_9": sum(v > 0.9 for v in arm_values["hybrid"]) / len(arm_values["hybrid"]) if arm_values["hybrid"] else None,
@@ -243,7 +255,7 @@ def aggregate(root: Path):
         }
 
     all_deltas = [r["hybrid_minus_nn_test_r2"] for r in case_rows
-                  if r["hybrid_minus_nn_test_r2"] is not None]
+                  if r["case_status"] == "standard" and r["hybrid_minus_nn_test_r2"] is not None]
     status_counts = Counter(r["case_status"] for r in case_rows)
     summary = {
         "schema_version": 1,
@@ -269,7 +281,8 @@ def aggregate(root: Path):
             "hybrid_better": sum(x > 0 for x in all_deltas),
             "tie": sum(x == 0 for x in all_deltas),
             "hybrid_worse": sum(x < 0 for x in all_deltas),
-            "warning": "Descriptive repeated-seed pairs; not an independent-sample significance test.",
+            "cohort": "standard (non-intractable) cases only",
+            "warning": "Descriptive repeated-seed pairs; not an independent-sample significance test. Intractable cases are summarized separately per seed.",
         },
         "hybrid_route_counts": dict(sorted(route_counts.items())),
         "hybrid_llm_token_totals": {
