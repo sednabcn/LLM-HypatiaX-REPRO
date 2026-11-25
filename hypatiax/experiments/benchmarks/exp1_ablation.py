@@ -808,6 +808,19 @@ def run_condition(eq, condition, seed=42, niterations=None,
         # equation-specific seed used for the shared data and PySR-only arm.
         _prior_engine_seed = os.environ.get("HYPATIAX_ENGINE_SEED")
         os.environ["HYPATIAX_ENGINE_SEED"] = str(eq_seed)
+        # Build the per-equation metadata before invoking discover(). The
+        # engine consumes random_seed during its own initialization/search.
+        hybrid_metadata = {
+            "equation_name":          eq["name"],
+            "random_seed":             eq_seed,
+            # AUDIT C4: key metadata by the SAFE names actually passed as
+            # var_names (S->var_S, N->var_N), otherwise the engine finds no
+            # description/unit for variables after sanitization.
+            "variable_descriptions":  {sv: ov for sv, ov in zip(safe_var_names, eq["vars"])},
+            "variable_units":         {sv: "" for sv in safe_var_names},
+            "noise_level":            0.05,
+            "domain":                 _dom_slug,
+        }
         t0 = time.time()
         try:
             with _Timeout(wall_clock_limit):
@@ -815,17 +828,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
                     X_train, y_train,
                     var_names   = safe_var_names,
                     description = eq["name"],
-                    metadata    = {
-                        "equation_name":          eq["name"],
-                        "random_seed":             eq_seed,
-                        # AUDIT C4: key metadata by the SAFE names actually passed as
-                        # var_names (S->var_S, N->var_N), otherwise the engine finds no
-                        # description/unit for renamed variables.
-                        "variable_descriptions":  {sv: ov for sv, ov in zip(safe_var_names, eq["vars"])},
-                        "variable_units":         {sv: "" for sv in safe_var_names},
-                        "noise_level":            0.05,
-                        "domain":                 _dom_slug,
-                    },
+                    metadata    = hybrid_metadata,
                 )
             sr_time = time.time() - t0
         except TimeoutError:
