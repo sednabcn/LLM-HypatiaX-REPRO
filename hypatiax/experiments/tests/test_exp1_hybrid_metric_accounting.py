@@ -398,6 +398,97 @@ def test_exp1_nn_reports_training_edge_ridge_and_abstention_diagnostics():
     assert np.isfinite(result["y_pred_test"]).all()
 
 
+def test_exp1_signed_ridge_accepts_signed_features_and_uses_training_only_selection(monkeypatch):
+    # A constant MLP deliberately has no extrapolation skill. The signed
+    # linear relationship is recoverable by Ridge even though one feature
+    # crosses zero and contains negative correlation-like values.
+    class ConstantMLP(bench.nn.Module):
+        def __init__(self, in_dim, hidden=None):
+            super().__init__()
+            self.bias = bench.nn.Parameter(bench.torch.tensor([0.0]))
+
+        def forward(self, x):
+            return self.bias.expand(x.shape[0], 1)
+
+    real_scaler = bench.StandardScaler
+    fit_row_counts = []
+
+    class RecordingScaler(real_scaler):
+        def fit(self, X, y=None, sample_weight=None):
+            fit_row_counts.append(len(X))
+            return super().fit(X, y=y, sample_weight=sample_weight)
+
+    monkeypatch.setattr(bench, "_MLP", ConstantMLP)
+    monkeypatch.setattr(bench, "StandardScaler", RecordingScaler)
+
+    x0 = np.linspace(-1.0, 1.0, 48)
+    x1 = 0.45 * np.sin(np.linspace(0.0, 3.0 * np.pi, 48)) - 0.15
+    X_train = np.column_stack([x0, x1])
+    y_train = 2.0 * x0 - 3.0 * x1 + 0.5
+    X_test = np.column_stack([
+        np.linspace(1.1, 1.5, 12),
+        np.linspace(-0.4, 0.2, 12),
+    ])
+    y_test = 2.0 * X_test[:, 0] - 3.0 * X_test[:, 1] + 0.5
+
+    assert bench._log_ridge_domain_eligible(X_train, y_train) is False
+    assert bench._signed_ridge_domain_eligible(X_train, y_train) is True
+
+    result = bench._train_and_eval_nn(
+        X_train, y_train, X_test, y_test,
+        epochs=3, hidden=[4], seed=31, max_time_s=30,
+        augment=False, patience=3,
+        split_metadata={"split_var_idx": 0, "split_type": "high"},
+    )
+
+    assert result["success"] is True
+    assert result["signed_ridge_eligible"] is True
+    assert result["selected_model"] == "signed_ridge"
+    assert result["signed_ridge_edge_r2"] > 0.99
+    assert np.isfinite(result["y_pred_test"]).all()
+    # Candidate and MLP scalers fit only the fit subset (38 rows); the final
+    # selected model scaler may refit on all 48 outer-training rows. No scaler
+    # is ever fitted on the 12 held-out test rows.
+    assert fit_row_counts == [38, 38, 38, 48]
+    assert 12 not in fit_row_counts
+
+    # Changing held-out labels cannot change candidate eligibility, edge score,
+    # or model selection: all three are determined before test evaluation.
+    changed_test = y_test + np.linspace(100.0, 200.0, len(y_test))
+    second = bench._train_and_eval_nn(
+        X_train, y_train, X_test, changed_test,
+        epochs=3, hidden=[4], seed=31, max_time_s=30,
+        augment=False, patience=3,
+        split_metadata={"split_var_idx": 0, "split_type": "high"},
+    )
+    assert second["selected_model"] == result["selected_model"]
+    assert second["signed_ridge_edge_r2"] == result["signed_ridge_edge_r2"]
+
+
+def test_exp1_signed_ridge_selection_is_exposed_to_hybrid_and_artifact_policy(monkeypatch):
+    _common(monkeypatch, "ensemble")
+    Xtr, ytr, Xte, yte = _inputs()
+    nn_result = {
+        "train_r2": 0.9, "test_r2": 0.7, "success": True,
+        "y_pred_train": np.linspace(0.1, 0.9, len(ytr)),
+        "y_pred_test": np.linspace(0.2, 0.8, len(yte)),
+        "abstained": True, "selected_model": "signed_ridge",
+        "nn_edge_r2": -0.2, "ridge_edge_r2": float("nan"),
+        "signed_ridge_edge_r2": 0.91, "signed_ridge_eligible": True,
+    }
+
+    result = bench._hybrid_predict_and_eval(
+        "signed-feature fixture", "defi", Xtr, ytr, Xte, yte, ["x"], {},
+        nn_result=nn_result,
+    )
+
+    assert "signed_ridge" in bench._ALLOWED_NN_MODELS
+    assert result["nn_selected_model"] == "signed_ridge"
+    assert result["signed_ridge_edge_r2"] == 0.91
+    assert result["signed_ridge_eligible"] is True
+    assert result["selected_predictor_source"] == "nn_abstention_signed_ridge"
+
+
 def test_exp1_options_delta_predictions_are_clipped_to_semantic_bounds(monkeypatch):
     _common(monkeypatch, "nn")
     Xtr, ytr, Xte, yte = _inputs()

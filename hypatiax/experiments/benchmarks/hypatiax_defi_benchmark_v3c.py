@@ -376,6 +376,23 @@ def _log_ridge_domain_eligible(X_train: np.ndarray, y_train: np.ndarray) -> bool
     return bool(np.all(X_train > 0) and np.all(y_train > 0))
 
 
+def _signed_ridge_domain_eligible(X_train: np.ndarray, y_train: np.ndarray) -> bool:
+    """Return whether a finite signed-feature Ridge candidate can be fitted.
+
+    Unlike the log-Ridge candidate, this model accepts zero and negative
+    feature/target values. Eligibility is only a shape/finite-value check;
+    predictive value is determined separately on the training-only edge
+    validation partition.
+    """
+    X_train = np.asarray(X_train, dtype=float)
+    y_train = np.asarray(y_train, dtype=float).reshape(-1)
+    return bool(
+        X_train.ndim == 2 and len(X_train) == len(y_train)
+        and X_train.shape[0] >= 8 and X_train.shape[1] > 0
+        and np.isfinite(X_train).all() and np.isfinite(y_train).all()
+    )
+
+
 def _feature_augmentation_schema(X: np.ndarray) -> tuple[tuple[bool, ...], tuple[bool, ...]]:
     """Fit the optional log/sqrt feature layout from training rows only."""
     X = np.asarray(X, dtype=float)
@@ -515,8 +532,11 @@ def _train_and_eval_nn(
         X_fit, y_fit = X_train[fit_idx], y_train[fit_idx]
         X_val, y_val = X_train[val_idx], y_train[val_idx]
 
-        # A log-linear Ridge candidate captures positive power-law/product/
-        # ratio relationships. Eligibility and all fitting use training rows only.
+        # Log-Ridge captures positive power-law/product/ratio relationships.
+        # Signed Ridge handles finite signed features (e.g. correlations) in
+        # their original domain. Both candidates are fitted on X_fit/y_fit and
+        # judged on the same directional validation rows; outer test labels
+        # never participate in candidate selection.
         ridge_edge_r2 = float("nan")
         ridge_eligible = _log_ridge_domain_eligible(X_train, y_train)
         if ridge_eligible:
@@ -527,6 +547,20 @@ def _train_and_eval_nn(
                 ridge_edge_r2 = float(_r2_checked(y_val, ridge_edge_pred)[0])
             except Exception:
                 ridge_edge_r2 = float("nan")
+
+        signed_ridge_edge_r2 = float("nan")
+        signed_ridge_eligible = _signed_ridge_domain_eligible(X_train, y_train)
+        if signed_ridge_eligible:
+            try:
+                signed_scaler = StandardScaler()
+                signed_X_fit = signed_scaler.fit_transform(X_fit)
+                signed_X_val = signed_scaler.transform(X_val)
+                signed_probe = Ridge(alpha=1.0)
+                signed_probe.fit(signed_X_fit, y_fit)
+                signed_edge_pred = signed_probe.predict(signed_X_val)
+                signed_ridge_edge_r2 = float(_r2_checked(y_val, signed_edge_pred)[0])
+            except Exception:
+                signed_ridge_edge_r2 = float("nan")
 
         if augment:
             augmentation_schema = _feature_augmentation_schema(X_fit)
@@ -630,19 +664,35 @@ def _train_and_eval_nn(
         nn_edge_r2 = float(nn_edge_r2)
 
         selected_model = "nn"
+        edge_candidates = []
+        if ridge_eligible and np.isfinite(ridge_edge_r2):
+            edge_candidates.append(("log_ridge", ridge_edge_r2))
+        if signed_ridge_eligible and np.isfinite(signed_ridge_edge_r2):
+            edge_candidates.append(("signed_ridge", signed_ridge_edge_r2))
+        best_ridge = max(edge_candidates, key=lambda item: item[1]) if edge_candidates else None
+        minimum_edge_score = max(
+            0.0, nn_edge_r2 if np.isfinite(nn_edge_r2) else -np.inf
+        )
         use_ridge = bool(
-            ridge_eligible and np.isfinite(ridge_edge_r2)
-            and ridge_edge_r2 > max(0.0, nn_edge_r2 if np.isfinite(nn_edge_r2) else -np.inf)
+            best_ridge is not None and best_ridge[1] > minimum_edge_score
         )
         abstained = bool(use_ridge or not np.isfinite(nn_edge_r2) or nn_edge_r2 < 0.0)
-        if use_ridge:
+        if use_ridge and best_ridge[0] == "log_ridge":
             ridge_final = Ridge(alpha=1.0).fit(np.log(X_train), np.log(y_train))
             yp_train = np.exp(np.clip(ridge_final.predict(np.log(X_train)), -700, 700))
             yp_test = np.exp(np.clip(ridge_final.predict(np.log(np.maximum(X_test, 1e-12))), -700, 700))
             selected_model = "log_ridge"
+        elif use_ridge and best_ridge[0] == "signed_ridge":
+            signed_final_scaler = StandardScaler()
+            signed_X_train = signed_final_scaler.fit_transform(X_train)
+            signed_X_test = signed_final_scaler.transform(X_test)
+            signed_final = Ridge(alpha=1.0).fit(signed_X_train, y_train)
+            yp_train = signed_final.predict(signed_X_train)
+            yp_test = signed_final.predict(signed_X_test)
+            selected_model = "signed_ridge"
         elif abstained:
-            # No positive edge-validated Ridge candidate: abstain to the
-            # training-mean predictor rather than extrapolating with the MLP.
+            # No Ridge candidate beat the positive validation threshold: abstain to
+            # the training-mean predictor rather than extrapolating with the MLP.
             mean_value = float(np.mean(y_train))
             yp_train = np.full(len(y_train), mean_value, dtype=float)
             yp_test = np.full(len(y_test), mean_value, dtype=float)
@@ -661,7 +711,10 @@ def _train_and_eval_nn(
             "success": bool(np.isfinite(train_r2) and np.isfinite(test_r2)),
             "y_pred_train": yp_train, "y_pred_test": yp_test,
             "nn_edge_r2": nn_edge_r2, "ridge_edge_r2": ridge_edge_r2,
-            "ridge_eligible": ridge_eligible, "abstained": abstained,
+            "ridge_eligible": ridge_eligible,
+            "signed_ridge_edge_r2": signed_ridge_edge_r2,
+            "signed_ridge_eligible": signed_ridge_eligible,
+            "abstained": abstained,
             "selected_model": selected_model,
             "failure_reason": None if (np.isfinite(train_r2) and np.isfinite(test_r2))
                               else "undefined_train_or_test_metric",
@@ -1453,6 +1506,8 @@ def _hybrid_predict_and_eval(
         "nn_selected_model": nn_m.get("selected_model") if "nn_m" in locals() else None,
         "nn_edge_r2": nn_m.get("nn_edge_r2") if "nn_m" in locals() else None,
         "ridge_edge_r2": nn_m.get("ridge_edge_r2") if "nn_m" in locals() else None,
+        "signed_ridge_edge_r2": nn_m.get("signed_ridge_edge_r2") if "nn_m" in locals() else None,
+        "signed_ridge_eligible": nn_m.get("signed_ridge_eligible") if "nn_m" in locals() else None,
         "physical_bounds_applied": nn_m.get("physical_bounds_applied") if "nn_m" in locals() else None,
         "nn_rerun_time_s": round(nn_rerun_time_s, 3),
         "llm_called": bool(llm_result.get("llm_called", False)),
@@ -1614,7 +1669,7 @@ def _get_test_cases() -> list[dict]:
 _DIAGNOSTIC_FIELDS = (
     "nn_selected_model", "nn_abstained", "nn_edge_r2", "ridge_edge_r2",
 )
-_ALLOWED_NN_MODELS = {"nn", "log_ridge", "training_mean"}
+_ALLOWED_NN_MODELS = {"nn", "log_ridge", "signed_ridge", "training_mean"}
 
 
 def _is_intractable_case(test_case: dict) -> bool:
@@ -2144,6 +2199,8 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "nn_edge_r2": nn_m.get("nn_edge_r2"),
                     "ridge_edge_r2": nn_m.get("ridge_edge_r2"),
                     "ridge_eligible": nn_m.get("ridge_eligible"),
+                    "signed_ridge_edge_r2": nn_m.get("signed_ridge_edge_r2"),
+                    "signed_ridge_eligible": nn_m.get("signed_ridge_eligible"),
                     "nn_abstained": nn_m.get("abstained", False),
                     "nn_selected_model": nn_m.get("selected_model", "nn"),
                     "failure_reason": nn_m.get("failure_reason"),
@@ -2201,6 +2258,8 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "nn_selected_model": hy_m.get("nn_selected_model"),
                     "nn_edge_r2": hy_m.get("nn_edge_r2"),
                     "ridge_edge_r2": hy_m.get("ridge_edge_r2"),
+                    "signed_ridge_edge_r2": hy_m.get("signed_ridge_edge_r2"),
+                    "signed_ridge_eligible": hy_m.get("signed_ridge_eligible"),
                     "physical_bounds_applied": hy_m.get("physical_bounds_applied"),
                     "llm_called":      hy_m.get("llm_called"),      # B2
                     "bypass_kind":     hy_m.get("bypass_kind"),     # B2
