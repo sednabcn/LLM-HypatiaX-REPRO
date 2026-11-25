@@ -385,10 +385,12 @@ class PureLLMBaseline:
             # never inherit provenance from a previous thread-local API call.
             "temperature_sent": False,
             "temperature_requested": __import__("hypatiax.core.llm_call", fromlist=["x"]).configured_temperature(),
+            "api_request_time_s": None,
             "model_source": self.model_source,
         }
         _llm_attempted = False
         _response_received = False
+        _api_start = None
 
         try:
             # The shared wrapper always requests Core-15 temperature=0.25
@@ -404,12 +406,14 @@ class PureLLMBaseline:
                 f"client_type={type(self.client).__module__}.{type(self.client).__name__}"
             )
             _llm_attempted = True
+            _api_start = time.perf_counter()
             response = _create_message(
                 self.client,
                 model=self.model,
                 max_tokens=4000,
                 messages=[{"role": "user", "content": prompt}],
             )
+            _prov["api_request_time_s"] = time.perf_counter() - _api_start
             _temperature_info = __import__("hypatiax.core.llm_call", fromlist=["x"]).last_call_info()
             _prov["temperature_sent"] = _temperature_info.get("temperature_sent")
             _prov["temperature_requested"] = _temperature_info.get("temperature_requested")
@@ -464,6 +468,8 @@ class PureLLMBaseline:
                 "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
+            if _api_start is not None:
+                _prov["api_request_time_s"] = time.perf_counter() - _api_start
             # Only read thread-local wrapper metadata after this invocation
             # actually entered the API wrapper. Otherwise it may describe a
             # previous call on the same thread.
