@@ -1781,6 +1781,20 @@ def _normalize_saved_record(record: dict) -> dict:
     return record
 
 
+def _hybrid_component_timing_fields(nn_component_time_s, hybrid_component_time_s):
+    """Return the required per-component wall-clock diagnostics for a Hybrid arm.
+
+    The NN component is the standalone NN fit performed before Hybrid routing.
+    The Hybrid component is the subsequent LLM/routing/evaluation stage and
+    includes any NN rerun performed inside that stage.  The end-to-end Hybrid
+    time is their sum; the rerun diagnostic remains a subset, not an extra term.
+    """
+    return {
+        "nn_component_time_s": round(float(nn_component_time_s), 6),
+        "hybrid_component_time_s": round(float(hybrid_component_time_s), 6),
+    }
+
+
 def _validate_result_records(
     records: list,
     require_il_record: bool = False,
@@ -2420,6 +2434,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     **_hybrid_metric_provenance_record(hy_m),
                     "success":         bool(hy_m.get("success", not (_nan(_train_r2) or _nan(_test_r2)))),
                     "time_s":          round(hyb_time, 6),
+                    **_hybrid_component_timing_fields(_nn_wall, _hyb_wall),
                     "nn_rerun_time_s": hy_m.get("nn_rerun_time_s", 0.0),
                 }
             except Exception as e:
@@ -2451,8 +2466,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     },
                     "success": False,
                     "time_s": round(_nn_wall + _hyb_exception_wall, 6),
-                    "nn_component_time_s": round(_nn_wall, 6),
-                    "hybrid_component_time_s": round(_hyb_exception_wall, 6),
+                    **_hybrid_component_timing_fields(_nn_wall, _hyb_exception_wall),
                     "error": str(e), "reason": "fit_or_metric_failed",
                     "blend_weights": None, "nn_abstained": None,
                     "nn_selected_model": None, "nn_edge_r2": None,
