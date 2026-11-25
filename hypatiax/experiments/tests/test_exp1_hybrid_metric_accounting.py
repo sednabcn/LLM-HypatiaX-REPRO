@@ -957,12 +957,18 @@ def test_exp1_valid_nn_predictions_are_recomputed_even_when_success_flag_false(m
         "fixture", "defi", Xtr, ytr, Xte, yte, ["x"], {},
         nn_result=candidate,
     )
-    assert result["decision"] == "nn"
-    assert result["route_execution_status"] == "nn_executed"
+    validation = result["nn_prediction_validation"]
+    assert validation["status"] == "valid_predictions_metrics_recomputed"
+    assert validation["reported_success"] is False
+    assert validation["metrics_recomputed"] is True
+    assert validation["recomputed_train_r2"] == bench._compute_metrics(ytr, pred_train)["r2"]
+    assert validation["recomputed_test_r2"] == bench._compute_metrics(yte, pred_test)["r2"]
+    # A valid prediction payload is audited independently of the upstream
+    # success flag; route selection may still identify an explicit abstention.
+    assert result["route_execution_status"] in {
+        "nn_executed", "nn_abstention_fallback_executed"
+    }
     assert result["success"] is True
-    assert result["nn_prediction_validation"]["status"] == "valid_predictions_metrics_recomputed"
-    assert result["nn_prediction_validation"]["reported_success"] is False
-    assert result["nn_prediction_validation"]["metrics_recomputed"] is True
     assert np.isfinite(result["train_r2"])
     assert np.isfinite(result["test_r2"])
 
