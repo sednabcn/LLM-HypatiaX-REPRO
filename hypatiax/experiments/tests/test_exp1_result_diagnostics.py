@@ -6,7 +6,6 @@ import json
 import pytest
 
 from hypatiax.experiments.benchmarks import hypatiax_defi_benchmark_v3c as bench
-from hypatiax.core.base_pure_llm import baseline_pure_llm_defi_discovery as pure_module
 
 
 def _record():
@@ -14,12 +13,6 @@ def _record():
         "equation_id": "Impermanent loss breakeven fee rate",
         "extrapolation_intractable": True,
         "results": {
-            "pure_llm": {
-                "time_s": 0.5, "generation_time_s": 0.4,
-                "evaluation_time_s": 0.1, "api_request_time_s": 0.3, "llm_called": True,
-                "model": "claude-sonnet-4-6",
-                "input_tokens": 100, "output_tokens": 50,
-            },
             "neural_network": {
                 "success": True,
                 "nn_selected_model": "log_ridge",
@@ -102,7 +95,7 @@ def test_legacy_resume_record_is_backfilled_without_overwriting_values():
 
 
 
-def test_legacy_two_arm_checkpoint_is_discarded_for_three_arm_protocol(tmp_path, monkeypatch):
+def test_legacy_two_arm_checkpoint_is_accepted_and_normalized(tmp_path, monkeypatch):
     checkpoint = tmp_path / "legacy.json"
     checkpoint.write_text(json.dumps([_record_without_pure_llm()]))
     monkeypatch.setattr(bench, "CHECKPOINT_FILE", checkpoint)
@@ -117,70 +110,3 @@ def _record_without_pure_llm():
     record = _record()
     del record["results"]["pure_llm"]
     return record
-
-
-
-def test_pure_llm_arm_uses_same_split_model_and_persists_usage(monkeypatch):
-    import numpy as np
-
-    observed = {}
-
-    class FakePureLLM:
-        def __init__(self, model):
-            observed["model"] = model
-
-        def generate_formula(self, description, domain, var_names, metadata):
-            observed["generation_args"] = (description, domain, list(var_names))
-            return {
-                "llm_called": True,
-                "llm_attempted": True,
-                "formula_present": True,
-                "model": bench.LLM_MODEL,
-                "model_source": "explicit",
-                "prompt_sha256": "abc",
-                "temperature_requested": 0.25,
-                "temperature_sent": True,
-                "usage": {"in": 123, "out": 45},
-                "python_code": "def formula(x): return x",
-            }
-
-        def test_formula_accuracy(self, formula, X, y, var_names, verbose=False):
-            observed.setdefault("scored_shapes", []).append((X.shape, y.shape))
-            return {"success": True, "r2": 0.99 if len(y) == 4 else 0.98}
-
-    monkeypatch.setattr(pure_module, "PureLLMBaseline", FakePureLLM)
-    X_train = np.ones((4, 1))
-    y_train = np.ones(4)
-    X_test = np.ones((2, 1))
-    y_test = np.ones(2)
-
-    result = bench._run_pure_llm_arm(
-        "description", "amm", ["x"], {"constants": {}},
-        X_train, y_train, X_test, y_test,
-    )
-
-    assert observed["model"] == bench.LLM_MODEL
-    assert observed["scored_shapes"] == [((4, 1), (4,)), ((2, 1), (2,))]
-    assert result["train_r2"] == 0.99
-    assert result["test_r2"] == 0.98
-    assert result["input_tokens"] == 123
-    assert result["output_tokens"] == 45
-    assert result["llm_called"] is True
-    assert result["temperature_sent"] is True
-
-
-def test_pure_llm_client_uses_hybrid_timeout_and_no_sdk_retries(monkeypatch):
-    observed = {}
-
-    class FakeAnthropic:
-        def __init__(self, **kwargs):
-            observed.update(kwargs)
-
-    monkeypatch.setattr(pure_module, "Anthropic", FakeAnthropic)
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
-    monkeypatch.setenv("LLM_METHOD_TIMEOUT", "37")
-
-    pure_module.PureLLMBaseline(model=bench.LLM_MODEL)
-
-    assert observed["timeout"] == 37.0
-    assert observed["max_retries"] == 0
