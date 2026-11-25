@@ -1081,17 +1081,23 @@ def formula({var_list}):
 """
     call_info = {}
     api_attempted = False
+    api_request_time_s = None
+    usage = None
+    api_start = None
     try:
         from hypatiax.core.llm_call import create_message, last_call_info  # UNIFIED-TEMPERATURE
         # Set immediately before entering the single-attempt API wrapper. A
         # timeout/provider error is still an attempted live request.
         api_attempted = True
+        api_start = time.perf_counter()
         resp = create_message(
             client,
             model=LLM_MODEL,
             max_tokens=1000,
             messages=[{"role": "user", "content": prompt}],
         )
+        api_request_time_s = time.perf_counter() - api_start
+        usage = getattr(resp, "usage", None)
         call_info = last_call_info()
         code = resp.content[0].text.strip()
         # Strip markdown fences if present
@@ -1103,15 +1109,23 @@ def formula({var_list}):
                 "success": "def formula" in code, "error": None,
                 "llm_called": True, "bypass_kind": "live",
                 "llm_source": "v3c_builtin", "timeout_s": timeout_s,
+                "api_request_time_s": api_request_time_s,
+                "input_tokens": getattr(usage, "input_tokens", None),
+                "output_tokens": getattr(usage, "output_tokens", None),
                 "temperature_requested": call_info.get("temperature_requested"),
                 "temperature_sent": call_info.get("temperature_sent", False)}
     except Exception as e:
+        if api_start is not None:
+            api_request_time_s = time.perf_counter() - api_start
         if "last_call_info" in locals():
             call_info = last_call_info()
         return {"python_code": None, "formula": None,
                 "success": False, "error": str(e),
                 "llm_called": api_attempted, "bypass_kind": "none",
                 "llm_source": "v3c_builtin_failed", "timeout_s": timeout_s,
+                "api_request_time_s": api_request_time_s,
+                "input_tokens": getattr(usage, "input_tokens", None),
+                "output_tokens": getattr(usage, "output_tokens", None),
                 "temperature_requested": call_info.get("temperature_requested"),
                 "temperature_sent": call_info.get("temperature_sent", False)}
 
@@ -1162,6 +1176,9 @@ def _hybrid_predict_and_eval(
             "bypass_kind": llm_result.get("bypass_kind", "none"),
             "llm_source": llm_result.get("llm_source", "unknown"),
             "llm_timeout_s": llm_result.get("timeout_s"),
+            "llm_api_request_time_s": llm_result.get("api_request_time_s"),
+            "llm_input_tokens": llm_result.get("input_tokens"),
+            "llm_output_tokens": llm_result.get("output_tokens"),
             "llm_temperature_requested": llm_result.get("temperature_requested"),
             "llm_temperature_sent": llm_result.get("temperature_sent", False),
             "llm_code": llm_code if has_formula else None,
@@ -1576,6 +1593,9 @@ def _hybrid_predict_and_eval(
         "bypass_kind": llm_result.get("bypass_kind", "none"),
         "llm_source": llm_result.get("llm_source", "unknown"),
         "llm_timeout_s": llm_result.get("timeout_s"),
+        "llm_api_request_time_s": llm_result.get("api_request_time_s"),
+        "llm_input_tokens": llm_result.get("input_tokens"),
+        "llm_output_tokens": llm_result.get("output_tokens"),
         "llm_temperature_requested": llm_result.get("temperature_requested"),
         "llm_temperature_sent": llm_result.get("temperature_sent", False),
         "success": success,
@@ -2460,6 +2480,9 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "bypass_kind":     hy_m.get("bypass_kind"),     # B2
                     "llm_source":      hy_m.get("llm_source"),
                     "llm_timeout_s":   hy_m.get("llm_timeout_s"),
+                    "llm_api_request_time_s": hy_m.get("llm_api_request_time_s"),
+                    "llm_input_tokens": hy_m.get("llm_input_tokens"),
+                    "llm_output_tokens": hy_m.get("llm_output_tokens"),
                     "llm_temperature_requested": hy_m.get("llm_temperature_requested"),
                     "llm_temperature_sent": hy_m.get("llm_temperature_sent"),
                     # Retain the exact generated Python formula for audit and
@@ -2477,6 +2500,9 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "bypass_kind": hybrid_llm_state.get("bypass_kind", "none"),
                     "llm_source": hybrid_llm_state.get("llm_source", "unknown"),
                     "llm_timeout_s": hybrid_llm_state.get("llm_timeout_s"),
+                    "llm_api_request_time_s": hybrid_llm_state.get("llm_api_request_time_s"),
+                    "llm_input_tokens": hybrid_llm_state.get("llm_input_tokens"),
+                    "llm_output_tokens": hybrid_llm_state.get("llm_output_tokens"),
                     "llm_temperature_requested": hybrid_llm_state.get("llm_temperature_requested"),
                     "llm_temperature_sent": hybrid_llm_state.get("llm_temperature_sent", False),
                     "formula": hybrid_llm_state.get("llm_code"),
