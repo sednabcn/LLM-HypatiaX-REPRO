@@ -1126,11 +1126,18 @@ jobs:
         id: python_env_check
         run: |
           set -euo pipefail
-          if [[ ! -x .venv/bin/python ]] || ! .venv/bin/python -c "import numpy, pandas, torch, anthropic, pysr, psutil, sklearn, yaml, dotenv, matplotlib, seaborn, pmlb, pint, pytest"; then
+          # PySR imports juliacall, which starts Julia as a side effect.  Do not
+          # import it for experiments whose plan explicitly says NEEDS_JULIA=false.
+          if [[ ! -x .venv/bin/python ]] || ! .venv/bin/python -c "import numpy, pandas, torch, anthropic, psutil, sklearn, yaml, dotenv, matplotlib, seaborn, pmlb, pint, pytest"; then
             echo "valid=false" >> "$GITHUB_OUTPUT"
             rm -rf .venv
             python -m venv .venv
             echo "Python environment cache miss or invalid cache; created a clean environment."
+          elif [[ "${NEEDS_JULIA}" == "true" ]] && ! .venv/bin/python -c "import pysr"; then
+            echo "valid=false" >> "$GITHUB_OUTPUT"
+            rm -rf .venv
+            python -m venv .venv
+            echo "Cached environment lacks required PySR/Julia support; created a clean environment."
           else
             echo "valid=true" >> "$GITHUB_OUTPUT"
             echo "Reusing cached Python 3.12 environment."
@@ -1159,7 +1166,7 @@ jobs:
           .venv/bin/python -m pip install --upgrade pip setuptools wheel
           .venv/bin/python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
           .venv/bin/python -m pip install "pandas==2.2.3"
-          .venv/bin/python -m pip install "pysr==2.0.0a1" \
+          .venv/bin/python -m pip install \
             numpy scipy sympy \
             "anthropic==0.73.0" \
             scikit-learn \
@@ -1171,8 +1178,16 @@ jobs:
             pint \
             psutil \
             pytest
+          if [[ "${NEEDS_JULIA}" == "true" ]]; then
+            .venv/bin/python -m pip install "pysr==2.0.0a1"
+          else
+            echo "Skipping PySR/juliacall installation: this experiment does not require Julia."
+          fi
           .venv/bin/python -m pip check
-          .venv/bin/python -c "import numpy, pandas, torch, anthropic, pysr, psutil; print('Cached runner environment verified.')"
+          .venv/bin/python -c "import numpy, pandas, torch, anthropic, psutil; print('Base runner environment verified.')"
+          if [[ "${NEEDS_JULIA}" == "true" ]]; then
+            .venv/bin/python -c "import pysr; print('PySR runner environment verified.')"
+          fi
 
       - name: Reuse cached Python environment
         if: steps.python_env_cache.outputs.cache-hit == 'true' && steps.python_env_check.outputs.valid == 'true'
