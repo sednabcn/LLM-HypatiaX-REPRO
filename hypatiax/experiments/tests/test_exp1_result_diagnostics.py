@@ -37,6 +37,15 @@ def _record():
     }
 
 
+def test_hybrid_component_timing_fields_preserve_both_stages():
+    fields = bench._hybrid_component_timing_fields(0.12345678, 1.23456789)
+
+    assert fields == {
+        "nn_component_time_s": 0.123457,
+        "hybrid_component_time_s": 1.234568,
+    }
+
+
 def test_saved_result_contract_accepts_complete_diagnostics():
     bench._validate_result_records([_record()], require_il_record=True)
 
