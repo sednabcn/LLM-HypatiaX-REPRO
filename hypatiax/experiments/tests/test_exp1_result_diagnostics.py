@@ -1,6 +1,7 @@
 """Regression tests for the serialized Exp1 result contract."""
 
 import copy
+import json
 
 import pytest
 
