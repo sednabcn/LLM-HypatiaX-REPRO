@@ -1445,7 +1445,10 @@ def _hybrid_predict_and_eval(
                 else "ensemble_metrics_undefined"
             )
     else:
-        if llm_trustworthy:
+        # An explicit NN route must evaluate the supplied NN candidate (or
+        # train the ordinary NN fallback); augmenting it with the trusted
+        # formula would silently replace the candidate and its audit metadata.
+        if llm_trustworthy and decision != "nn":
             try:
                 llm_train_preds = _execute_formula(llm_code, X_train, constants=constants)
                 llm_test_preds = _execute_formula(llm_code, X_test, constants=constants)
