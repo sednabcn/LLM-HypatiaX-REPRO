@@ -4,7 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from scripts.ci.aggregate_exp1_provenance import EXPECTED_SEEDS, aggregate
+from scripts.ci import aggregate_exp1_provenance as scientific
+
+EXPECTED_SEEDS = scientific.EXPECTED_SEEDS
+aggregate = scientific.aggregate
 
 
 def _fixture(root: Path, *, missing_id_seed=None):
@@ -44,7 +47,8 @@ def _fixture(root: Path, *, missing_id_seed=None):
         )
 
 
-def test_aggregate_joins_equation_ids_and_keeps_repeated_seeds(tmp_path):
+def test_aggregate_joins_equation_ids_and_keeps_repeated_seeds(tmp_path, monkeypatch):
+    monkeypatch.setattr(scientific, "EXPECTED_CASES", 2)
     _fixture(tmp_path)
     summary, rows = aggregate(tmp_path)
 
@@ -56,7 +60,8 @@ def test_aggregate_joins_equation_ids_and_keeps_repeated_seeds(tmp_path):
     assert "not 370 independent" in summary["interpretation"]
 
 
-def test_undefined_and_intractable_cases_are_not_dropped(tmp_path):
+def test_undefined_and_intractable_cases_are_not_dropped(tmp_path, monkeypatch):
+    monkeypatch.setattr(scientific, "EXPECTED_CASES", 2)
     _fixture(tmp_path)
     summary, rows = aggregate(tmp_path)
 
@@ -67,7 +72,8 @@ def test_undefined_and_intractable_cases_are_not_dropped(tmp_path):
     assert sum(row["case_status"] == "intractable" for row in rows) == 5
 
 
-def test_aggregate_rejects_cross_seed_equation_id_mismatch(tmp_path):
+def test_aggregate_rejects_cross_seed_equation_id_mismatch(tmp_path, monkeypatch):
+    monkeypatch.setattr(scientific, "EXPECTED_CASES", 2)
     _fixture(tmp_path, missing_id_seed=99)
     with pytest.raises(ValueError, match="expected 74/74|expected 74 records|equation IDs differ"):
         aggregate(tmp_path)
