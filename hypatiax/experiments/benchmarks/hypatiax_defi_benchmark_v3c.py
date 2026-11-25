@@ -691,8 +691,8 @@ def _train_and_eval_nn(
             yp_test = signed_final.predict(signed_X_test)
             selected_model = "signed_ridge"
         elif abstained:
-            # No positive edge-validated Ridge candidate: abstain to the
-            # training-mean predictor rather than extrapolating with the MLP.
+            # No Ridge candidate beat the positive validation threshold: abstain to
+            # the training-mean predictor rather than extrapolating with the MLP.
             mean_value = float(np.mean(y_train))
             yp_train = np.full(len(y_train), mean_value, dtype=float)
             yp_test = np.full(len(y_test), mean_value, dtype=float)
@@ -1506,6 +1506,8 @@ def _hybrid_predict_and_eval(
         "nn_selected_model": nn_m.get("selected_model") if "nn_m" in locals() else None,
         "nn_edge_r2": nn_m.get("nn_edge_r2") if "nn_m" in locals() else None,
         "ridge_edge_r2": nn_m.get("ridge_edge_r2") if "nn_m" in locals() else None,
+        "signed_ridge_edge_r2": nn_m.get("signed_ridge_edge_r2") if "nn_m" in locals() else None,
+        "signed_ridge_eligible": nn_m.get("signed_ridge_eligible") if "nn_m" in locals() else None,
         "physical_bounds_applied": nn_m.get("physical_bounds_applied") if "nn_m" in locals() else None,
         "nn_rerun_time_s": round(nn_rerun_time_s, 3),
         "llm_called": bool(llm_result.get("llm_called", False)),
@@ -1667,7 +1669,7 @@ def _get_test_cases() -> list[dict]:
 _DIAGNOSTIC_FIELDS = (
     "nn_selected_model", "nn_abstained", "nn_edge_r2", "ridge_edge_r2",
 )
-_ALLOWED_NN_MODELS = {"nn", "log_ridge", "training_mean"}
+_ALLOWED_NN_MODELS = {"nn", "log_ridge", "signed_ridge", "training_mean"}
 
 
 def _is_intractable_case(test_case: dict) -> bool:
@@ -2197,6 +2199,8 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "nn_edge_r2": nn_m.get("nn_edge_r2"),
                     "ridge_edge_r2": nn_m.get("ridge_edge_r2"),
                     "ridge_eligible": nn_m.get("ridge_eligible"),
+                    "signed_ridge_edge_r2": nn_m.get("signed_ridge_edge_r2"),
+                    "signed_ridge_eligible": nn_m.get("signed_ridge_eligible"),
                     "nn_abstained": nn_m.get("abstained", False),
                     "nn_selected_model": nn_m.get("selected_model", "nn"),
                     "failure_reason": nn_m.get("failure_reason"),
@@ -2254,6 +2258,8 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "nn_selected_model": hy_m.get("nn_selected_model"),
                     "nn_edge_r2": hy_m.get("nn_edge_r2"),
                     "ridge_edge_r2": hy_m.get("ridge_edge_r2"),
+                    "signed_ridge_edge_r2": hy_m.get("signed_ridge_edge_r2"),
+                    "signed_ridge_eligible": hy_m.get("signed_ridge_eligible"),
                     "physical_bounds_applied": hy_m.get("physical_bounds_applied"),
                     "llm_called":      hy_m.get("llm_called"),      # B2
                     "bypass_kind":     hy_m.get("bypass_kind"),     # B2
