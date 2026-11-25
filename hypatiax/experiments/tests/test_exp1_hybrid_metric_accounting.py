@@ -1,5 +1,6 @@
 """Focused offline regressions for the Exp1 DeFi hybrid route."""
 
+import json
 import sys
 from types import SimpleNamespace
 
@@ -763,14 +764,33 @@ def test_exp1_abstention_fallback_and_formula_metrics_remain_separate(monkeypatc
 
 
 def test_exp1_case_serialization_preserves_formula_and_selected_metrics():
-    from pathlib import Path
+    hybrid_metrics = {
+        "llm_train_r2": 0.91,
+        "llm_test_r2": 0.88,
+        "ensemble_train_r2": 0.72,
+        "ensemble_test_r2": 0.64,
+        "selected_predictor_train_r2": 0.72,
+        "selected_predictor_test_r2": 0.64,
+        "selected_predictor_source": "ensemble_training_residual_blend",
+    }
 
-    source = (
-        Path(bench.__file__).read_text()
-    )
-    assert '"llm_train_r2":    hy_m.get("llm_train_r2")' in source
-    assert '"llm_test_r2":     hy_m.get("llm_test_r2")' in source
-    assert '"ensemble_train_r2": hy_m.get("ensemble_train_r2")' in source
-    assert '"ensemble_test_r2": hy_m.get("ensemble_test_r2")' in source
-    assert '"selected_predictor_test_r2": hy_m.get("selected_predictor_test_r2")' in source
-    assert '"selected_predictor_source": hy_m.get("selected_predictor_source")' in source
+    case_record = bench._hybrid_metric_provenance_record(hybrid_metrics)
+    serialized = json.dumps(case_record)
+    restored = json.loads(serialized)
+
+    assert restored == hybrid_metrics
+    assert restored["llm_test_r2"] != restored["selected_predictor_test_r2"]
+    assert restored["selected_predictor_source"] == "ensemble_training_residual_blend"
+
+    # Missing provenance stays explicitly unavailable rather than borrowing
+    # another component's score.
+    unavailable = bench._hybrid_metric_provenance_record({})
+    assert unavailable == {
+        "llm_train_r2": None,
+        "llm_test_r2": None,
+        "ensemble_train_r2": None,
+        "ensemble_test_r2": None,
+        "selected_predictor_train_r2": None,
+        "selected_predictor_test_r2": None,
+        "selected_predictor_source": None,
+    }

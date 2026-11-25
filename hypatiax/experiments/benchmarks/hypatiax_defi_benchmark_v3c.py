@@ -1962,6 +1962,19 @@ _FIX5_VERIFY_CASES = {
 }
 
 
+def _hybrid_metric_provenance_record(hy_m):
+    """Return the distinct formula, ensemble, and selected-route scores for a case record."""
+    return {
+        "llm_train_r2": hy_m.get("llm_train_r2"),
+        "llm_test_r2": hy_m.get("llm_test_r2"),
+        "ensemble_train_r2": hy_m.get("ensemble_train_r2"),
+        "ensemble_test_r2": hy_m.get("ensemble_test_r2"),
+        "selected_predictor_train_r2": hy_m.get("selected_predictor_train_r2"),
+        "selected_predictor_test_r2": hy_m.get("selected_predictor_test_r2"),
+        "selected_predictor_source": hy_m.get("selected_predictor_source"),
+    }
+
+
 def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                   verbose: bool = False, cases: list = None,
                   seeds: list = None):
@@ -2198,13 +2211,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     # Retain the exact generated Python formula for audit and
                     # independent rescoring on the identical protocol split.
                     "formula":         hy_m.get("llm_code"),
-                    "llm_train_r2":    hy_m.get("llm_train_r2"),
-                    "llm_test_r2":     hy_m.get("llm_test_r2"),
-                    "ensemble_train_r2": hy_m.get("ensemble_train_r2"),
-                    "ensemble_test_r2": hy_m.get("ensemble_test_r2"),
-                    "selected_predictor_train_r2": hy_m.get("selected_predictor_train_r2"),
-                    "selected_predictor_test_r2": hy_m.get("selected_predictor_test_r2"),
-                    "selected_predictor_source": hy_m.get("selected_predictor_source"),
+                    **_hybrid_metric_provenance_record(hy_m),
                     "success":         bool(hy_m.get("success", not (_nan(_train_r2) or _nan(_test_r2)))),
                     "time_s":          round(hyb_time, 3),
                     "nn_rerun_time_s": hy_m.get("nn_rerun_time_s", 0.0),
