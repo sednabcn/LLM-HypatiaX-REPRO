@@ -1,0 +1,61 @@
+{
+  "experiment_id": "exp1-provenance",
+  "status": "passed",
+  "workflow_run_id": "45696410523",
+  "workflow_run_attempt": "1",
+  "commit_sha": "270bc69cccabf01f173ff314bde15ae7aa0ad198",
+  "git_ref": "refs/heads/master",
+  "seed": 99,
+  "shard_index": 1,
+  "shard_id": 2,
+  "n_shards": 5,
+  "assigned_task_ids": [
+    "amm_seed99",
+    "risk_var_seed99",
+    "liquidity_seed99",
+    "expected_shortfall_seed99",
+    "liquidation_seed99",
+    "risk_seed99",
+    "lending_seed99",
+    "staking_seed99",
+    "trading_seed99",
+    "derivatives_seed99"
+  ],
+  "assigned_domains": [
+    "amm",
+    "derivatives",
+    "expected_shortfall",
+    "lending",
+    "liquidation",
+    "liquidity",
+    "risk",
+    "risk_var",
+    "staking",
+    "trading"
+  ],
+  "expected_case_count": 74,
+  "observed_case_count": 74,
+  "result_file": "hypatiax_defi_benchmark_v3_results_seed99.json",
+  "result_sha256": "36e2cff5bf62ecb62a99272b82b80fa297a81b5a797e397a4cd0c9aa7a406903",
+  "script_path": "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py",
+  "script_sha256": "245f0f5647f9e725d8a5372b49a4dd0ca50d826dabe6dd49b02f4717c73fbdc3",
+  "protocol_config_sha256": "f69d2a8f3b31a64ec3ffa702a35c91599fe5a4eb52d1e4355398a0aaa56edb0d",
+  "repro_config_sha256": "79a855260e7b7a4452cb0f6c3022de5cc45d01b92d2048b738ede3ba79153a2e",
+  "python_version": "3.12.16",
+  "platform": "Linux-7.0.0-1020-azure-x86_64-with-glibc2.43",
+  "runtime_package_versions": {
+    "numpy": "2.5.5",
+    "torch": "2.15.0+cpu",
+    "pysr": "2.0.0a1",
+    "anthropic": "0.73.0",
+    "scipy": "1.18.1",
+    "scikit-learn": "1.9.1"
+  },
+  "clean_run_flags": {
+    "HYPATIAX_DISABLE_HARDCODED": "1",
+    "HYPATIAX_DISABLE_PROMPT_HINTS": "1",
+    "HYPATIAX_STRICT": "1",
+    "HYPATIAX_R2_SIGN_FLIP": "0"
+  },
+  "created_at_utc": "2026-11-25T20:40:37.430629+00:00"
+}
