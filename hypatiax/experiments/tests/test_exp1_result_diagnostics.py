@@ -12,6 +12,12 @@ def _record():
         "equation_id": "Impermanent loss breakeven fee rate",
         "extrapolation_intractable": True,
         "results": {
+            "pure_llm": {
+                "time_s": 0.5, "generation_time_s": 0.4,
+                "evaluation_time_s": 0.1, "llm_called": True,
+                "model": "claude-sonnet-4-6",
+                "input_tokens": 100, "output_tokens": 50,
+            },
             "neural_network": {
                 "success": True,
                 "nn_selected_model": "log_ridge",
@@ -85,3 +91,22 @@ def test_legacy_resume_record_is_backfilled_without_overwriting_values():
     for arm in ("neural_network", "hybrid"):
         for field in bench._DIAGNOSTIC_FIELDS:
             assert field in normalized["results"][arm]
+    assert "pure_llm" not in normalized["results"]
+
+
+
+def test_legacy_two_arm_checkpoint_is_discarded_for_three_arm_protocol(tmp_path, monkeypatch):
+    checkpoint = tmp_path / "legacy.json"
+    checkpoint.write_text(json.dumps([_record_without_pure_llm()]))
+    monkeypatch.setattr(bench, "CHECKPOINT_FILE", checkpoint)
+
+    records, completed = bench._load_checkpoint()
+
+    assert records == []
+    assert completed == 0
+
+
+def _record_without_pure_llm():
+    record = _record()
+    del record["results"]["pure_llm"]
+    return record
