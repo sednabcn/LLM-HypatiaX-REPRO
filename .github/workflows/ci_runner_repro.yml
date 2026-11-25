@@ -210,7 +210,7 @@ env:
   HYPATIA_MAX_RETRIES: "3"
   PYSR_POST_PROC_BUDGET: "300"
   FEYNMAN_NOISELESS_THRESHOLD: "0.999999"  # matches run_noise_sweep_benchmark.py --threshold-noiseless default
-  OUT_BASE:            ${{ github.event.inputs.fresh_mode == 'true' && format('{0}/../hypatiax-fresh-{1}-attempt-{2}', github.workspace, github.run_id, github.run_attempt) || 'hypatiax/data/results' }}
+  OUT_BASE:            ${{ github.event.inputs.fresh_mode == 'true' && format('{0}/hypatiax-fresh-{1}-attempt-{2}', github.workspace, github.run_id, github.run_attempt) || format('{0}/hypatiax/data/results', github.workspace) }}
   REPRO_CFG:           "${{ github.workspace }}/config/repro.yaml"
   PYTHON_JULIACALL_HANDLE_SIGNALS: "yes"
   # Clean live-LLM run: read by PureLLMBaseline. Local shell exports do NOT reach CI.
@@ -3665,7 +3665,7 @@ jobs:
         run: python -m pip install "pyyaml" "numpy"
 
       - name: Download all five Protocol-30 worker artifacts
-        uses: actions/download-artifact@v4.3.6
+        uses: actions/download-artifact@v4
         with:
           pattern: results-exp2_protocol30_*-shard*
           path: ${{ github.workspace }}/protocol30_artifacts
@@ -3756,7 +3756,7 @@ jobs:
           [[ "${SOURCE_RUN_ID}" =~ ^[0-9]+$ ]] || { echo "::error::aggregate_run_id must be a numeric GitHub Actions run ID."; exit 1; }
 
       - name: Download all five worker artifacts
-        uses: actions/download-artifact@v4.3.6
+        uses: actions/download-artifact@v4
         with:
           pattern: results-exp1_four_way_matched-shard*
           path: ${{ github.workspace }}/four_way_artifacts
@@ -3845,7 +3845,7 @@ jobs:
             psutil
 
       - name: Download shard artifacts
-        uses: actions/download-artifact@v4.3.6
+        uses: actions/download-artifact@v4
         with:
           pattern: results-exp1_ablation-shard*
           path: ${{ github.workspace }}/ablation_artifacts
@@ -3920,7 +3920,7 @@ jobs:
         id: download_seeds
         if: always()
         continue-on-error: true
-        uses: actions/download-artifact@v4.3.6
+        uses: actions/download-artifact@v4
         with:
           pattern: results-exp1-provenance-shard*
           path: provenance-shards
