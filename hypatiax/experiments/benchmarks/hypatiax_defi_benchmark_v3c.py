@@ -1845,7 +1845,8 @@ def _validate_result_records(
                         errors.append(f"{equation_id} {arm}: missing {field}")
             elif arm == "pure_llm":
                 for field in ("time_s", "generation_time_s", "evaluation_time_s",
-                              "llm_called", "model", "input_tokens", "output_tokens"):
+                              "api_request_time_s", "llm_called", "model",
+                              "input_tokens", "output_tokens"):
                     if field not in data:
                         errors.append(f"{equation_id} pure_llm: missing {field}")
 
@@ -2108,6 +2109,23 @@ def _generate_report(results: list):
         total_ratio = sum(hybrid for _, hybrid in paired) / sum(pure for pure, _ in paired)
         print(f"  Hybrid / Pure LLM paired total wall-time ratio: {total_ratio:.3f}×")
 
+    # Provider request latency is measured independently from parsing,
+    # formula evaluation, and NN/hybrid orchestration.
+    for method, field in (("pure_llm", "api_request_time_s"),
+                          ("hybrid", "llm_api_request_time_s")):
+        api_times = [
+            r.get("results", {}).get(method, {}).get(field)
+            for r in results
+        ]
+        api_times = [float(v) for v in api_times
+                     if v is not None and np.isfinite(v) and v >= 0]
+        if api_times:
+            print(
+                f"  {method_labels[method]} provider request: "
+                f"total={sum(api_times):.3f}s, mean={np.mean(api_times):.3f}s, "
+                f"median={np.median(api_times):.3f}s (n={len(api_times)})"
+            )
+
     # Provider token accounting is reported separately from wall-clock time.
     token_rows = [r.get("results", {}).get("pure_llm", {}) for r in results]
     token_rows = [x for x in token_rows if x.get("input_tokens") is not None
@@ -2118,6 +2136,16 @@ def _generate_report(results: list):
         print(
             f"  Pure LLM token usage: input={sum(in_tokens)} "
             f"(n={len(in_tokens)}), output={sum(out_tokens)} (n={len(out_tokens)})"
+        )
+    hybrid_token_rows = [r.get("results", {}).get("hybrid", {}) for r in results]
+    hybrid_in = [int(x["llm_input_tokens"]) for x in hybrid_token_rows
+                 if x.get("llm_input_tokens") is not None]
+    hybrid_out = [int(x["llm_output_tokens"]) for x in hybrid_token_rows
+                  if x.get("llm_output_tokens") is not None]
+    if hybrid_in or hybrid_out:
+        print(
+            f"  Hybrid LLM token usage: input={sum(hybrid_in)} "
+            f"(n={len(hybrid_in)}), output={sum(hybrid_out)} (n={len(hybrid_out)})"
         )
 
     print("\n" + "=" * 80)
@@ -2220,6 +2248,7 @@ def _run_pure_llm_arm(description, domain, var_names, metadata, X_train, y_train
         "time_s": round(time.perf_counter() - wall_start, 6),
         "generation_time_s": round(generation_time_s, 6),
         "evaluation_time_s": round(evaluation_time_s, 6),
+        "api_request_time_s": llm_result.get("api_request_time_s"),
         "llm_called": bool(llm_result.get("llm_called", False)),
         "llm_attempted": bool(llm_result.get("llm_attempted", False)),
         "formula_present": bool(llm_result.get("formula_present", False)),
@@ -2557,7 +2586,8 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 case_results["pure_llm"] = {
                     "train_r2": None, "test_r2": None, "success": False,
                     "time_s": 0.0, "generation_time_s": 0.0,
-                    "evaluation_time_s": 0.0, "llm_called": False,
+                    "evaluation_time_s": 0.0, "api_request_time_s": None,
+                    "llm_called": False,
                     "llm_attempted": False, "formula_present": False,
                     "model": LLM_MODEL, "model_source": None,
                     "prompt_sha256": None, "temperature_requested": None,
