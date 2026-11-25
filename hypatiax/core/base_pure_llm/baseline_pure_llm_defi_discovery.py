@@ -185,7 +185,16 @@ class PureLLMBaseline:
         api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
             raise ValueError("ANTHROPIC_API_KEY environment variable not set")
-        self.client = Anthropic(api_key=api_key)
+        timeout_s = float(os.environ.get("LLM_METHOD_TIMEOUT", "120"))
+        if not np.isfinite(timeout_s) or timeout_s <= 0:
+            raise ValueError("LLM_METHOD_TIMEOUT must be a finite positive number")
+        # Match the hybrid benchmark's single-attempt provider policy and
+        # timeout. SDK retries would otherwise inflate standalone-LLM latency
+        # and token cost relative to the hybrid arm.
+        self.client = Anthropic(
+            api_key=api_key, timeout=timeout_s, max_retries=0
+        )
+        self.timeout_s = timeout_s
         self.model, self.model_source = resolve_model(model)
         self.results = []
         # No per-instance cache: each benchmark case owns a fresh baseline.
