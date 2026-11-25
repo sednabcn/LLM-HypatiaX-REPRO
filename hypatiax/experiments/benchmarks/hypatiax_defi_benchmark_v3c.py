@@ -2030,6 +2030,26 @@ def _generate_report(results: list):
             print(f"  {diff:6s} | {method:14s}: median={s['median']:.4f}, "
                   f">0.99: {s['pct_099']:.1f}%  (n={len(subset)})")
 
+    # Paired predictive comparison uses only equations with finite scores
+    # from both arms; the full-denominator summaries above remain unchanged.
+    paired_scores = []
+    for record in standard:
+        pure_score = record.get("results", {}).get("pure_llm", {}).get("test_r2")
+        hybrid_score = record.get("results", {}).get("hybrid", {}).get("test_r2")
+        if (pure_score is not None and hybrid_score is not None
+                and np.isfinite(pure_score) and np.isfinite(hybrid_score)):
+            paired_scores.append((float(pure_score), float(hybrid_score)))
+    if paired_scores:
+        score_delta = np.asarray([hybrid - pure for pure, hybrid in paired_scores])
+        wins = int(np.sum(score_delta > 1e-12))
+        losses = int(np.sum(score_delta < -1e-12))
+        ties = int(len(score_delta) - wins - losses)
+        print(
+            f"  Hybrid vs Pure LLM test-R² (paired n={len(paired_scores)}): "
+            f"mean ΔR²={np.mean(score_delta):.4f}, median ΔR²={np.median(score_delta):.4f}; "
+            f"hybrid wins={wins}, losses={losses}, ties={ties}"
+        )
+
     # ── Three-arm timing and paired Hybrid-vs-PureLLM comparison ────────────
     print("\n── Timing summary (per-case wall time) ──────────────────────────────────")
     timing = {}
@@ -2065,6 +2085,8 @@ def _generate_report(results: list):
             f"mean={np.mean(ratios):.3f}×, median={np.median(ratios):.3f}× "
             f"(n={len(paired)}; hybrid slower={slower}, faster={faster}, tied={tied})"
         )
+        total_ratio = sum(hybrid for _, hybrid in paired) / sum(pure for pure, _ in paired)
+        print(f"  Hybrid / Pure LLM paired total wall-time ratio: {total_ratio:.3f}×")
 
     # Provider token accounting is reported separately from wall-clock time.
     token_rows = [r.get("results", {}).get("pure_llm", {}) for r in results]
@@ -2375,7 +2397,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "nn_abstained": nn_m.get("abstained", False),
                     "nn_selected_model": nn_m.get("selected_model", "nn"),
                     "failure_reason": nn_m.get("failure_reason"),
-                    "time_s":      round(time.time() - _t0_nn, 3),
+                    "time_s":      round(time.time() - _t0_nn, 6),
                     "y_pred_train": nn_m["y_pred_train"].tolist() if nn_m.get("y_pred_train") is not None else None,
                     "y_pred_test":  nn_m["y_pred_test"].tolist() if nn_m.get("y_pred_test") is not None else None,
                 }
@@ -2398,7 +2420,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     nn_result=nn_m,
                     split_metadata=split_details,
                 )
-                _hyb_wall = round(time.time() - _t0_hyb, 3)
+                _hyb_wall = round(time.time() - _t0_hyb, 6)
 
                 # _hyb_wall already includes any NN rerun performed inside
                 # _hybrid_predict_and_eval. Keep nn_rerun_time_s as a subset
