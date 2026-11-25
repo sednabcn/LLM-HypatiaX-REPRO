@@ -922,6 +922,8 @@ def run_condition(eq, condition, seed=42, niterations=None,
             value is not None and np.isfinite(float(value))
             for value in (test_r2, test_rmse, test_mae)
         )
+        if not _primary_test_ok and _test_eval_error is None:
+            _test_eval_error = "non_finite_or_missing_primary_test_metric"
         def _f(v):
             if v is None: return "N/A"
             try: return f"{float(v):.4f}" if np.isfinite(float(v)) else "N/A"
@@ -1077,6 +1079,8 @@ def run_condition(eq, condition, seed=42, niterations=None,
         value is not None and np.isfinite(float(value))
         for value in (train_r2, train_rmse, test_r2, test_rmse, test_mae)
     )
+    if not _primary_eval_ok and _evaluation_error is None:
+        _evaluation_error = "non_finite_or_missing_primary_metric"
     return {
         "condition":             "pysr_only",
         "completed":             True,
@@ -1487,9 +1491,9 @@ def run_rf01(all_results: dict) -> None:
     h_wins  = int(np.sum(H_arr > P_arr + 0.01))
     p_wins  = int(np.sum(P_arr > H_arr + 0.01))
     ties    = n_pairs - h_wins - p_wins
-    # [AUDIT-S1] The design is paired (same equation, both arms): Wilcoxon signed-rank is the
-    # PRIMARY test; Mann-Whitney is reported only as a sensitivity check. Falls back to
-    # Mann-Whitney only if Wilcoxon could not be computed.
+    # The design is paired (same equation, both arms): Wilcoxon signed-rank is
+    # primary; Mann-Whitney is only an unpaired sensitivity check. If Wilcoxon
+    # is unavailable, do not substitute the unpaired p-value as primary.
     P_PRIM   = float(p_wil_gt) if p_wil_gt is not None else None
     PRIM_TXT = (f"Wilcoxon signed-rank $W={W_stat:.0f}$, $p_{{H>P}}={p_wil_gt:.4f}$"
                 if p_wil_gt is not None else "Wilcoxon unavailable; no primary p-value")
@@ -1509,7 +1513,7 @@ def run_rf01(all_results: dict) -> None:
     if W_stat is not None:
         print(f"  Wilcoxon signed-rank       : W={W_stat:.0f}, p(2-sided)={p_wil:.4f},"
               f" p(H>P)={p_wil_gt:.4f}")
-    print(f"  Rank-biserial r            : {r_rb:+.3f}")
+    print(f"  Paired rank-biserial r      : {r_rb:+.3f}")
     print(f"  Significant (α=0.05)       : {'YES ✅' if IS_SIG else 'NO ⚠'}")
     print(f"  Paper targets              : U=126, p=0.295 (Run A / seed=42 / pops=30)")
 
@@ -1533,7 +1537,7 @@ def run_rf01(all_results: dict) -> None:
             f"HypatiaX achieves significantly higher far-extrapolation $R^2$ than "
             f"PySR-only across the Core-15 benchmark "
             f"({PRIM_TXT}; Mann-Whitney sensitivity $U={U_gt:.0f}$, $p={p_gt:.4f}$, two-tailed $p={p_two:.4f}$, "
-            f"$n={n_pairs}$; rank-biserial $r={r_rb:+.2f}$). "
+            f"$n={n_pairs}$; paired rank-biserial $r={r_rb:+.2f}$). "
             f"HypatiaX outperforms PySR-only on {h_wins}/{n_pairs} equations "
             f"({', '.join(driving_doms) if driving_doms else 'multiple'} domains), "
             f"with {ties} tie(s) and {p_wins} equation(s) where PySR-only is superior"
@@ -1559,7 +1563,7 @@ def run_rf01(all_results: dict) -> None:
             f"Across Core-15, HypatiaX does not achieve statistically significant "
             f"higher far-extrapolation $R^2$ than PySR-only "
             f"({PRIM_TXT}; Mann-Whitney sensitivity $U={U_gt:.0f}$, $p={p_gt:.4f}$, $n={n_pairs}$; "
-            f"rank-biserial $r={r_rb:+.2f}$). " + dom_detail
+            f"paired rank-biserial $r={r_rb:+.2f}$). " + dom_detail
         )
         verdict = "⚠️  NOT SIGNIFICANT"
 
@@ -1720,9 +1724,10 @@ def _holm(pvals):
 
 
 def run_llm_contribution(all_results: dict) -> None:
-    """Pairwise far-R2 tests across pysr_only (P), hypatia (H), hypatia_nollm (N).
-    H-P = total effect, N-P = non-LLM pipeline, H-N = LLM alone.
-    Active only when the hypatia_nollm arm was run (HYPATIAX_NOLLM_ARM=1)."""
+    """Pairwise far-R2 tests across PySR-only (P), Hybrid+LLM (H), Hybrid-no-LLM (N).
+    H-P is the total Hybrid+LLM vs PySR contrast; N-P is Hybrid without LLM vs PySR;
+    H-N estimates the incremental effect of enabling LLM inside Hybrid, not a
+    standalone Pure-LLM effect. Active only when the no-LLM arm was run."""
     if "hypatia_nollm" not in CONDITIONS:
         return
     from scipy import stats as scipy_stats
