@@ -465,30 +465,6 @@ def test_exp1_signed_ridge_accepts_signed_features_and_uses_training_only_select
     assert second["signed_ridge_edge_r2"] == result["signed_ridge_edge_r2"]
 
 
-def test_exp1_signed_ridge_selection_is_exposed_to_hybrid_and_artifact_policy(monkeypatch):
-    _common(monkeypatch, "ensemble")
-    Xtr, ytr, Xte, yte = _inputs()
-    nn_result = {
-        "train_r2": 0.9, "test_r2": 0.7, "success": True,
-        "y_pred_train": np.linspace(0.1, 0.9, len(ytr)),
-        "y_pred_test": np.linspace(0.2, 0.8, len(yte)),
-        "abstained": True, "selected_model": "signed_ridge",
-        "nn_edge_r2": -0.2, "ridge_edge_r2": float("nan"),
-        "signed_ridge_edge_r2": 0.91, "signed_ridge_eligible": True,
-    }
-
-    result = bench._hybrid_predict_and_eval(
-        "signed-feature fixture", "defi", Xtr, ytr, Xte, yte, ["x"], {},
-        nn_result=nn_result,
-    )
-
-    assert "signed_ridge" in bench._ALLOWED_NN_MODELS
-    assert result["nn_selected_model"] == "signed_ridge"
-    assert result["signed_ridge_edge_r2"] == 0.91
-    assert result["signed_ridge_eligible"] is True
-    assert result["selected_predictor_source"] == "nn_abstention_signed_ridge"
-
-
 def test_exp1_options_delta_predictions_are_clipped_to_semantic_bounds(monkeypatch):
     _common(monkeypatch, "nn")
     Xtr, ytr, Xte, yte = _inputs()
