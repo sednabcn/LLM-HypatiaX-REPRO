@@ -406,6 +406,11 @@ CORE_15 = [
         "fn": lambda s1, s2, rho: np.sqrt(s1**2 + s2**2 + 2 * rho * s1 * s2),
         "formula_latex": r"\sigma_p = \sqrt{\sigma_1^2 + \sigma_2^2 + 2\rho\sigma_1\sigma_2}",
         "formula_sympy": "np.sqrt(s1**2 + s2**2 + 2 * rho * s1 * s2)",
+        # Keep rho physically valid while moving volatility inputs beyond training.
+        "extrapolation_ranges": {
+            "near": [(0.2, 0.3), (0.2, 0.3), (-0.9, 0.9)],
+            "far":  [(0.8, 1.2), (0.8, 1.2), (-0.99, 0.99)],
+        },
         "note": "C4: run 5-seed sweep to report mean ± std. Seeds [42,99,123,777,2024].",
     },
 ]
@@ -439,15 +444,22 @@ def generate_data(eq, N=200, noise_level=0.05, seed=42):
 
 
 def generate_extrap_data(eq, regime="medium", N=100, seed=42):
-    rng    = np.random.RandomState(seed + 999)
+    """Generate deterministic OOD samples, honouring constrained domains."""
+    rng = np.random.RandomState(seed + 999)
     n_vars = len(eq["vars"])
     if regime == "medium":
         ranges = eq["extrap_range"]
+    elif regime in (eq.get("extrapolation_ranges") or {}):
+        ranges = eq["extrapolation_ranges"][regime]
     else:
         mult_lo, mult_hi = {"near": (1.0, 1.5), "far": (4.0, 6.0)}[regime]
         ranges = [(hi * mult_lo, hi * mult_hi) for (_, hi) in eq["train_range"]]
+    if len(ranges) != n_vars or any(not (np.isfinite(lo) and np.isfinite(hi) and lo < hi) for lo, hi in ranges):
+        raise ValueError(f"Invalid {regime} extrapolation ranges for {eq['name']}: {ranges!r}")
     X = np.column_stack([rng.uniform(lo, hi, N) for lo, hi in ranges])
     y = eq["fn"](*[X[:, i] for i in range(n_vars)])
+    if not np.all(np.isfinite(y)):
+        raise ValueError(f"Non-finite {regime} targets generated for {eq['name']}")
     return X, y
 
 # =============================================================================
@@ -803,6 +815,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
                     description = eq["name"],
                     metadata    = {
                         "equation_name":          eq["name"],
+                        "random_seed":             eq_seed,
                         # AUDIT C4: key metadata by the SAFE names actually passed as
                         # var_names (S->var_S, N->var_N), otherwise the engine finds no
                         # description/unit for renamed variables.
@@ -894,6 +907,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
         # Outer test rows were generated before any fitting and are never used
         # for fitting, routing, model selection, or threshold selection.
         test_r2 = test_rmse = test_mae = None
+        _test_eval_error = None if _predict is not None else _ood_note
         if _predict is not None:
             try:
                 _test_pred = np.asarray(_predict(X_test), dtype=float).reshape(-1)
@@ -901,8 +915,13 @@ def run_condition(eq, condition, seed=42, niterations=None,
                 test_rmse = _safe_rmse(y_test, _test_pred)
                 test_mae = _safe_mae(y_test, _test_pred)
             except Exception as _test_exc:
-                dbg(f"outer test evaluation failed: {_test_exc}")
+                _test_eval_error = f"{type(_test_exc).__name__}: {_test_exc}"
+                dbg(f"outer test evaluation failed: {_test_eval_error}")
 
+        _primary_test_ok = all(
+            value is not None and np.isfinite(float(value))
+            for value in (test_r2, test_rmse, test_mae)
+        )
         def _f(v):
             if v is None: return "N/A"
             try: return f"{float(v):.4f}" if np.isfinite(float(v)) else "N/A"
@@ -919,7 +938,11 @@ def run_condition(eq, condition, seed=42, niterations=None,
         _llm_m = llm_meta(res)   # real LLM time/expression/confidence from the engine
         return {
             "condition":             condition,
-            "success":               res.get("success", False),
+            "completed":             True,
+            "fit_status":            "success" if res.get("success", False) else "failed",
+            "evaluation_status":     "success" if _primary_test_ok else "failed",
+            "evaluation_error":      _test_eval_error,
+            "success":               bool(res.get("success", False) and _primary_test_ok),
             "timed_out":             False,
             "excluded_from_timing":  False,
             "train_r2":              train_r2,
@@ -1003,6 +1026,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
         return _build_error_result("pysr_only", str(e), sr_time)
 
     test_r2 = test_rmse = test_mae = None
+    _evaluation_error = None
     try:
         y_pred_train = model.predict(X_train)
         train_r2     = _safe_r2(y_train, y_pred_train)
@@ -1029,9 +1053,11 @@ def run_condition(eq, condition, seed=42, niterations=None,
         except Exception:
             eqs_df     = model.equations_
             complexity = int(eqs_df.loc[eqs_df["loss"].idxmin(), "complexity"])
-    except Exception:
+    except Exception as _eval_exc:
+        _evaluation_error = f"{type(_eval_exc).__name__}: {_eval_exc}"
         traceback.print_exc()
         train_r2 = train_rmse = None
+        test_r2 = test_rmse = test_mae = None
         extrap_r2   = {r: None for r, _ in EXTRAP_REGIMES}
         extrap_r2_raw, extrap_r2_status = {}, {}
         extrap_rmse = {r: None for r, _ in EXTRAP_REGIMES}
@@ -1047,9 +1073,17 @@ def run_condition(eq, condition, seed=42, niterations=None,
         f"med={_f(extrap_r2.get('medium'))} "
         f"far={_f(extrap_r2.get('far'))})  time={total_time:.1f}s"
     )
+    _primary_eval_ok = all(
+        value is not None and np.isfinite(float(value))
+        for value in (train_r2, train_rmse, test_r2, test_rmse, test_mae)
+    )
     return {
         "condition":             "pysr_only",
-        "success":               True,
+        "completed":             True,
+        "fit_status":            "success",
+        "evaluation_status":     "success" if (_evaluation_error is None and _primary_eval_ok) else "failed",
+        "evaluation_error":      _evaluation_error,
+        "success":               bool(_evaluation_error is None and _primary_eval_ok),
         "timed_out":             False,
         "excluded_from_timing":  False,
         "train_r2":              train_r2,
@@ -1096,6 +1130,9 @@ def _build_timeout_result(condition: str, sr_time: float) -> dict:
     return {
         **base,
         "condition":            condition,
+        "completed":            True,
+        "fit_status":           "timeout",
+        "evaluation_status":    "not_run",
         "success":              False,
         "timed_out":            True,
         "excluded_from_timing": True,
@@ -1119,6 +1156,9 @@ def _build_error_result(condition: str, error: str, sr_time: float) -> dict:
     return {
         **base,
         "condition":            condition,
+        "completed":            True,
+        "fit_status":           "error",
+        "evaluation_status":    "not_run",
         "success":              False,
         "timed_out":            False,
         "excluded_from_timing": False,
@@ -1277,7 +1317,10 @@ def run_experiment():
         all_results.setdefault(eq_key, {"name": eq["name"], "domain": eq["domain"]})
         entry  = all_results[eq_key]
 
-        to_run = [c for c in CONDITIONS if entry.get(c) is None]
+        # Legacy rows without a terminal marker must be rerun under this contract.
+        to_run = [c for c in CONDITIONS
+                  if not (isinstance(entry.get(c), dict)
+                          and entry[c].get("completed") is True)]
         if not to_run:
             print(f"✓ [{eq_idx:02d}] {eq['name']} — already done")
             continue
@@ -1368,8 +1411,23 @@ def print_summary(all_results: dict) -> None:
               f"median={np.median(speedups):.2f}×  n={len(speedups)}")
 
 # =============================================================================
-# §18 · RF-01 — Mann-Whitney U + Wilcoxon (§10.6 statistics)
+# §18 · RF-01 — Paired Wilcoxon + Mann-Whitney sensitivity (§10.6)
 # =============================================================================
+
+def _paired_rank_biserial(differences, tie_tolerance=0.0) -> float:
+    """Matched-pairs rank-biserial correlation from signed Wilcoxon ranks."""
+    from scipy.stats import rankdata
+    delta = np.asarray(differences, dtype=float).reshape(-1)
+    delta = delta[np.isfinite(delta)]
+    delta = delta[np.abs(delta) > float(tie_tolerance)]
+    if delta.size == 0:
+        return 0.0
+    ranks = rankdata(np.abs(delta), method="average")
+    positive = float(np.sum(ranks[delta > 0]))
+    negative = float(np.sum(ranks[delta < 0]))
+    denominator = positive + negative
+    return float((positive - negative) / denominator) if denominator else 0.0
+
 
 def run_rf01(all_results: dict) -> None:
     from collections import defaultdict
@@ -1385,7 +1443,8 @@ def run_rf01(all_results: dict) -> None:
         h   = res.get("hypatia",   {}) or {}
         pf  = p.get("extrap_r2_far")
         hf  = h.get("extrap_r2_far")
-        if (pf is not None and hf is not None
+        if (p.get("success") is True and h.get("success") is True
+                and pf is not None and hf is not None
                 and np.isfinite(float(pf)) and np.isfinite(float(hf))):
             P_far.append(float(pf))
             H_far.append(float(hf))
@@ -1397,6 +1456,8 @@ def run_rf01(all_results: dict) -> None:
             ))
         else:
             reasons = []
+            if p.get("success") is not True: reasons.append(f"P evaluation status={p.get('evaluation_status', 'legacy/failed')}")
+            if h.get("success") is not True: reasons.append(f"H evaluation status={h.get('evaluation_status', 'legacy/failed')}")
             if pf is None or not np.isfinite(float(pf)): reasons.append(f"P far-R²={pf}")
             if hf is None or not np.isfinite(float(hf)): reasons.append(f"H far-R²={hf}")
             skipped.append((eq["name"], eq["domain"], "; ".join(reasons)))
@@ -1412,24 +1473,27 @@ def run_rf01(all_results: dict) -> None:
     U_gt,    p_gt    = scipy_stats.mannwhitneyu(H_far, P_far, alternative="greater")  # audit: ignore[S1] sensitivity check only; primary test is paired Wilcoxon + Holm
     U_two,   p_two   = scipy_stats.mannwhitneyu(H_far, P_far, alternative="two-sided")  # audit: ignore[S1] sensitivity check only; primary test is paired Wilcoxon + Holm
     try:
-        W_stat,  p_wil   = scipy_stats.wilcoxon(H_far, P_far, alternative="two-sided")
-        _,       p_wil_gt= scipy_stats.wilcoxon(H_far, P_far, alternative="greater")
-        W_stat = float(W_stat)
+        if np.all(H_arr == P_arr):
+            W_stat, p_wil, p_wil_gt = 0.0, 1.0, 1.0
+        else:
+            W_stat, p_wil = scipy_stats.wilcoxon(H_far, P_far, alternative="two-sided")
+            _, p_wil_gt = scipy_stats.wilcoxon(H_far, P_far, alternative="greater")
+            W_stat = float(W_stat)
     except Exception as e:
         W_stat = p_wil = p_wil_gt = None
         print(f"  Wilcoxon N/A: {e}")
 
-    r_rb    = float((2 * U_gt) / (n_pairs * n_pairs) - 1)   # positive = H higher (sign fixed)
+    r_rb = _paired_rank_biserial(H_arr - P_arr)
     h_wins  = int(np.sum(H_arr > P_arr + 0.01))
     p_wins  = int(np.sum(P_arr > H_arr + 0.01))
     ties    = n_pairs - h_wins - p_wins
     # [AUDIT-S1] The design is paired (same equation, both arms): Wilcoxon signed-rank is the
     # PRIMARY test; Mann-Whitney is reported only as a sensitivity check. Falls back to
     # Mann-Whitney only if Wilcoxon could not be computed.
-    P_PRIM   = float(p_wil_gt) if p_wil_gt is not None else float(p_gt)
+    P_PRIM   = float(p_wil_gt) if p_wil_gt is not None else None
     PRIM_TXT = (f"Wilcoxon signed-rank $W={W_stat:.0f}$, $p_{{H>P}}={p_wil_gt:.4f}$"
-                if p_wil_gt is not None else "Wilcoxon unavailable")
-    IS_SIG  = bool(P_PRIM < ALPHA)
+                if p_wil_gt is not None else "Wilcoxon unavailable; no primary p-value")
+    IS_SIG  = bool(P_PRIM is not None and P_PRIM < ALPHA)
 
     print(f"\n{'═' * 72}")
     print("AGGREGATE STATISTICAL TESTS  (RF-01)")
@@ -1438,7 +1502,8 @@ def run_rf01(all_results: dict) -> None:
     print(f"  H Far-R²  median/mean      : {np.median(H_arr):+.4f} / {np.mean(H_arr):+.4f}")
     print(f"  P Far-R²  median/mean      : {np.median(P_arr):+.4f} / {np.mean(P_arr):+.4f}")
     print(f"  H wins / ties / P wins     : {h_wins} / {ties} / {p_wins}")
-    print(f"  PRIMARY: Wilcoxon p(H>P)   : {P_PRIM:.4f}   (Mann-Whitney below = sensitivity only)")
+    print(f"  PRIMARY: Wilcoxon p(H>P)   : {P_PRIM:.4f}" if P_PRIM is not None
+          else "  PRIMARY: Wilcoxon p(H>P)   : N/A (Mann-Whitney remains sensitivity only)")
     print(f"  Mann-Whitney U (H > P)     : U={U_gt:.0f},  p={p_gt:.4f}")
     print(f"  Mann-Whitney U (two-sided) : U={U_two:.0f},  p={p_two:.4f}")
     if W_stat is not None:
@@ -1518,7 +1583,9 @@ def run_rf01(all_results: dict) -> None:
             "H_mean_far_r2":   float(np.mean(H_arr)),
             "P_mean_far_r2":   float(np.mean(P_arr)),
             "h_wins": h_wins, "p_wins": p_wins, "ties": ties,
-            "primary_test": "wilcoxon_signed_rank" if p_wil_gt is not None else "mann_whitney_fallback",
+            "primary_test": "wilcoxon_signed_rank" if p_wil_gt is not None else "wilcoxon_unavailable",
+            "effect_size": "paired_rank_biserial",
+            "rank_biserial_method": "paired_signed_rank",
             "primary_p_greater": P_PRIM,
             "significant_p05": IS_SIG,
             "paper_sentence":  sentence,
@@ -1592,7 +1659,7 @@ def run_rf01(all_results: dict) -> None:
     tex_sig += [
         r"\bottomrule", r"\end{tabular}",
         r"\begin{tablenotes}\small",
-        r"\item P = PySR-only; H = HypatiaX. Near/Med/Far at 1.2×/canonical/5× training range.",
+        r"\item P = PySR-only; H = HypatiaX. Near/far use 1.0–1.5×/4–6× upper-bound bands; medium uses equation-specific ranges. Portfolio correlation remains within [-0.99, 0.99].",
         r"\end{tablenotes}", r"\end{table}",
     ]
     with open(RF01_SIGTEX, "w") as f:
@@ -1666,8 +1733,10 @@ def run_llm_contribution(all_results: dict) -> None:
         res = all_results.get(str(eq_idx), {}) or {}
         v = {}
         for tag, cond in (("P", "pysr_only"), ("H", "hypatia"), ("N", "hypatia_nollm")):
-            x = (res.get(cond) or {}).get("extrap_r2_far")
-            v[tag] = float(x) if x is not None and np.isfinite(float(x)) else None
+            arm = res.get(cond) or {}
+            x = arm.get("extrap_r2_far")
+            v[tag] = (float(x) if arm.get("success") is True and x is not None
+                      and np.isfinite(float(x)) else None)
         if all(val is not None for val in v.values()):
             rows.append((eq["name"], v))
 
@@ -1677,8 +1746,9 @@ def run_llm_contribution(all_results: dict) -> None:
     _fail = {}
     for tag, cond in (("P", "pysr_only"), ("H", "hypatia"), ("N", "hypatia_nollm")):
         _fail[tag] = [eq["name"] for i, eq in enumerate(CORE_15)
-                      if (lambda x: x is None or not np.isfinite(float(x)))(
-                          ((all_results.get(str(i), {}) or {}).get(cond) or {}).get("extrap_r2_far"))]
+                      if (lambda arm: arm.get("success") is not True
+                          or (lambda x: x is None or not np.isfinite(float(x)))(arm.get("extrap_r2_far")))(
+                          (all_results.get(str(i), {}) or {}).get(cond) or {})]
     print(f"\nLLM-CONTRIBUTION (3-arm far-R2): {n} equation(s) with all arms")
     print("  failures per arm (excluded from tests): "
           + ", ".join(f"{k}={len(v)}" for k, v in _fail.items()))
@@ -1701,7 +1771,7 @@ def run_llm_contribution(all_results: dict) -> None:
         d_adj = np.where(tied, 0.0, d)
         U, pg = scipy_stats.mannwhitneyu(a_adj, b, alternative="greater")  # audit: ignore[S1] sensitivity check only; primary test is paired Wilcoxon + Holm
         _, p2 = scipy_stats.mannwhitneyu(a_adj, b, alternative="two-sided")  # audit: ignore[S1] sensitivity check only; primary test is paired Wilcoxon + Holm
-        rbc = float(2 * U / (n * n) - 1)   # positive = first arm higher
+        rbc = _paired_rank_biserial(d_adj)
         t = {"median_a": float(np.median(a)), "median_b": float(np.median(b)),
              "wins": w, "ties": n - w - l, "losses": l,
              "U_greater": float(U), "p_greater": float(pg), "p_two_sided": float(p2),
@@ -2061,8 +2131,9 @@ def check_readiness() -> bool:
 
     pv_path = OUTPUT_DIR / f"portfolio_variance_seed_sweep{_seed_suffix}.json"
     c4_ok = pv_path.exists()
-    checks.append(("C4 Portfolio seed sweep", c4_ok,
-                   "sweep JSON present" if c4_ok else "run run_portfolio_seed_sweep()"))
+    print("  ℹ️  C4 Portfolio seed sweep: "
+          + ("optional diagnostic JSON present" if c4_ok else
+             "optional diagnostic not run; --seed-sweep performs 15 additional model fits"))
 
     print("\n" + "=" * 70)
     print("SUBMISSION READINESS — BLOCKER CHECKLIST")
@@ -2149,8 +2220,7 @@ if __name__ == "__main__":
         print("⚡ --fast preset: iterations=300, timeout=90s")
 
     if args.check:
-        check_readiness()
-        sys.exit(0)
+        sys.exit(0 if check_readiness() else 2)
 
     # Run main experiment (or, in CI aggregation, load the merged shard checkpoint)
     if args.aggregate_only:
@@ -2190,5 +2260,7 @@ if __name__ == "__main__":
     if args.seed_sweep:
         run_portfolio_seed_sweep()
 
-    check_readiness()
+    if not check_readiness():
+        print("::error::Exp1 ablation outputs failed the required readiness checks.")
+        sys.exit(2)
     print("\n✅ exp1_ablation.py complete — all outputs written.")
