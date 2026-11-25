@@ -24,7 +24,13 @@ def _record(case_id):
                 "model": "test", "input_tokens": None, "output_tokens": None,
             },
             "neural_network": {**diagnostics, "success": False},
-            "hybrid": {**diagnostics, "success": False},
+            "hybrid": {
+                **diagnostics, "success": False,
+                "nn_component_time_s": 0.0,
+                "hybrid_component_time_s": 0.0,
+                "llm_api_request_time_s": None,
+                "llm_input_tokens": None, "llm_output_tokens": None,
+            },
         },
     }
 
