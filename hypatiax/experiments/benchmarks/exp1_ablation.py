@@ -2158,7 +2158,9 @@ if __name__ == "__main__":
         _missing = []
         for _eq in CORE_15:
             _e = all_results.get(str(EQ_ID[_eq["name"]]), {}) or {}
-            _lack = [c for c in CONDITIONS if not isinstance(_e.get(c), dict)]
+            _lack = [c for c in CONDITIONS
+                     if not isinstance(_e.get(c), dict)
+                     or _e[c].get("completed") is not True]
             if _lack:
                 _missing.append((_eq["name"], _lack))
         if _missing:
