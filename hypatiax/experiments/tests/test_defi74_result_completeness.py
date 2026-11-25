@@ -18,6 +18,11 @@ def _record(case_id):
             "impermanent loss breakeven" in case_id.lower()
         ),
         "results": {
+            "pure_llm": {
+                "time_s": 0.0, "generation_time_s": 0.0,
+                "evaluation_time_s": 0.0, "llm_called": False,
+                "model": "test", "input_tokens": None, "output_tokens": None,
+            },
             "neural_network": {**diagnostics, "success": False},
             "hybrid": {**diagnostics, "success": False},
         },
@@ -134,3 +139,11 @@ def test_filtered_scope_rejects_case_outside_selected_filter():
             expected_cases=portfolio_cases,
         )
 
+
+
+
+def test_validation_rejects_missing_standalone_llm_arm():
+    records = _complete_records()
+    del records[0]["results"]["pure_llm"]
+    with pytest.raises(ValueError, match="missing results.pure_llm"):
+        benchmark._validate_result_records(records, require_complete=True)
