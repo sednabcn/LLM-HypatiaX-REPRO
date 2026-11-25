@@ -1814,14 +1814,20 @@ def _validate_result_records(
         if not isinstance(result_arms, dict):
             errors.append(f"{equation_id}: results must be an object")
             continue
-        for arm in ("neural_network", "hybrid"):
+        for arm in ("neural_network", "hybrid", "pure_llm"):
             data = result_arms.get(arm)
             if not isinstance(data, dict):
                 errors.append(f"{equation_id}: missing results.{arm}")
                 continue
-            for field in _DIAGNOSTIC_FIELDS:
-                if field not in data:
-                    errors.append(f"{equation_id} {arm}: missing {field}")
+            if arm in ("neural_network", "hybrid"):
+                for field in _DIAGNOSTIC_FIELDS:
+                    if field not in data:
+                        errors.append(f"{equation_id} {arm}: missing {field}")
+            elif arm == "pure_llm":
+                for field in ("time_s", "generation_time_s", "evaluation_time_s",
+                              "llm_called", "model", "input_tokens", "output_tokens"):
+                    if field not in data:
+                        errors.append(f"{equation_id} pure_llm: missing {field}")
 
             selected = data.get("nn_selected_model")
             if selected is not None and selected not in _ALLOWED_NN_MODELS:
@@ -1884,6 +1890,15 @@ def _load_checkpoint() -> tuple[list, int]:
         for item in data:
             seen[item.get("equation_id", id(item))] = item
         data = [_normalize_saved_record(item) for item in seen.values()]
+        # Legacy two-arm checkpoints cannot be mixed with the new three-arm
+        # protocol. Start a clean run rather than silently treating a missing
+        # standalone-LLM arm as a measured result.
+        if any(not isinstance(item.get("results"), dict)
+               or not isinstance(item["results"].get("pure_llm"), dict)
+               for item in data):
+            print("  [checkpoint] Legacy NN/Hybrid-only checkpoint found; "
+                  "discarding it for a complete NN/PureLLM/Hybrid run.")
+            return [], 0
         return data, len(data)
     except Exception:
         return [], 0
@@ -1977,10 +1992,14 @@ def _generate_report(results: list):
     print("NOTE: All percentages use FIXED denominator (standard cases only).")
     print("      NaN / failure counts as 0 toward the denominator.\\n")
 
-    for method in ["neural_network", "hybrid"]:
+    method_labels = {
+        "pure_llm": "Pure LLM",
+        "neural_network": "Neural Network",
+        "hybrid": "Hybrid",
+    }
+    for method in ("pure_llm", "neural_network", "hybrid"):
         s = _stats(_r2s(standard, method), denom)
-        label = {"neural_network": "Neural Network",
-                 "hybrid":   "Hybrid        "}[method]
+        label = method_labels[method]
         print(f"  {label}: median={s['median']:.4f}, "
               f"mean(clip-{abs(CLIP_LO):.0f})={s['mean_clip']:.4f}, "
               f">0.9: {s['pct_09']:.1f}%, "
@@ -1990,10 +2009,15 @@ def _generate_report(results: list):
     if intractable:
         print(f"\n── Intractable cases ({len(intractable)}) ─────────────────────────────────────")
         for r in intractable:
-            hy = r["results"].get("hybrid", {}).get("test_r2")
             case_name = str(r.get("equation_id", r.get("test_case", "<unknown>")))
-            print(f"  {case_name[:55]:<55}  hybrid test R² = "
-                  f"{'nan' if hy is None or (isinstance(hy, float) and np.isnan(hy)) else f'{hy:.4f}'}")
+            values = []
+            for method in ("pure_llm", "neural_network", "hybrid"):
+                score = r["results"].get(method, {}).get("test_r2")
+                values.append(
+                    f"{method_labels[method]}="
+                    f"{'nan' if score is None or (isinstance(score, float) and np.isnan(score)) else f'{score:.4f}'}"
+                )
+            print(f"  {case_name[:42]:<42}  " + " | ".join(values))
 
     # By-difficulty breakdown
     print("\n── By difficulty ─────────────────────────────────────────────────────────")
@@ -2001,67 +2025,58 @@ def _generate_report(results: list):
         subset = [r for r in standard if r.get("difficulty") == diff]
         if not subset:
             continue
-        for method in ["neural_network", "hybrid"]:
+        for method in ("pure_llm", "neural_network", "hybrid"):
             s = _stats(_r2s(subset, method), max(len(subset), 1))
             print(f"  {diff:6s} | {method:14s}: median={s['median']:.4f}, "
                   f">0.99: {s['pct_099']:.1f}%  (n={len(subset)})")
 
-    # ── Timing and speedup ─────────────────────────────────────────────────
-    print("\n── Timing summary (per-case mean) ────────────────────────────────────────")
-
-    # Identify timed-out NN cases (Issue 2)
-    timed_out_cases = [
-        r["equation_id"] for r in results
-        if r["results"].get("neural_network", {}).get("timed_out", False)
-    ]
-    if timed_out_cases:
-        print(f"  ⚠️  NN wall-clock limit hit ({_NN_MAX_TIME_S}s) in "
-              f"{len(timed_out_cases)} case(s): {', '.join(timed_out_cases)}")
-
-    for method in ["neural_network", "hybrid"]:
-        times = [
-            r["results"].get(method, {}).get("time_s", 0.0)
+    # ── Three-arm timing and paired Hybrid-vs-PureLLM comparison ────────────
+    print("\n── Timing summary (per-case wall time) ──────────────────────────────────")
+    timing = {}
+    for method in ("pure_llm", "neural_network", "hybrid"):
+        values = [
+            r.get("results", {}).get(method, {}).get("time_s")
             for r in results
-            if r["results"].get(method, {}).get("time_s") is not None
         ]
-        times = [t for t in times if t and t > 0]
-        if times:
-            label = {"neural_network": "Neural Network",
-                     "hybrid":   "Hybrid        "}[method]
-            print(f"  {label}: mean={np.mean(times):.1f}s, "
-                  f"median={np.median(times):.1f}s  (n={len(times)})")
+        values = [float(v) for v in values if v is not None and np.isfinite(v) and v > 0]
+        if values:
+            timing[method] = values
+            print(
+                f"  {method_labels[method]:14s}: total={sum(values):.3f}s, "
+                f"mean={np.mean(values):.3f}s, median={np.median(values):.3f}s "
+                f"(n={len(values)})"
+            )
 
-    nn_times  = [r["results"].get("neural_network", {}).get("time_s", 0.0) or 0.0 for r in results]
-    hyb_times = [r["results"].get("hybrid",         {}).get("time_s", 0.0) or 0.0 for r in results]
-    nn_times  = [t for t in nn_times  if t > 0]
-    hyb_times = [t for t in hyb_times if t > 0]
-    if nn_times and hyb_times and len(nn_times) == len(hyb_times):
-        speedup_mean   = np.mean(nn_times) / np.mean(hyb_times)
-        speedup_median = np.median(nn_times) / np.median(hyb_times)
-        verdict = (f"Hybrid {speedup_mean:.2f}× faster than NN (mean)"
-                   if speedup_mean > 1 else f"Hybrid {1/speedup_mean:.2f}× slower than NN (mean)")
-        print(f"  Hybrid vs NN speedup: {verdict}")
-        print(f"  Hybrid vs NN speedup (median): {speedup_median:.2f}×")
-        print("  (Paper claims 73% reduction = 3.7×)")
-        reduction_mean   = (1 - np.mean(hyb_times) / np.mean(nn_times)) * 100
-        reduction_median = (1 - np.median(hyb_times) / np.median(nn_times)) * 100
-        print(f"  This run: mean-based {reduction_mean:.1f}% reduction, "
-              f"median-based {reduction_median:.1f}% reduction")
+    paired = []
+    for record in results:
+        pure_time = record.get("results", {}).get("pure_llm", {}).get("time_s")
+        hybrid_time = record.get("results", {}).get("hybrid", {}).get("time_s")
+        if (pure_time is not None and hybrid_time is not None
+                and np.isfinite(pure_time) and np.isfinite(hybrid_time)
+                and pure_time > 0 and hybrid_time > 0):
+            paired.append((float(pure_time), float(hybrid_time)))
+    if paired:
+        ratios = np.asarray([hybrid / pure for pure, hybrid in paired], dtype=float)
+        slower = int(np.sum(ratios > 1.0))
+        faster = int(np.sum(ratios < 1.0))
+        tied = int(np.sum(np.isclose(ratios, 1.0, rtol=1e-6, atol=1e-9)))
+        print(
+            f"  Hybrid / Pure LLM paired wall-time ratio: "
+            f"mean={np.mean(ratios):.3f}×, median={np.median(ratios):.3f}× "
+            f"(n={len(paired)}; hybrid slower={slower}, faster={faster}, tied={tied})"
+        )
 
-        # Issue 3: also report hybrid speedup excluding NN-fallback cases
-        # (these are LLM-routed Hybrid cases, compared with standalone NN time)
-        llm_only_nn   = [r["results"].get("neural_network", {}).get("time_s", 0.0) or 0.0
-                          for r in results
-                          if r["results"].get("hybrid", {}).get("decision", "") not in
-                          ("nn", "nn_fallback", "fail") and r["results"].get("neural_network")]
-        llm_only_hyb  = [r["results"].get("hybrid", {}).get("time_s", 0.0) or 0.0
-                          for r in results
-                          if r["results"].get("hybrid", {}).get("decision", "") not in
-                          ("nn", "nn_fallback", "fail") and r["results"].get("hybrid")]
-        if llm_only_nn and llm_only_hyb and len(llm_only_nn) == len(llm_only_hyb):
-            sp_llm = np.mean(llm_only_nn) / np.mean(llm_only_hyb)
-            print(f"  Hybrid vs NN speedup (LLM-routed cases only, n={len(llm_only_nn)}): "
-                  f"{sp_llm:.2f}× — this is the cleanest comparison for the paper")
+    # Provider token accounting is reported separately from wall-clock time.
+    token_rows = [r.get("results", {}).get("pure_llm", {}) for r in results]
+    token_rows = [x for x in token_rows if x.get("input_tokens") is not None
+                  or x.get("output_tokens") is not None]
+    if token_rows:
+        in_tokens = [int(x["input_tokens"]) for x in token_rows if x.get("input_tokens") is not None]
+        out_tokens = [int(x["output_tokens"]) for x in token_rows if x.get("output_tokens") is not None]
+        print(
+            f"  Pure LLM token usage: input={sum(in_tokens)} "
+            f"(n={len(in_tokens)}), output={sum(out_tokens)} (n={len(out_tokens)})"
+        )
 
     print("\n" + "=" * 80)
 
@@ -2120,6 +2135,63 @@ _FIX5_VERIFY_CASES = {
     "Capital efficiency",
     "Concentrated liquidity position width (v2)",
 }
+
+
+def _run_pure_llm_arm(description, domain, var_names, metadata, X_train, y_train, X_test, y_test):
+    """Run the independent PureLLM baseline on the exact benchmark split."""
+    from hypatiax.core.base_pure_llm.baseline_pure_llm_defi_discovery import (
+        PureLLMBaseline,
+    )
+
+    wall_start = time.perf_counter()
+    generation_start = time.perf_counter()
+    baseline = PureLLMBaseline(model=LLM_MODEL)
+    llm_result = baseline.generate_formula(
+        description, domain, var_names, metadata
+    )
+    generation_time_s = time.perf_counter() - generation_start
+
+    evaluation_start = time.perf_counter()
+    train_metrics = baseline.test_formula_accuracy(
+        llm_result, X_train, y_train, var_names, verbose=False
+    )
+    test_metrics = baseline.test_formula_accuracy(
+        llm_result, X_test, y_test, var_names, verbose=False
+    )
+    evaluation_time_s = time.perf_counter() - evaluation_start
+
+    def _finite_metric(value):
+        try:
+            value = float(value)
+        except (TypeError, ValueError, OverflowError):
+            return None
+        return value if np.isfinite(value) else None
+
+    train_r2 = _finite_metric(train_metrics.get("r2"))
+    test_r2 = _finite_metric(test_metrics.get("r2"))
+    usage = llm_result.get("usage") or {}
+    return {
+        "train_r2": train_r2,
+        "test_r2": test_r2,
+        "success": bool(train_metrics.get("success") and test_metrics.get("success")
+                        and train_r2 is not None and test_r2 is not None),
+        "time_s": round(time.perf_counter() - wall_start, 6),
+        "generation_time_s": round(generation_time_s, 6),
+        "evaluation_time_s": round(evaluation_time_s, 6),
+        "llm_called": bool(llm_result.get("llm_called", False)),
+        "llm_attempted": bool(llm_result.get("llm_attempted", False)),
+        "formula_present": bool(llm_result.get("formula_present", False)),
+        "model": llm_result.get("model", LLM_MODEL),
+        "model_source": llm_result.get("model_source"),
+        "prompt_sha256": llm_result.get("prompt_sha256"),
+        "temperature_requested": llm_result.get("temperature_requested"),
+        "temperature_sent": llm_result.get("temperature_sent", False),
+        "input_tokens": usage.get("in"),
+        "output_tokens": usage.get("out"),
+        "stop_reason": llm_result.get("stop_reason"),
+        "formula": llm_result.get("python_code"),
+        "error": llm_result.get("error") or test_metrics.get("error"),
+    }
 
 
 def _hybrid_metric_provenance_record(hy_m):
@@ -2427,6 +2499,25 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     else float("nan")
                 )
 
+            # ── Standalone Pure LLM baseline (same data and split) ───────────
+            try:
+                case_results["pure_llm"] = _run_pure_llm_arm(
+                    desc, tc["domain"], var_names, metadata,
+                    X_tr, y_tr, X_te, y_te,
+                )
+            except Exception as e:
+                case_results["pure_llm"] = {
+                    "train_r2": None, "test_r2": None, "success": False,
+                    "time_s": 0.0, "generation_time_s": 0.0,
+                    "evaluation_time_s": 0.0, "llm_called": False,
+                    "llm_attempted": False, "formula_present": False,
+                    "model": LLM_MODEL, "model_source": None,
+                    "prompt_sha256": None, "temperature_requested": None,
+                    "temperature_sent": False, "input_tokens": None,
+                    "output_tokens": None, "stop_reason": None,
+                    "formula": None, "error": str(e),
+                }
+
             # ── Print per-case summary ────────────────────────────────────────
             def _fmt(v):
                 return "   nan" if (v is None or (isinstance(v, float) and np.isnan(v))) else f"{v:6.4f}"
@@ -2435,6 +2526,12 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 dec = f" [{res.get('decision', '')}]" if method == "hybrid" else ""
                 print(f"  {method:15s}: train={_fmt(res.get('train_r2'))}, "
                       f"test={_fmt(res.get('test_r2'))}{dec}")
+                if method == "pure_llm":
+                    print(
+                        f"    Pure LLM generation={res.get('generation_time_s', 0.0):.3f}s, "
+                        f"evaluation={res.get('evaluation_time_s', 0.0):.3f}s, "
+                        f"tokens={res.get('input_tokens')}/{res.get('output_tokens')}"
+                    )
                 if method == "neural_network":
                     if res.get("failure_reason"):
                         print(f"    NN failure: {res['failure_reason']}")
