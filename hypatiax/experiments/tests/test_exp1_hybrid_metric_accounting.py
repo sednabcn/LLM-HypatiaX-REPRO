@@ -494,8 +494,18 @@ def test_exp1_hybrid_abstention_bypasses_ensemble_and_records_zero_nn_weight(mon
         "fixture", "defi", Xtr, ytr, Xte, yte, ["x"], {},
         nn_result=nn_result,
     )
-    assert result["train_r2"] == 0.25
-    assert result["test_r2"] == 0.15
+    # Cached component metrics are intentionally ignored: the selected
+    # replacement predictions must be scored against the actual split targets.
+    expected_replacement_train_r2 = bench._compute_metrics(
+        ytr, nn_result["y_pred_train"]
+    )["r2"]
+    expected_replacement_test_r2 = bench._compute_metrics(
+        yte, nn_result["y_pred_test"]
+    )["r2"]
+    assert result["train_r2"] == expected_replacement_train_r2
+    assert result["test_r2"] == expected_replacement_test_r2
+    assert result["train_r2"] != nn_result["train_r2"]
+    assert result["test_r2"] != nn_result["test_r2"]
     assert result["train_r2_source"] == "nn_abstention_log_ridge"
     assert result["route_execution_status"] == "nn_abstention_fallback_executed"
     assert result["decision"] == "nn_abstention_fallback"
@@ -709,7 +719,12 @@ def test_exp1_tiny_scale_varying_test_target_uses_canonical_r2_policy(monkeypatc
         "tiny-scale fixture", "defi", Xtr, ytr, Xte, yte, ["x"], {}
     )
 
-    assert np.isclose(result["test_r2"], 0.5)
+    # With predictions mean + centered/sqrt(2), residuals are
+    # centered*(1 - 1/sqrt(2)); the mathematically correct R² is ~0.9142,
+    # not 0.5. Compare to the canonical scorer to guard tiny-scale handling.
+    expected_test_r2, expected_status = bench._r2_checked(yte, y_pred_test)
+    assert np.isclose(result["test_r2"], expected_test_r2)
+    assert expected_status == "ok"
     assert result["test_r2_status"] == "defined"
     assert result["success"] is True
 
