@@ -4074,8 +4074,8 @@ jobs:
         if: success()
         run: |
           set -euo pipefail
-          python3 scripts/ci/aggregate_exp1_provenance.py \\
-            --artifacts-dir provenance-shards \\
+          python3 scripts/ci/aggregate_exp1_provenance.py \
+            --artifacts-dir provenance-shards \
             --output-dir exp1-provenance-scientific
 
       - name: Upload scientific aggregate outputs
