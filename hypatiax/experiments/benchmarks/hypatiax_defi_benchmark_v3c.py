@@ -1115,7 +1115,7 @@ def formula({var_list}):
                 "temperature_requested": call_info.get("temperature_requested"),
                 "temperature_sent": call_info.get("temperature_sent", False)}
     except Exception as e:
-        if api_start is not None:
+        if api_start is not None and api_request_time_s is None:
             api_request_time_s = time.perf_counter() - api_start
         if "last_call_info" in locals():
             call_info = last_call_info()
