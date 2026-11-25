@@ -1,0 +1,46 @@
+{
+  "case": "Portfolio VaR for two correlated assets",
+  "case_identity": {
+    "domain": "risk_var",
+    "name": "Portfolio VaR for two correlated assets",
+    "protocol_index": 18,
+    "ground_truth": "sqrt(var1**2 + var2**2 + 2*rho*var1*var2)",
+    "variables": [
+      "var_asset1",
+      "var_asset2",
+      "correlation"
+    ]
+  },
+  "benchmark_version": "v3c3",
+  "split_protocol": "first_feature_percentile_40_60",
+  "split_is_transductive": false,
+  "split_details": {
+    "split_protocol": "first_feature_percentile_40_60",
+    "split_method": "40th percentile threshold on first feature",
+    "feature_scaling": "none",
+    "n_samples": 200,
+    "n_train": 80,
+    "n_test": 120,
+    "split_is_transductive": false
+  },
+  "seeds_run": [
+    42
+  ],
+  "results": [
+    {
+      "seed": 42,
+      "train_r2": 1.0,
+      "far_r2": 1.0,
+      "decision": "ensemble",
+      "success": true,
+      "llm_train_r2": 1.0,
+      "time_s": 1.629467487335205,
+      "llm_code": "def formula(var_asset1, var_asset2, correlation):\n    return np.sqrt(var_asset1**2 + var_asset2**2 + 2 * correlation * var_asset1 * var_asset2)"
+    }
+  ],
+  "summary": {
+    "n_seeds": 1,
+    "n_success": 1,
+    "success_rate": 1.0
+  }
+}
