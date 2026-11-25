@@ -839,6 +839,14 @@ def test_exp1_case_serialization_preserves_formula_and_selected_metrics():
         "selected_predictor_train_r2": 0.72,
         "selected_predictor_test_r2": 0.64,
         "selected_predictor_source": "ensemble_training_residual_blend",
+        "trust_gate_diagnostics": {
+            "schema_version": 1, "passed": False,
+            "rejection_reasons": ["training_r2_below_0_5"],
+        },
+        "nn_prediction_validation": {
+            "schema_version": 1, "status": "valid_predictions_metrics_recomputed",
+            "reported_success": False, "metrics_recomputed": True,
+        },
     }
 
     case_record = bench._hybrid_metric_provenance_record(hybrid_metrics)
@@ -860,4 +868,104 @@ def test_exp1_case_serialization_preserves_formula_and_selected_metrics():
         "selected_predictor_train_r2": None,
         "selected_predictor_test_r2": None,
         "selected_predictor_source": None,
+        "trust_gate_diagnostics": None,
+        "nn_prediction_validation": None,
     }
+
+
+def test_exp1_trust_gate_persists_specific_rejection_reasons(monkeypatch):
+    _common(monkeypatch, "nn")
+    Xtr, ytr, Xte, yte = _inputs()
+    monkeypatch.setattr(
+        bench, "_generate_llm_formula",
+        lambda *a, **k: {"python_code": "def formula(x):\\n    return x", "llm_called": True},
+    )
+    monkeypatch.setattr(bench, "_eval_formula_r2", lambda *a, **k: (0.2, True))
+    result = bench._hybrid_predict_and_eval(
+        "fixture", "defi", Xtr, ytr, Xte, yte, ["x"], {},
+        nn_result={
+            "success": True,
+            "y_pred_train": np.full(len(ytr), 0.4),
+            "y_pred_test": np.full(len(yte), 0.4),
+        },
+    )
+    audit = result["trust_gate_diagnostics"]
+    assert audit["schema_version"] == 1
+    assert audit["passed"] is False
+    assert audit["formula_present"] is True
+    assert audit["training_evaluation_ok"] is True
+    assert audit["training_r2"] == 0.2
+    assert audit["rejection_reasons"] == ["training_r2_below_0_5"]
+
+
+def test_exp1_trust_gate_records_missing_formula_and_pathology(monkeypatch):
+    _common(monkeypatch, "nn")
+    Xtr, ytr, Xte, yte = _inputs()
+    monkeypatch.setattr(
+        bench, "_generate_llm_formula",
+        lambda *a, **k: {"python_code": None, "llm_called": False},
+    )
+    result = bench._hybrid_predict_and_eval(
+        "fixture", "defi", Xtr, ytr, Xte, yte, ["x"], {},
+        nn_result={
+            "success": True,
+            "y_pred_train": np.full(len(ytr), 0.4),
+            "y_pred_test": np.full(len(yte), 0.4),
+        },
+    )
+    assert result["trust_gate_diagnostics"]["rejection_reasons"] == [
+        "formula_missing", "training_r2_nonfinite"
+    ]
+
+
+def test_exp1_valid_nn_predictions_are_recomputed_even_when_success_flag_false(monkeypatch):
+    _common(monkeypatch, "nn")
+    Xtr, ytr, Xte, yte = _inputs()
+    pred_train = np.full(len(ytr), 0.4)
+    pred_test = np.full(len(yte), 0.4)
+    candidate = {
+        "success": False,
+        "failure_reason": "upstream_metric_flag_false",
+        "y_pred_train": pred_train.copy(),
+        "y_pred_test": pred_test.copy(),
+    }
+    result = bench._hybrid_predict_and_eval(
+        "fixture", "defi", Xtr, ytr, Xte, yte, ["x"], {},
+        nn_result=candidate,
+    )
+    validation = result["nn_prediction_validation"]
+    assert validation["status"] == "valid_predictions_metrics_recomputed"
+    assert validation["reported_success"] is False
+    assert validation["metrics_recomputed"] is True
+    assert validation["recomputed_train_r2"] == bench._compute_metrics(ytr, pred_train)["r2"]
+    assert validation["recomputed_test_r2"] == bench._compute_metrics(yte, pred_test)["r2"]
+    # A valid prediction payload is audited independently of the upstream
+    # success flag; route selection may still identify an explicit abstention.
+    assert result["route_execution_status"] in {
+        "nn_executed", "nn_abstention_fallback_executed"
+    }
+    assert result["success"] is True
+    assert np.isfinite(result["train_r2"])
+    assert np.isfinite(result["test_r2"])
+
+
+def test_exp1_trust_gate_separates_formula_eval_failure_from_pathology(monkeypatch):
+    _common(monkeypatch, "nn")
+    Xtr, ytr, Xte, yte = _inputs()
+    monkeypatch.setattr(
+        bench, "_generate_llm_formula",
+        lambda *a, **k: {"python_code": "def formula(x):\\n    return nan", "llm_called": True},
+    )
+    monkeypatch.setattr(bench, "_eval_formula_r2", lambda *a, **k: (0.8, False))
+    result = bench._hybrid_predict_and_eval(
+        "fixture", "defi", Xtr, ytr, Xte, yte, ["x"], {},
+        nn_result={
+            "success": True,
+            "y_pred_train": np.full(len(ytr), 0.4),
+            "y_pred_test": np.full(len(yte), 0.4),
+        },
+    )
+    assert result["trust_gate_diagnostics"]["rejection_reasons"] == [
+        "formula_training_evaluation_failed", "pathological_formula:bare_nan_token"
+    ]
+    assert result["trust_gate_diagnostics"]["pathology_reasons"] == ["bare_nan_token"]

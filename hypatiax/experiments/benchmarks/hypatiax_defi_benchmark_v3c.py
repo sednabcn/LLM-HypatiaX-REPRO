@@ -1120,23 +1120,26 @@ def formula({var_list}):
 # SECTION 5 — Hybrid routing (Fix 5b: trustworthiness guard)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _formula_has_pathological_behavior(code: str) -> bool:
-    """
-    FIX 10 (v3c2-fix2): Detect formulas with patterns known to cause degenerate output.
-    Returns True if any bad pattern is found → formula should not be trusted.
-
-    BUGFIX: bare "nan" substring was matching identifiers like "nominal", "channel",
-    any variable name containing "nan" — causing valid LLM formulas to be wrongly
-    rejected → train_r2 = NaN.  Fixed with whole-word matching via regex.
-    "np.inf", "1/0", "**1000" are unambiguous — substring match is fine.
-    """
-    # Whole-word match for bare "nan" — avoids false positives in identifiers
+def _formula_pathology_reasons(code: str) -> list[str]:
+    """Return stable reason codes for formula patterns rejected by the trust gate."""
+    reasons = []
+    # Whole-word matching avoids rejecting identifiers such as "nominal".
     if re.search(r'\bnan\b', code):
-        return True
-    # These patterns are unambiguous — substring match is fine
-    unambiguous = ["1/0", "np.inf", "**1000"]
+        reasons.append("bare_nan_token")
     low = code.lower()
-    return any(p.lower() in low for p in unambiguous)
+    for pattern, reason in (
+        ("1/0", "literal_division_by_zero"),
+        ("np.inf", "numpy_infinity_literal"),
+        ("**1000", "extreme_power_literal"),
+    ):
+        if pattern in low:
+            reasons.append(reason)
+    return reasons
+
+
+def _formula_has_pathological_behavior(code: str) -> bool:
+    """Preserve the boolean API while exposing auditable rejection reasons."""
+    return bool(_formula_pathology_reasons(code))
 
 
 def _hybrid_predict_and_eval(
@@ -1168,11 +1171,40 @@ def _hybrid_predict_and_eval(
         _eval_formula_r2(llm_code, X_train, y_train, constants=constants)
         if has_formula else (float("nan"), False)
     )
-    llm_trustworthy = (
-        has_formula and llm_train_ok and np.isfinite(llm_train_r2)
-        and llm_train_r2 >= 0.5
-        and not _formula_has_pathological_behavior(llm_code)
+    try:
+        llm_train_r2_numeric = float(llm_train_r2)
+    except (TypeError, ValueError, OverflowError):
+        llm_train_r2_numeric = float("nan")
+    llm_train_r2_finite = bool(np.isfinite(llm_train_r2_numeric))
+    formula_pathology_reasons = _formula_pathology_reasons(llm_code) if has_formula else []
+    trust_gate_rejection_reasons = []
+    if not has_formula:
+        trust_gate_rejection_reasons.append("formula_missing")
+    if has_formula and not llm_train_ok:
+        trust_gate_rejection_reasons.append("formula_training_evaluation_failed")
+    if not llm_train_r2_finite:
+        trust_gate_rejection_reasons.append("training_r2_nonfinite")
+    elif llm_train_r2_numeric < 0.5:
+        trust_gate_rejection_reasons.append("training_r2_below_0_5")
+    trust_gate_rejection_reasons.extend(
+        "pathological_formula:" + reason for reason in formula_pathology_reasons
     )
+    llm_trustworthy = not trust_gate_rejection_reasons
+    trust_gate_diagnostics = {
+        "schema_version": 1,
+        "passed": bool(llm_trustworthy),
+        "formula_present": bool(has_formula),
+        "training_evaluation_ok": bool(llm_train_ok),
+        "training_r2": (
+            llm_train_r2_numeric if llm_train_r2_finite else None
+        ),
+        "training_r2_finite": llm_train_r2_finite,
+        "minimum_training_r2": 0.5,
+        "pathology_reasons": formula_pathology_reasons,
+        "rejection_reasons": trust_gate_rejection_reasons,
+    }
+    if llm_attempt_state is not None:
+        llm_attempt_state["trust_gate_diagnostics"] = trust_gate_diagnostics
     structural_tokens = structural_risk_tokens(llm_code)
     structural_risk_flag = bool(structural_tokens)
     # This NN-trained edge probe is a separate NN robustness diagnostic.
@@ -1224,9 +1256,24 @@ def _hybrid_predict_and_eval(
             return float("nan")
         return value if np.isfinite(value) else float("nan")
 
+    nn_prediction_validation = {
+        "schema_version": 1, "status": "not_checked",
+        "reported_success": None, "metrics_recomputed": False,
+    }
+
     def _valid_nn_result(candidate):
-        if not isinstance(candidate, dict) or not candidate.get("success", False):
+        nonlocal nn_prediction_validation
+        if not isinstance(candidate, dict):
+            nn_prediction_validation = {
+                "schema_version": 1, "status": "invalid_candidate_record",
+                "reported_success": None, "metrics_recomputed": False,
+            }
             return False
+        nn_prediction_validation = {
+            "schema_version": 1, "status": "checking_predictions",
+            "reported_success": bool(candidate.get("success", False)),
+            "metrics_recomputed": False,
+        }
         try:
             pred_train = np.asarray(candidate.get("y_pred_train"), dtype=float).reshape(-1)
             pred_test = np.asarray(candidate.get("y_pred_test"), dtype=float).reshape(-1)
@@ -1249,9 +1296,11 @@ def _hybrid_predict_and_eval(
             if (
                 pred_train.shape != np.asarray(y_train).reshape(-1).shape
                 or pred_test.shape != np.asarray(y_test).reshape(-1).shape
-                or not np.isfinite(pred_train).all()
-                or not np.isfinite(pred_test).all()
             ):
+                nn_prediction_validation["status"] = "prediction_shape_mismatch"
+                return False
+            if not np.isfinite(pred_train).all() or not np.isfinite(pred_test).all():
+                nn_prediction_validation["status"] = "nonfinite_predictions"
                 return False
             # Never trust cached/stale component metrics: score the exact
             # predictions that this route would select on the supplied targets.
@@ -1263,8 +1312,16 @@ def _hybrid_predict_and_eval(
             ).get("r2"))
             candidate["train_r2"] = train_r2
             candidate["test_r2"] = test_r2
-            return bool(np.isfinite(train_r2) and np.isfinite(test_r2))
-        except (TypeError, ValueError):
+            valid_metrics = bool(np.isfinite(train_r2) and np.isfinite(test_r2))
+            nn_prediction_validation.update({
+                "status": "valid_predictions_metrics_recomputed" if valid_metrics else "undefined_recomputed_metrics",
+                "metrics_recomputed": True,
+                "recomputed_train_r2": train_r2 if np.isfinite(train_r2) else None,
+                "recomputed_test_r2": test_r2 if np.isfinite(test_r2) else None,
+            })
+            return valid_metrics
+        except (TypeError, ValueError, OverflowError):
+            nn_prediction_validation["status"] = "prediction_conversion_failed"
             return False
 
     def _raw_nn():
@@ -1388,7 +1445,10 @@ def _hybrid_predict_and_eval(
                 else "ensemble_metrics_undefined"
             )
     else:
-        if llm_trustworthy:
+        # An explicit NN route must evaluate the supplied NN candidate (or
+        # train the ordinary NN fallback); augmenting it with the trusted
+        # formula would silently replace the candidate and its audit metadata.
+        if llm_trustworthy and decision != "nn":
             try:
                 llm_train_preds = _execute_formula(llm_code, X_train, constants=constants)
                 llm_test_preds = _execute_formula(llm_code, X_test, constants=constants)
@@ -1490,6 +1550,8 @@ def _hybrid_predict_and_eval(
         "route_execution_status": route_execution_status,
         "structural_risk_flag": structural_risk_flag,
         "structural_risk_tokens": structural_tokens,
+        "trust_gate_diagnostics": trust_gate_diagnostics,
+        "nn_prediction_validation": nn_prediction_validation,
         # Keep the legacy name as an alias while making its NN provenance explicit.
         "degradation_probe": nn_degradation_probe,
         "nn_degradation_probe": nn_degradation_probe,
@@ -2027,6 +2089,8 @@ def _hybrid_metric_provenance_record(hy_m):
         "selected_predictor_train_r2": hy_m.get("selected_predictor_train_r2"),
         "selected_predictor_test_r2": hy_m.get("selected_predictor_test_r2"),
         "selected_predictor_source": hy_m.get("selected_predictor_source"),
+        "trust_gate_diagnostics": hy_m.get("trust_gate_diagnostics"),
+        "nn_prediction_validation": hy_m.get("nn_prediction_validation"),
     }
 
 
@@ -2249,6 +2313,8 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "test_r2_status": hy_m.get("test_r2_status"),
                     "structural_risk_flag": hy_m.get("structural_risk_flag"),
                     "structural_risk_tokens": hy_m.get("structural_risk_tokens"),
+                    "trust_gate_diagnostics": hy_m.get("trust_gate_diagnostics"),
+                    "nn_prediction_validation": hy_m.get("nn_prediction_validation"),
                     "degradation_probe": hy_m.get("degradation_probe"),
                     "degradation_tau": hy_m.get("degradation_tau"),
                     "ood_diagnostic": hy_m.get("ood_diagnostic"),
@@ -2285,6 +2351,17 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "llm_temperature_requested": hybrid_llm_state.get("llm_temperature_requested"),
                     "llm_temperature_sent": hybrid_llm_state.get("llm_temperature_sent", False),
                     "formula": hybrid_llm_state.get("llm_code"),
+                    "trust_gate_diagnostics": hybrid_llm_state.get("trust_gate_diagnostics", {
+                        "schema_version": 1, "passed": False,
+                        "formula_present": None, "training_evaluation_ok": None,
+                        "training_r2": None, "training_r2_finite": None,
+                        "minimum_training_r2": 0.5, "pathology_reasons": [],
+                        "rejection_reasons": ["hybrid_evaluation_exception"],
+                    }),
+                    "nn_prediction_validation": {
+                        "schema_version": 1, "status": "not_available_after_exception",
+                        "reported_success": None, "metrics_recomputed": False,
+                    },
                     "success": False, "time_s": 0.0, "error": str(e), "reason": "fit_or_metric_failed",
                     "blend_weights": None, "nn_abstained": None,
                     "nn_selected_model": None, "nn_edge_r2": None,
