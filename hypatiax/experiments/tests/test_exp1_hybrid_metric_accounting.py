@@ -449,7 +449,7 @@ def test_exp1_signed_ridge_accepts_signed_features_and_uses_training_only_select
     # Candidate and MLP scalers fit only the fit subset (38 rows); the final
     # selected model scaler may refit on all 48 outer-training rows. No scaler
     # is ever fitted on the 12 held-out test rows.
-    assert fit_row_counts == [38, 38, 48]
+    assert fit_row_counts == [38, 38, 38, 48]
     assert 12 not in fit_row_counts
 
     # Changing held-out labels cannot change candidate eligibility, edge score,
