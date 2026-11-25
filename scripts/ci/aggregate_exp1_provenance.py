@@ -256,10 +256,12 @@ def aggregate(root: Path):
         "interpretation": (
             "The 370 rows are 74 repeated equation families measured under five seeds; "
             "seeds are repeated runs, not 370 independent equation families. "
-            "Cross-seed summaries are calculated within equation_id."
+            "Cross-seed summaries are calculated within equation_id. Clipped R² uses [-10, 1] "
+            "and is reported separately from raw R²."
         ),
         "metric": METRIC,
         "case_status_counts_across_seed_records": dict(sorted(status_counts.items())),
+        "metric_status_counts_across_seed_records": dict(sorted(Counter(r["metric_status"] for r in case_rows).items())),
         "per_seed": seed_summaries,
         "per_equation": by_equation,
         "paired_delta_across_seed_records_descriptive_only": {
