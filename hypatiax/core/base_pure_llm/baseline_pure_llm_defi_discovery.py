@@ -185,16 +185,7 @@ class PureLLMBaseline:
         api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
             raise ValueError("ANTHROPIC_API_KEY environment variable not set")
-        timeout_s = float(os.environ.get("LLM_METHOD_TIMEOUT", "120"))
-        if not np.isfinite(timeout_s) or timeout_s <= 0:
-            raise ValueError("LLM_METHOD_TIMEOUT must be a finite positive number")
-        # Match the hybrid benchmark's single-attempt provider policy and
-        # timeout. SDK retries would otherwise inflate standalone-LLM latency
-        # and token cost relative to the hybrid arm.
-        self.client = Anthropic(
-            api_key=api_key, timeout=timeout_s, max_retries=0
-        )
-        self.timeout_s = timeout_s
+        self.client = Anthropic(api_key=api_key)
         self.model, self.model_source = resolve_model(model)
         self.results = []
         # No per-instance cache: each benchmark case owns a fresh baseline.
@@ -385,12 +376,10 @@ class PureLLMBaseline:
             # never inherit provenance from a previous thread-local API call.
             "temperature_sent": False,
             "temperature_requested": __import__("hypatiax.core.llm_call", fromlist=["x"]).configured_temperature(),
-            "api_request_time_s": None,
             "model_source": self.model_source,
         }
         _llm_attempted = False
         _response_received = False
-        _api_start = None
 
         try:
             # The shared wrapper always requests Core-15 temperature=0.25
@@ -406,14 +395,12 @@ class PureLLMBaseline:
                 f"client_type={type(self.client).__module__}.{type(self.client).__name__}"
             )
             _llm_attempted = True
-            _api_start = time.perf_counter()
             response = _create_message(
                 self.client,
                 model=self.model,
                 max_tokens=4000,
                 messages=[{"role": "user", "content": prompt}],
             )
-            _prov["api_request_time_s"] = time.perf_counter() - _api_start
             _temperature_info = __import__("hypatiax.core.llm_call", fromlist=["x"]).last_call_info()
             _prov["temperature_sent"] = _temperature_info.get("temperature_sent")
             _prov["temperature_requested"] = _temperature_info.get("temperature_requested")
@@ -468,8 +455,6 @@ class PureLLMBaseline:
                 "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
-            if _api_start is not None and _prov["api_request_time_s"] is None:
-                _prov["api_request_time_s"] = time.perf_counter() - _api_start
             # Only read thread-local wrapper metadata after this invocation
             # actually entered the API wrapper. Otherwise it may describe a
             # previous call on the same thread.
