@@ -1534,7 +1534,14 @@ def run_rf01(all_results: dict) -> None:
     p_dom_doms   = [dom for dom, d in domain_data.items() if d["p_wins"] > d["h_wins"]]
 
     # Paper sentence
-    if IS_SIG:
+    if P_PRIM is None:
+        sentence = (
+            "The paired Wilcoxon primary test was unavailable for this comparison; "
+            "no inferential significance conclusion is reported. Mann-Whitney is "
+            "retained only as an unpaired sensitivity analysis."
+        )
+        verdict = "⚠️  PRIMARY TEST UNAVAILABLE"
+    elif IS_SIG:
         sentence = (
             f"HypatiaX achieves significantly higher far-extrapolation $R^2$ than "
             f"PySR-only across the Core-15 benchmark "
@@ -1594,6 +1601,8 @@ def run_rf01(all_results: dict) -> None:
             "rank_biserial_method": "paired_signed_rank",
             "primary_p_greater": P_PRIM,
             "significant_p05": IS_SIG,
+            "significance_status": ("unavailable" if P_PRIM is None else
+                                   "significant" if IS_SIG else "not_significant"),
             "paper_sentence":  sentence,
             "equations_included": [r[0] for r in pairs],
             "H_far_r2_vector": [float(v) for v in H_far],
