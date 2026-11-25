@@ -2519,7 +2519,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "formula":         hy_m.get("llm_code"),
                     **_hybrid_metric_provenance_record(hy_m),
                     "success":         bool(hy_m.get("success", not (_nan(_train_r2) or _nan(_test_r2)))),
-                    "time_s":          round(hyb_time, 3),
+                    "time_s":          round(hyb_time, 6),
                     "nn_rerun_time_s": hy_m.get("nn_rerun_time_s", 0.0),
                 }
             except Exception as e:
