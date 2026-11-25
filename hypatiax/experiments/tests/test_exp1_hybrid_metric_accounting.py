@@ -490,6 +490,10 @@ def test_exp1_hybrid_abstention_bypasses_ensemble_and_records_zero_nn_weight(mon
         bench, "_ensemble_llm_nn",
         lambda *a, **k: (_ for _ in ()).throw(AssertionError("abstained predictor must not be blended")),
     )
+    # Preserve the deliberately stale cache values before the route
+    # mutates the supplied component result with recomputed prediction scores.
+    cached_train_r2 = nn_result["train_r2"]
+    cached_test_r2 = nn_result["test_r2"]
     result = bench._hybrid_predict_and_eval(
         "fixture", "defi", Xtr, ytr, Xte, yte, ["x"], {},
         nn_result=nn_result,
@@ -504,8 +508,8 @@ def test_exp1_hybrid_abstention_bypasses_ensemble_and_records_zero_nn_weight(mon
     )["r2"]
     assert result["train_r2"] == expected_replacement_train_r2
     assert result["test_r2"] == expected_replacement_test_r2
-    assert result["train_r2"] != nn_result["train_r2"]
-    assert result["test_r2"] != nn_result["test_r2"]
+    assert result["train_r2"] != cached_train_r2
+    assert result["test_r2"] != cached_test_r2
     assert result["train_r2_source"] == "nn_abstention_log_ridge"
     assert result["route_execution_status"] == "nn_abstention_fallback_executed"
     assert result["decision"] == "nn_abstention_fallback"
