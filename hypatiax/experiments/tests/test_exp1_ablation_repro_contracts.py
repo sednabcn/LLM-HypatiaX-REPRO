@@ -47,10 +47,10 @@ def test_portfolio_ood_rho_remains_a_valid_correlation():
         "fn": lambda s1, s2, rho: np.sqrt(s1**2 + s2**2 + 2 * rho * s1 * s2),
     }
     for regime in ("near", "far"):
-        X, y = generator(eq, regime=regime, N=128, seed=777)
+        X, y = generator(eq, regime=regime, N=128, seed=777, domain_validated=True)
         assert np.all(np.abs(X[:, 2]) <= 1.0)
         assert np.all(np.isfinite(y))
-    assert np.all((generator(eq, "far", N=128, seed=777)[0][:, :2]) > 0.2)
+    assert np.all((generator(eq, "far", N=128, seed=777, domain_validated=True)[0][:, :2]) > 0.2)
 
 
 def test_pysr_evaluation_failure_is_not_marked_successful():
