@@ -20,7 +20,7 @@ def _record(case_id):
         "results": {
             "pure_llm": {
                 "time_s": 0.0, "generation_time_s": 0.0,
-                "evaluation_time_s": 0.0, "llm_called": False,
+                "evaluation_time_s": 0.0, "api_request_time_s": None, "llm_called": False,
                 "model": "test", "input_tokens": None, "output_tokens": None,
             },
             "neural_network": {**diagnostics, "success": False},
