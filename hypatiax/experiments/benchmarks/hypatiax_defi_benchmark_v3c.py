@@ -2275,7 +2275,9 @@ def _run_pure_llm_arm(description, domain, var_names, metadata, X_train, y_train
             value = float(value)
         except (TypeError, ValueError, OverflowError):
             return None
-        return value if np.isfinite(value) else None
+        # Keep this helper self-contained: the regression test extracts
+        # it with AST and supplies only the stdlib math alias.
+        return value if _math.isfinite(value) else None
 
     train_r2 = _finite_metric(train_metrics.get("r2"))
     test_r2 = _finite_metric(test_metrics.get("r2"))
