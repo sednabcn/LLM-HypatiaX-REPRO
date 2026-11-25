@@ -1780,7 +1780,7 @@ def run_llm_contribution(all_results: dict) -> None:
         t = {"median_a": float(np.median(a)), "median_b": float(np.median(b)),
              "wins": w, "ties": n - w - l, "losses": l,
              "U_greater": float(U), "p_greater": float(pg), "p_two_sided": float(p2),
-             "rank_biserial_r": rbc, "n_tied": int(tied.sum()), "tie_tol": TIE}
+             "rank_biserial_r": rbc, "rank_biserial_method": "paired_signed_rank", "n_tied": int(tied.sum()), "tie_tol": TIE}
         if np.all(d_adj == 0):
             t["wilcoxon_note"] = "all paired differences within tolerance (all ties)"
         else:
