@@ -4070,6 +4070,23 @@ jobs:
               summary.write("- Seeds: 42, 99, 123, 777, 2024\n- Shards: 5/5\n- Cases: 74 per seed (370 total)\n- Result: **PASS**\n")
           PYEOF
 
+      - name: Build equation-keyed scientific aggregate
+        if: success()
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/aggregate_exp1_provenance.py \
+            --artifacts-dir provenance-shards \
+            --output-dir exp1-provenance-scientific
+
+      - name: Upload scientific aggregate outputs
+        if: success()
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: exp1-provenance-scientific-run${{ github.run_id }}
+          path: exp1-provenance-scientific/
+          if-no-files-found: error
+          retention-days: 90
+
       - name: Upload aggregate provenance manifest
         if: always()
         uses: actions/upload-artifact@v4.3.6
