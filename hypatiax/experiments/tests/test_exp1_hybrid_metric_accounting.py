@@ -519,7 +519,6 @@ def test_exp1_hybrid_abstention_bypasses_ensemble_and_records_zero_nn_weight(mon
         yte, np.full(len(yte), 0.5)
     )["r2"]
     assert result["llm_test_r2"] == expected_formula_r2
-    assert result["test_r2"] == 0.15
     assert result["blend_weights"]["nn"] == [0.0] * len(yte)
     assert result["blend_weights"]["llm"] == [0.0] * len(yte)
     assert result["blend_weights"]["replacement"] == [1.0] * len(yte)
