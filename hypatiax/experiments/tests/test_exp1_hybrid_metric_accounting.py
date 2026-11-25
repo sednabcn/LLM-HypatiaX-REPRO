@@ -969,3 +969,43 @@ def test_exp1_trust_gate_separates_formula_eval_failure_from_pathology(monkeypat
         "formula_training_evaluation_failed", "pathological_formula:bare_nan_token"
     ]
     assert result["trust_gate_diagnostics"]["pathology_reasons"] == ["bare_nan_token"]
+
+
+def test_exp1_defi_protocol_matching_selects_canonical_base_cases():
+    descriptions = [
+        "Constant product formula: reserve Y given reserve X and invariant k",
+        "Constant product formula (multivariate) for three-token pool reserve z given k and x and y",
+        "Spot price from AMM ratio (token A / token B)",
+        "Spot price from AMM reserve adjusted for pending trade size (price impact)",
+        "Funding rate cost for long position over funding periods",
+        "Funding rate cost (extended) from mark-index premium over funding periods",
+        "Concentrated liquidity position width from upper and lower price bounds",
+        "Concentrated liquidity position width (v2) using square-root price bounds",
+    ]
+    cases = [(description, index, None, None, {}) for index, description in enumerate(descriptions)]
+
+    expected = {
+        "Constant product formula": descriptions[0],
+        "Spot price from AMM": descriptions[2],
+        "Funding rate cost": descriptions[4],
+        "Concentrated liquidity position width": descriptions[6],
+    }
+    for case_name, description in expected.items():
+        assert bench._match_defi_protocol_case(case_name, cases)[0] == description
+
+
+def test_exp1_defi_protocol_matching_keeps_unique_fallback_and_rejects_ambiguity():
+    unique = [("Reserve ratio from token balances", None, None, None, {})]
+    assert bench._match_defi_protocol_case("Reserve ratio", unique) is unique[0]
+
+    ambiguous = [
+        ("Example equation base", None, None, None, {}),
+        ("Example equation base (extended)", None, None, None, {}),
+    ]
+    try:
+        bench._match_defi_protocol_case("Example equation base", ambiguous)
+    except ValueError as exc:
+        assert "found 2" in str(exc)
+        assert "extended" in str(exc)
+    else:
+        raise AssertionError("ambiguous protocol descriptions must fail explicitly")
