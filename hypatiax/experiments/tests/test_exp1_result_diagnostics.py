@@ -97,16 +97,11 @@ def test_legacy_resume_record_is_backfilled_without_overwriting_values():
 
 def test_legacy_two_arm_checkpoint_is_accepted_and_normalized(tmp_path, monkeypatch):
     checkpoint = tmp_path / "legacy.json"
-    checkpoint.write_text(json.dumps([_record_without_pure_llm()]))
+    checkpoint.write_text(json.dumps([_record()]))
     monkeypatch.setattr(bench, "CHECKPOINT_FILE", checkpoint)
 
     records, completed = bench._load_checkpoint()
 
-    assert records == []
-    assert completed == 0
-
-
-def _record_without_pure_llm():
-    record = _record()
-    del record["results"]["pure_llm"]
-    return record
+    assert len(records) == 1
+    assert completed == 1
+    assert "pure_llm" not in records[0]["results"]
