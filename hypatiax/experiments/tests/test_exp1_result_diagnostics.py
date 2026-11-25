@@ -16,7 +16,7 @@ def _record():
         "results": {
             "pure_llm": {
                 "time_s": 0.5, "generation_time_s": 0.4,
-                "evaluation_time_s": 0.1, "llm_called": True,
+                "evaluation_time_s": 0.1, "api_request_time_s": 0.3, "llm_called": True,
                 "model": "claude-sonnet-4-6",
                 "input_tokens": 100, "output_tokens": 50,
             },
