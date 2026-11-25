@@ -61,8 +61,22 @@ def build_summary(results_by_seed, provenance_by_seed):
     revisions = {p.get("source_revision") for p in provenance_by_seed.values()}
     if len(hashes) != 1:
         raise ValueError(f"benchmark script hashes differ across seeds: {sorted(hashes)}")
-    if len(revisions) != 1:
-        raise ValueError(f"source revisions differ across seeds: {sorted(str(x) for x in revisions)}")
+    if len(revisions) != 1 or None in revisions:
+        raise ValueError(f"source revisions differ or are missing across seeds: {sorted(str(x) for x in revisions)}")
+    protocol_fields = ("engine_version", "populations", "niterations", "model_string", "flags")
+    protocol = {}
+    for field in protocol_fields:
+        values = {json.dumps(p.get(field), sort_keys=True) for p in provenance_by_seed.values()}
+        if len(values) != 1:
+            raise ValueError(f"protocol field {field!r} differs across seeds")
+        protocol[field] = provenance_by_seed[SEEDS[0]].get(field)
+    for eq_id in range(EQUATIONS):
+        first = results_by_seed[SEEDS[0]][str(eq_id)]
+        expected_identity = (first.get("name"), first.get("domain"))
+        for seed in SEEDS[1:]:
+            row = results_by_seed[seed][str(eq_id)]
+            if (row.get("name"), row.get("domain")) != expected_identity:
+                raise ValueError(f"equation identity/domain differs for id {eq_id} at seed {seed}")
 
     records = []
     seed_summaries = {}
@@ -123,7 +137,7 @@ def build_summary(results_by_seed, provenance_by_seed):
         }
 
     for eq_id in range(EQUATIONS):
-        eq = next(results_by_seed[SEEDS[0]][str(eq_id)] for _ in (0,))
+        eq = results_by_seed[SEEDS[0]][str(eq_id)]
         eq_name = eq.get("name", f"equation_{eq_id}")
         for arm in ARMS:
             for metric in METRICS:
@@ -169,6 +183,7 @@ def build_summary(results_by_seed, provenance_by_seed):
         "n_arm_records": len(records),
         "benchmark_script_sha256": next(iter(hashes)),
         "source_revision": next(iter(revisions)),
+        "protocol": protocol,
         "seed_level_summary": seed_summaries,
         "equation_level_summary": equation_summaries,
         "across_seed_descriptive_summary": across_seed,
