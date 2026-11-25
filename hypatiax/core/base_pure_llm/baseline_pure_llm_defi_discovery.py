@@ -468,7 +468,7 @@ class PureLLMBaseline:
                 "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
-            if _api_start is not None:
+            if _api_start is not None and _prov["api_request_time_s"] is None:
                 _prov["api_request_time_s"] = time.perf_counter() - _api_start
             # Only read thread-local wrapper metadata after this invocation
             # actually entered the API wrapper. Otherwise it may describe a
