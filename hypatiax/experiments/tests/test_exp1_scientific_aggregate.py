@@ -69,6 +69,8 @@ def test_undefined_and_intractable_cases_are_not_dropped(tmp_path, monkeypatch):
     assert eq_b["extrapolation_intractable"] is True
     assert eq_b["neural_network_test_r2"]["n_finite"] == 0
     assert eq_b["hybrid_test_r2"]["n_finite"] == 0
+    assert all(row["metric_status"] == "undefined_both" for row in rows if row["equation_id"] == "Equation B")
+    assert summary["metric_status_counts_across_seed_records"]["undefined_both"] == 5
     assert sum(row["case_status"] == "intractable" for row in rows) == 5
 
 
