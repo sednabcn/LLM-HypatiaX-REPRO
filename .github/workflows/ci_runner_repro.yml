@@ -2629,7 +2629,9 @@ jobs:
           bad = False
           for k in sorted(d, key=lambda x: (not str(x).isdigit(), int(x) if str(x).isdigit() else 0, str(x))):
               v = d[k]
-              miss = [a for a in arms if not isinstance(v.get(a), dict)]
+              miss = [a for a in arms
+                      if not isinstance(v.get(a), dict)
+                      or v[a].get("completed") is not True]
               h  = (v.get("hypatia") or {}).get("llm_called")
               nl = (v.get("hypatia_nollm") or {}).get("llm_called")
               print(f"[{k}] {v.get('name', '?')}: arms={[a for a in arms if a not in miss]} llm_called(hypatia)={h} llm_called(nollm)={nl}")
@@ -3093,7 +3095,10 @@ jobs:
                   data = None
               if data:
                   bad = [a for a in need
-                         if not all(isinstance(v, dict) and isinstance(v.get(a), dict) for v in data.values())]
+                         if not all(isinstance(v, dict)
+                                    and isinstance(v.get(a), dict)
+                                    and v[a].get("completed") is True
+                                    for v in data.values())]
                   if bad:
                       print(f"  [exp1_ablation] shard checkpoint incomplete for arms {bad} - not marking done")
                   else:
