@@ -2068,6 +2068,49 @@ def _generate_report(results: list):
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 10 — Main runner
+# Explicit canonical descriptors for catalogue names that are prefixes of
+# related protocol variants. Keep these exact so the base and variant equations
+# remain distinct experimental units.
+_DEFI_CANONICAL_PROTOCOL_DESCRIPTIONS = {
+    "Constant product formula":
+        "Constant product formula: reserve Y given reserve X and invariant k",
+    "Spot price from AMM":
+        "Spot price from AMM ratio (token A / token B)",
+    "Funding rate cost":
+        "Funding rate cost for long position over funding periods",
+    "Concentrated liquidity position width":
+        "Concentrated liquidity position width from upper and lower price bounds",
+}
+
+
+def _match_defi_protocol_case(case_name, protocol_cases):
+    """Resolve one catalogue case without prefix collisions with variant cases.
+
+    Known ambiguous base names use their canonical protocol description.
+    Other cases retain the historical substring lookup, but ambiguity and
+    missing matches fail loudly rather than silently selecting a variant.
+    """
+    canonical = _DEFI_CANONICAL_PROTOCOL_DESCRIPTIONS.get(case_name)
+    if canonical is not None:
+        matches = [case for case in protocol_cases if str(case[0]).strip().casefold() == canonical.casefold()]
+        if len(matches) != 1:
+            raise ValueError(
+                f"Expected exactly one canonical protocol match for {case_name!r} "
+                f"({canonical!r}); found {len(matches)}"
+            )
+        return matches[0]
+
+    needle = str(case_name).strip().casefold()
+    matches = [case for case in protocol_cases if needle in str(case[0]).casefold()]
+    if len(matches) != 1:
+        candidates = [str(case[0]) for case in matches]
+        raise ValueError(
+            f"Expected exactly one protocol match for {case_name!r}; "
+            f"found {len(matches)}: {candidates}"
+        )
+    return matches[0]
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Cases where Fix 5 is known to have been broken — use these for quick verification
@@ -2197,17 +2240,9 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
             protocol_cases = protocol.load_test_data(
                 tc["domain"], num_samples=tc["num_samples"]
             )
-            matches = [
-                (d, X, y, v, m) for d, X, y, v, m in protocol_cases
-                if tc["name"].lower() in d.lower()
-            ]
-            if len(matches) != 1:
-                raise ValueError(
-                    f"Expected exactly one protocol match for {tc['name']!r}; "
-                    f"found {len(matches)}"
-                )
-
-            desc, X_full, y_full, var_names, metadata = matches[0]
+            desc, X_full, y_full, var_names, metadata = _match_defi_protocol_case(
+                tc["name"], protocol_cases
+            )
             _is_il_breakeven = "impermanent loss breakeven" in tc["name"].lower()
             metadata.update({
                 "extrapolation_test": (
