@@ -72,6 +72,10 @@ def test_undefined_and_intractable_cases_are_not_dropped(tmp_path, monkeypatch):
     assert all(row["metric_status"] == "undefined_both" for row in rows if row["equation_id"] == "Equation B")
     assert summary["metric_status_counts_across_seed_records"]["undefined_both"] == 5
     assert sum(row["case_status"] == "intractable" for row in rows) == 5
+    seed42 = summary["per_seed"]["42"]
+    assert seed42["paired_counts"]["n"] == 1
+    assert seed42["intractable_separate"]["case_count"] == 1
+    assert seed42["intractable_separate"]["paired_hybrid_minus_nn_test_r2"]["n_finite"] == 0
 
 
 def test_aggregate_rejects_cross_seed_equation_id_mismatch(tmp_path, monkeypatch):
