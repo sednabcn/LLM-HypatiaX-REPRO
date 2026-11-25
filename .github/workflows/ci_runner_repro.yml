@@ -4079,7 +4079,7 @@ jobs:
           # Match run_all.sh: RESULTS_DIR is the canonical persistent result root.
           # Create it explicitly so the aggregate stage also works when no earlier
           # workflow step has populated the directory.
-          AGGREGATE_DIR="${RESULTS_DIR%/}/exp1-provenance"
+          AGGREGATE_DIR="${RESULTS_DIR%/}/comparison_results/noise-noiseless/noiseless/defi"
           mkdir -p "${AGGREGATE_DIR}"
           echo "Exp1 scientific results directory: ${AGGREGATE_DIR}"
           python3 scripts/ci/aggregate_exp1_provenance.py \
@@ -4094,7 +4094,7 @@ jobs:
         uses: actions/upload-artifact@v4.3.6
         with:
           name: exp1-provenance-scientific-run${{ github.run_id }}
-          path: ${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}/exp1-provenance/
+          path: ${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}/comparison_results/noise-noiseless/noiseless/defi/exp1-provenance_*
           if-no-files-found: error
           retention-days: 90
 
