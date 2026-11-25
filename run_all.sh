@@ -797,8 +797,7 @@ _exp1_ablation_step() {
 
   local ntex
   ntex=$(find "${abl_dir}" -maxdepth 1 -name '*.tex' 2>/dev/null | wc -l)
-  find "${abl_dir}" -maxdepth 1 -name '*.tex' -delete 2>/dev/null || true
-  echo "[exp1_ablation] removed ${ntex} .tex table byproduct(s) - table generation disabled"
+  echo "[exp1_ablation] retained ${ntex} generated .tex table artifact(s)"
 
   echo '=== exp1_ablation verification ==='
   find "${abl_dir}" -maxdepth 1 \( -name '*.json' -o -name '*.csv' \) 2>/dev/null | sort
@@ -951,8 +950,15 @@ elif len(merged) < n_eq:
     print(f"::error::only {len(merged)}/{n_eq} equations after merge")
     sys.exit(1)
 
-incomplete = {k: [a for a in arms if not isinstance(v.get(a), dict)]
-              for k, v in merged.items() if score(v) < len(arms)}
+incomplete = {
+    k: [a for a in arms if not isinstance(v.get(a), dict)
+        or v[a].get("completed") is not True]
+    for k, v in merged.items()
+    if score(v) < len(arms) or any(
+        not isinstance(v.get(a), dict) or v[a].get("completed") is not True
+        for a in arms
+    )
+}
 if incomplete:
     print(f"::error::equations with missing arms: {incomplete}")
     sys.exit(1)
@@ -979,7 +985,6 @@ PYMERGE
   METHOD_TIMEOUT="${METHOD_TIMEOUT}" PYSR_TIMEOUT="${FEYNMAN_TIMEOUT}" JOB_DEADLINE="${JOB_DEADLINE}" \
     python3 "${script}" "${flags[@]}" 2>&1 | tee "${logf}" || rc=$?
 
-  find "${abl_dir}" -maxdepth 1 -name '*.tex' -delete 2>/dev/null || true
   if [[ "${rc}" -ne 0 ]]; then
     echo "::error::exp1_ablation analysis exited ${rc} - see ${logf}"
     return "${rc}"
