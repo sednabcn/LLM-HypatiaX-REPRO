@@ -208,3 +208,19 @@ def test_invalid_alpha_is_rejected_before_blending():
             assert "alpha" in str(exc)
         else:
             raise AssertionError("invalid alpha must not silently produce weights")
+
+
+def test_trust_gate_failure_precedes_missing_degradation_tau():
+    route = route_decision_from_diagnostics(
+        False, 0.2, [], degradation_delta=None, degradation_tau=None
+    )
+    assert route["decision"] == "nn"
+    assert route["route_reason"] == "trust_gate_failed"
+
+
+def test_trust_gate_pass_with_missing_degradation_tau_fails_closed_to_ensemble():
+    route = route_decision_from_diagnostics(
+        True, 0.8, [], degradation_delta=None, degradation_tau=None
+    )
+    assert route["decision"] == "ensemble"
+    assert route["route_reason"] == "degradation_probe_or_tau_unavailable"
