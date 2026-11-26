@@ -1092,23 +1092,18 @@ if paper_nums:
 
 # ── 6d: DeFi table footnote ──────────────────────────────────────────────────
 if paper_nums:
-    N=paper_nums['hypatia_N']; X=paper_nums['hypatia_X']; Y=paper_nums['hypatia_Y_pct']
-    wh=paper_nums['hypatia_worst_far_r2']; bs=paper_nums['hypatia_best_seed']
-    bd=paper_nums['benchmark_default_seed']
-
+    N = paper_nums['hypatia_N']
+    X = paper_nums['hypatia_X']
+    Y = paper_nums['hypatia_Y_pct']
+    best_seed = paper_nums.get('hypatia_best_seed')
+    benchmark_seed = paper_nums['benchmark_seed']
+    observed_successes = sorted(_successful_observed) if v3c3_data else []
     fn_lines = [
-        '% -- DeFi table footnote for Portfolio Variance R2=1.000 entry --',
-        '%',
-        '% In the table cell where HypatiaX R2=1.000 appears:',
-        r'%   1.000$^\dagger$',
-        '%',
-        '% In the table caption or note:',
-        '%',
-        f'$^{{\\dagger}}$~Result at seed~{bs} only.',
-        f'At the default benchmark seed~({bd}),',
-        f'HypatiaX achieves far-$R^2 = {wh}$.',
-        f'Across {N}~seeds, HypatiaX recovers the correct formula',
-        f'in {X}/{N}~runs ({Y:.0f}' + r'\%).',
+        '% -- Data-derived Portfolio Variance seed-sensitivity note --',
+        f'Observed best seed: {best_seed}; configured benchmark seed: {benchmark_seed}.',
+        f'Across {N} valid observations, {X} exceeded far-R2 > 0.99 ({Y:.1f}' + r'\%).',
+        f'Observed successful seeds: {observed_successes}.',
+        r'Non-finite and missing observations are reported separately in the audit JSON.',
         r'See Section~6 and Table~\ref{tab:portfolio-variance-seed-sweep}.',
     ]
     fn = '\n'.join(fn_lines) + '\n'
