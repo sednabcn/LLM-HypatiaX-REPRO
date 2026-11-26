@@ -781,13 +781,20 @@ _exp1_ablation_step() {
   fi
 
   log "exp1_ablation: NOLLM_ARM=${HYPATIAX_NOLLM_ARM} STRICT=${HYPATIAX_STRICT} shard=${SHARD_INDEX:-all} domain='${DOMAIN_FILTER:-<all>}'"
-  if [[ -f "${abl_dir}/exp1_ablation_checkpoint.json" ]]; then
-    log "exp1_ablation: keeping existing checkpoint ${abl_dir}/exp1_ablation_checkpoint.json"
+  local checkpoint_override="${EXP1_ABLATION_CHECKPOINT:-}"
+  if [[ -z "${checkpoint_override}" && -n "${SHARD_INDEX:-}" ]]; then
+    checkpoint_override="${abl_dir}/exp1_ablation_checkpoint_shard${SHARD_INDEX}.json"
+  fi
+  if [[ -n "${checkpoint_override}" && -f "${checkpoint_override}" ]]; then
+    log "exp1_ablation: resuming shard-local checkpoint ${checkpoint_override}"
+  elif [[ -z "${checkpoint_override}" && -f "${abl_dir}/exp1_ablation_checkpoint.json" ]]; then
+    log "exp1_ablation: keeping existing local checkpoint ${abl_dir}/exp1_ablation_checkpoint.json"
   fi
 
   local rc=0
   PYTHONPATH="${REPO_ROOT}${PYTHONPATH:+:${PYTHONPATH}}" \
   RESULTS_DIR="${abl_dir}" \
+  EXP1_ABLATION_CHECKPOINT="${checkpoint_override}" \
   PYSR_POPULATIONS="${PYSR_POPULATIONS}" \
   PYSR_SEED="${PYSR_SEED}" \
   METHOD_TIMEOUT="${METHOD_TIMEOUT}" \
