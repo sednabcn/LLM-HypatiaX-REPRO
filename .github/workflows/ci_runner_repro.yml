@@ -1251,7 +1251,8 @@ jobs:
           if result.returncode != 0:
               print("Julia/PythonCall/PySR bootstrap failed:")
               print(result.stderr[-6000:] if result.stderr else "(no stderr)")
-              if os.environ.get("EXPERIMENT") == "exp1_ablation" or os.environ.get("EXPERIMENT") in ("exp1_pca", "exp1_pca_seeds"):
+              required_julia_experiments = ("exp1_ablation", "exp1_pca", "exp1_pca_seeds")
+              if os.environ.get("EXPERIMENT") == "exp1_ablation" or os.environ.get("EXPERIMENT") in required_julia_experiments:
                   print("ERROR: This benchmark requires a working Julia/PythonCall/PySR bridge; refusing to start shards.")
                   print("Python:", sys.executable)
                   print("JULIA_DEPOT_PATH:", os.environ.get("JULIA_DEPOT_PATH", "<default>"))
