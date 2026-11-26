@@ -104,7 +104,7 @@ def test_pythoncall_cache_probe_does_not_start_julia_before_julia_setup():
     assert '("exp1_ablation", "exp1_pca", "exp1_pca_seeds")' in warmup
     assert "refusing to start shards" in warmup
 
-def test_exp1b_pca_dispatch_does_not_depend_on_exp1_pca_job():
+def test_exp1b_pca_dispatch_is_selected_directly_and_only_needs_credentials():
     workflow = WORKFLOW.read_text(encoding="utf-8")
     lines = workflow.splitlines()
     job_start = next(i for i, line in enumerate(lines) if line == "  pca_run_exp1b:")
@@ -116,7 +116,7 @@ def test_exp1b_pca_dispatch_does_not_depend_on_exp1_pca_job():
     )
     exp1b_job = "\n".join(lines[job_start:job_end])
     needs_line = next(line.strip() for line in exp1b_job.splitlines() if line.strip().startswith("needs:"))
-    assert "pca_runner" in needs_line
-    assert "credential_preflight" in needs_line
+    assert needs_line == "needs: [credential_preflight]"
+    assert "pca_runner" not in needs_line
     assert "pca_run_exp1" not in needs_line
-    assert "if: needs.pca_runner.outputs.is_pca == 'true'" in exp1b_job
+    assert "if: ${{ always() && github.event.inputs.experiment == 'exp1b_pca' && needs.credential_preflight.result == 'success' }}" in exp1b_job

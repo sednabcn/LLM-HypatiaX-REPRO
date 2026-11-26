@@ -4774,9 +4774,10 @@ jobs:
 
   pca_run_exp1b:
     name: "C5c-2 · Run exp1b_pca (DeFi portfolio seed sweep, PCA 40/60)"
-    # exp1b_pca is an independent dispatch; do not depend on the separate exp1_pca job.
-    needs: [pca_runner, credential_preflight]
-    if: needs.pca_runner.outputs.is_pca == 'true'
+    # This runner is selected directly by its dispatch input; the PCA gate is
+    # informational only and must not be a dependency for scheduling this job.
+    needs: [credential_preflight]
+    if: ${{ always() && github.event.inputs.experiment == 'exp1b_pca' && needs.credential_preflight.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 340
     outputs:
