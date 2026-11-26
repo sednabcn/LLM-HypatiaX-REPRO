@@ -108,3 +108,24 @@ def test_pca_split_protocol_is_persisted_in_each_record_and_disclosure():
     assert 'hypatiax_defi_benchmark_pca_checkpoint' in source
     assert 'hypatiax_defi_benchmark_pca_results' in source
     assert 'hypatiax_defi_benchmark_v3_results' not in source
+
+
+
+def test_pca_cli_accepts_force_fresh_and_rejects_conflicting_resume_mode():
+    source, tree = _source_and_tree()
+    main_guard = next(
+        node for node in tree.body
+        if isinstance(node, ast.If)
+        and isinstance(node.test, ast.Compare)
+        and any(isinstance(part, ast.Constant) and part.value == "__main__"
+                for part in node.test.comparators)
+    )
+    cli_source = ast.get_source_segment(source, main_guard)
+    assert 'add_mutually_exclusive_group()' in cli_source
+    assert 'add_argument("--resume"' in cli_source
+    assert 'add_argument("--force-fresh"' in cli_source
+    # Fresh is already the default run mode; this flag makes that intent explicit
+    # for run_all.sh and CI callers without changing checkpoint semantics.
+    assert 'if not resume:' in source
+    assert 'CHECKPOINT_FILE.unlink()' in source
+    assert 'FINAL_OUTPUT.unlink()' in source
