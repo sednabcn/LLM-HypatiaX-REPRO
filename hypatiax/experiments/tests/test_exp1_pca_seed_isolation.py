@@ -12,7 +12,7 @@ from scripts.ci.aggregate_exp1_pca_seeds import aggregate_seed_artifacts
 def _write_seed_result(path: Path, seed: int) -> None:
     rows = [
         {"equation_id": f"case-{i:02d}", "seed": seed,
-         "split_protocol": {"name": "pca_40_60_pc1", "train_size": 80, "test_size": 120, "test_fraction": 0.6}}
+         "split_protocol": {"name": "pca_40_60_pc1", "train_size": 79, "test_size": 120, "test_fraction": 0.6}}
         for i in range(74)
     ]
     path.parent.mkdir(parents=True, exist_ok=True)
