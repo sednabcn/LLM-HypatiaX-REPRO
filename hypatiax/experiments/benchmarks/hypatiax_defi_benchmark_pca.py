@@ -231,8 +231,8 @@ def _configure_output_dir(output_dir: str | None) -> None:
     global RESULTS_DIR, CHECKPOINT_FILE, FINAL_OUTPUT
     RESULTS_DIR     = Path(output_dir)
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    CHECKPOINT_FILE = RESULTS_DIR / f"hypatiax_defi_benchmark_v3_checkpoint{_SEED_TAG}.json"
-    FINAL_OUTPUT    = RESULTS_DIR / f"hypatiax_defi_benchmark_v3_results{_SEED_TAG}.json"
+    CHECKPOINT_FILE = RESULTS_DIR / f"hypatiax_defi_benchmark_pca_checkpoint{_SEED_TAG}.json"
+    FINAL_OUTPUT    = RESULTS_DIR / f"hypatiax_defi_benchmark_pca_results{_SEED_TAG}.json"
     print(f"📁 Output dir overridden via --output-dir: {RESULTS_DIR}")
 
 # ─────────────────────────────────────────────────────────────────────────────
