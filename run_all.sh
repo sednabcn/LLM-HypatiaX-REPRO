@@ -1365,10 +1365,10 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
   # HYPATIAX_RESULTS_DIR independently selects the analysis output directory.
   _BENCH_JSON_PCA=\$(ls -t \"\${_PCA15_DIR}\"/hypatiax_defi_benchmark_*results*.json 2>/dev/null | head -1 || true)
   if [[ -z \"\${_BENCH_JSON_PCA}\" ]]; then
-    echo '::error::portfolio_variance_v3c2.py skipped — benchmark JSON not found in '"\${_PCA15_DIR}"'.'
+    echo '::error::portfolio_variance_v3c2.py skipped — benchmark JSON not found in 15_pca/.'
     exit 1
   else
-    echo '[exp1b_pca] Running portfolio_variance_v3c2.py against: '\"\${_BENCH_JSON_PCA}\"
+    echo '[exp1b_pca] Running portfolio_variance_v3c2.py against:' \"\${_BENCH_JSON_PCA}\"
     # Strategy A is deliberately NOT enabled here: portfolio_variance_v3c2.py has no PCA split
     # (it uses the standard DeFi protocol split), so a sweep run here would be labelled PCA but
     # would not be one. Offline analysis only.
@@ -1377,7 +1377,7 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
     HYPATIAX_V3C3_RESULTS=\"\${_BENCH_JSON_PCA}\" \\
       python3 '${EXPERIMENTS_DIR}/portfolio_variance_v3c2.py' \\
         2>&1 | tee -a '${RESULTS_DIR}/exp1b_pca_run.log' \\
-      || { echo "::error::exp1b_pca portfolio analysis failed"; exit 1; }
+      || { echo '::error::exp1b_pca portfolio analysis failed'; exit 1; }
   fi
 
   _SHARD=\${SHARD_INDEX:-0}

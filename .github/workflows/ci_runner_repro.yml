@@ -58,6 +58,12 @@ on:
         required: false
         default: ""
 
+      ablation_multi_seed:
+        description: "exp1_ablation only: dispatch the five independent seeds 42,99,123,777,2024 automatically (five domain shards per seed; fresh checkpoints)."
+        required: false
+        type: boolean
+        default: false
+
       n_shards:
         description: "Number of parallel worker shards (user input). exp1-provenance: forced to 5 (one seed per worker, fixed seeds 42,99,123,777,2024). exp1b/exp1c/portfolio: forced to 5 (one shard per seed — table minimum, exact). exp1_ablation: forced to 5 (one shard per domain, exact); exp1_llm_sens: forced to 6 (one worker per condition). exp1_four_way_matched and both manuscript Protocol-30 variants: forced to 5 isolated equation shards with strict aggregation. exp3b: floored to 4 (table minimum). exp1b_seeds: exactly one shard (= one runner) per seed, so the default 99,123,777,2024 always runs as 4 parallel workers and the input is ignored (exp1_pca_seeds follows the same rule for the PCA 40/60 variant, default 99,123,777,2024) — running the seeds back-to-back on one worker would blow the 6h GitHub job clock. suppB: forced to 5 regardless of input (one shard per noise level — divmod(55,5)=11 tasks each, preserving one-noise-level-per-shard alignment required by run_all.sh STEP 10). suppB_sc: forced to 6 regardless of input (one shard per sample size — divmod(66,6)=11 tasks each). All other experiments: forced to 1 regardless of input. Input is accepted and logged but may be overridden by the per-experiment shard table."
         required: false
@@ -327,9 +333,119 @@ jobs:
               -f fresh_mode="${FRESH_MODE:-false}"
           done
 
+  dispatch_exp1_ablation_multi_seed:
+    name: "Dispatch exp1_ablation five-seed replication"
+    if: ${{ github.event.inputs.experiment == 'exp1_ablation' && github.event.inputs.ablation_multi_seed == 'true' && github.event.inputs.experiments == '' && github.event.inputs.aggregate_run_id == '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Dispatch five isolated seed runs and wait for all of them
+        env:
+          GH_TOKEN:          ${{ secrets.DISPATCH_PAT }}
+          REPO:               ${{ github.repository }}
+          REF:                ${{ github.ref_name }}
+          N_SAMPLES:          ${{ github.event.inputs.n_samples || '200' }}
+          NOISE_LEVELS:       ${{ github.event.inputs.noise_levels || '0.0,0.05,0.1,0.5,1.0' }}
+          PYSR_GENERATIONS:   ${{ github.event.inputs.pysr_generations || '1000' }}
+          PYSR_POPULATIONS:   ${{ github.event.inputs.pysr_populations || '30' }}
+          DRY_RUN:            ${{ github.event.inputs.dry_run || 'false' }}
+          FORCE_RERUN:        ${{ github.event.inputs.force_rerun || 'false' }}
+        run: |
+          set -euo pipefail
+          SEEDS=(42 99 123 777 2024)
+          RUN_IDS=()
+
+          echo "::notice::Starting exp1_ablation five-seed replication: ${SEEDS[*]}"
+          echo "::notice::Each seed is a separate runner dispatch with exactly five domain shards."
+          echo "::notice::resume=false is forced so every seed is a fresh independent replication."
+
+          for SEED in "${SEEDS[@]}"; do
+            STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "Dispatching exp1_ablation seed=${SEED}"
+            OUTPUT="$(gh workflow run ci_runner_repro.yml \
+              --repo "${REPO}" --ref "${REF}" \
+              -f experiment=exp1_ablation \
+              -f seeds="${SEED}" \
+              -f n_shards=5 \
+              -f n_samples="${N_SAMPLES}" \
+              -f noise_levels="${NOISE_LEVELS}" \
+              -f pysr_generations="${PYSR_GENERATIONS}" \
+              -f pysr_populations="${PYSR_POPULATIONS}" \
+              -f resume=false \
+              -f dry_run="${DRY_RUN}" \
+              -f force_rerun="${FORCE_RERUN}" 2>&1)"
+            printf '%s\n' "${OUTPUT}"
+
+            RUN_ID="$(printf '%s\n' "${OUTPUT}" | grep -Eo 'actions/runs/[0-9]+' | cut -d/ -f3 | tail -1 || true)"
+            if [[ -z "${RUN_ID}" ]]; then
+              for ATTEMPT in $(seq 1 30); do
+                CANDIDATES="$(gh run list --repo "${REPO}" --workflow ci_runner_repro.yml \
+                  --event workflow_dispatch --limit 30 \
+                  --json databaseId,createdAt,displayTitle,headBranch 2>/dev/null | \
+                  jq -r --arg branch "${REF}" --arg since "${STARTED_AT}" \
+                    '[.[] | select(.headBranch == $branch and .createdAt >= $since and (.displayTitle | test("exp1_ablation"; "i")))] | sort_by(.createdAt) | reverse | .[].databaseId' || true)"
+                while IFS= read -r CANDIDATE; do
+                  [[ -z "${CANDIDATE}" ]] && continue
+                  if [[ ! " ${RUN_IDS[*]} " =~ " ${CANDIDATE} " ]]; then
+                    RUN_ID="${CANDIDATE}"
+                    break
+                  fi
+                done <<< "${CANDIDATES}"
+                [[ -n "${RUN_ID}" ]] && break
+                sleep 5
+              done
+            fi
+            if [[ -z "${RUN_ID}" ]]; then
+              echo "::error::Could not identify the workflow run dispatched for seed ${SEED}."
+              exit 1
+            fi
+            echo "Dispatched seed ${SEED} as workflow run ${RUN_ID}"
+            RUN_IDS+=("${RUN_ID}")
+          done
+
+          echo "All five seed runs dispatched: ${RUN_IDS[*]}"
+          FAILED_RUNS=()
+          for RUN_ID in "${RUN_IDS[@]}"; do
+            echo "Waiting for exp1_ablation run ${RUN_ID}"
+            DEADLINE=$(( $(date +%s) + 21600 ))
+            SLEEP=30
+            while true; do
+              RUN_JSON="$(gh run view "${RUN_ID}" --repo "${REPO}" --json status,conclusion)"
+              STATUS="$(printf '%s' "${RUN_JSON}" | jq -r '.status')"
+              CONCLUSION="$(printf '%s' "${RUN_JSON}" | jq -r '.conclusion // "none"')"
+              echo "run=${RUN_ID} status=${STATUS} conclusion=${CONCLUSION}"
+              if [[ "${STATUS}" == "completed" ]]; then
+                if [[ "${CONCLUSION}" != "success" ]]; then
+                  echo "::error::exp1_ablation seed run ${RUN_ID} completed with conclusion ${CONCLUSION}."
+                  FAILED_RUNS+=("${RUN_ID}:${CONCLUSION}")
+                fi
+                break
+              fi
+              if [[ $(date +%s) -ge ${DEADLINE} ]]; then
+                echo "::error::Timed out waiting for exp1_ablation seed run ${RUN_ID}."
+                FAILED_RUNS+=("${RUN_ID}:timeout")
+                break
+              fi
+              sleep "${SLEEP}"
+              (( SLEEP < 120 )) && SLEEP=$(( SLEEP + 10 )) || true
+            done
+          done
+
+          {
+            echo "## exp1_ablation five-seed replication"
+            for INDEX in "${!SEEDS[@]}"; do
+              echo "- Seed ${SEEDS[${INDEX}]}: workflow run ${RUN_IDS[${INDEX}]}"
+            done
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          if [[ ${#FAILED_RUNS[@]} -gt 0 ]]; then
+            printf '::error::One or more exp1_ablation seed runs failed: %s\\n' "${FAILED_RUNS[*]}"
+            exit 1
+          fi
+          echo "::notice::All five exp1_ablation seed runs completed successfully."
   pca_runner:
     name: "PCA gate - ${{ github.event.inputs.experiment }}"
-    if: github.event.inputs.experiments == '' && github.event.inputs.aggregate_run_id == ''
+    if: github.event.inputs.experiments == '' && github.event.inputs.aggregate_run_id == '' && !(github.event.inputs.experiment == 'exp1_ablation' && github.event.inputs.ablation_multi_seed == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
