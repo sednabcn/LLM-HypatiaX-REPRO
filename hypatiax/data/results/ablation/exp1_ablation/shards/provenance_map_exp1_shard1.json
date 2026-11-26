@@ -15,7 +15,7 @@
   "populations": 30,
   "niterations": 1000,
   "model_string": "claude-sonnet-4-6",
-  "timestamp": "2026-11-26T15:57:46.416230",
+  "timestamp": "2026-11-26T17:40:50.440962",
   "outputs": {
     "results_json": "/home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_results.json",
     "checkpoint_json": "/home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint_shard1.json",
@@ -49,11 +49,13 @@
     "FIX-SEED: env-driven seed; output files namespaced per seed",
     "FIX-RESTORE: VariableNameSanitizer.restore() sorts keys longest-first"
   ],
-  "source_revision": "b3c63d91d1843fbb0fd2f42decd5adb537eb9a1f",
-  "benchmark_script_sha256": "39968d4591782d14b03fc1111900c9e9da9792dcb6cdc3496087439f56b289e4",
+  "source_revision": "b460be2475ad9527bb7a56c9aaa11e740d26dea6",
+  "benchmark_script_sha256": "5a5eae79a57eeee3d0fcfd01f2dcf48fb2bfe5c924560db1a278891491fa0d70",
   "benchmark_script_path": "/home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/exp1_ablation.py",
   "benchmark_script_tracked": true,
-  "git_dirty": false,
+  "git_dirty": true,
   "git_dirty_scope": "tracked_and_untracked_worktree_excl_data_results",
-  "git_dirty_files": []
+  "git_dirty_files": [
+    "?? checkpoint_worker_shard1.json"
+  ]
 }
