@@ -66,6 +66,8 @@ from pathlib import Path
 import numpy as np
 from sklearn.model_selection import train_test_split
 
+from hypatiax.experiments.benchmarks.exp1_ablation_contracts import formula_pathology_reasons
+
 warnings.filterwarnings("ignore")
 
 # =============================================================================
@@ -110,7 +112,7 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 _seed_suffix = ("" if os.environ.get("EXP1_ABLATION_SEED_IN_DIR") == "1"
                 else (f"_seed{_GLOBAL_SEED}" if _GLOBAL_SEED != 42 else ""))
 RESULTS_PATH = OUTPUT_DIR / f"exp1_ablation_results{_seed_suffix}.json"
-CKPT_PATH    = OUTPUT_DIR / f"exp1_ablation_checkpoint{_seed_suffix}.json"
+CKPT_PATH    = Path(os.environ["EXP1_ABLATION_CHECKPOINT"]) if os.environ.get("EXP1_ABLATION_CHECKPOINT") else OUTPUT_DIR / f"exp1_ablation_checkpoint{_seed_suffix}.json"
 TEX_PATH     = OUTPUT_DIR / f"exp1_ablation_table{_seed_suffix}.tex"
 RF01_JSON    = OUTPUT_DIR / f"exp1_rf01_mannwhitney{_seed_suffix}.json"
 RF01_SIGTEX  = OUTPUT_DIR / f"exp1_rf01_significant{_seed_suffix}.tex"
@@ -1006,6 +1008,9 @@ def run_condition(eq, condition, seed=42, niterations=None,
             "validation_score":      res.get("validation_score"),
             "ood_predictor_note":    _ood_note,    # None when extrap metrics were computed
             "sanitized_vars":        dict(sanitizer.fwd),   # {} when no variable was renamed
+            # v3c-derived pathology labels are audit-only; they do not gate or
+            # alter the formula, predictions, metrics, or ablation accounting.
+            "formula_pathology_reasons": formula_pathology_reasons(best_expr_raw),
         }
 
     # =========================================================================
@@ -1116,6 +1121,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
         "llm_time_s":            0.0,
         "total_time_s":          total_time,
         "best_expression":       best_expr,
+        "formula_pathology_reasons": formula_pathology_reasons(best_expr),
         "complexity":            complexity,
         "llm_expression":        None,
         "llm_confidence":        None,
@@ -1298,6 +1304,13 @@ def run_experiment():
         print(f"🔀 Shard filter (index mode, shard {_shard_index}/{_n_shards}): "
               f"{len(_CORE_15_RUN)}/{len(CORE_15)} equations selected"
               f" → {[eq['name'] for eq in _CORE_15_RUN]}")
+
+    # A worker checkpoint is a shard-local artifact. Drop any unrelated legacy
+    # rows before resuming so stale master entries cannot masquerade as work
+    # performed by this shard or leak into its upload.
+    if _shard_slugs or _n_shards > 1:
+        _assigned_keys = {str(EQ_ID[eq["name"]]) for eq in _CORE_15_RUN}
+        all_results = {k: v for k, v in all_results.items() if str(k) in _assigned_keys}
 
     print("=" * 65)
     print("EXPERIMENT 1: LLM ABLATION  (§10.6 Core-15)")
