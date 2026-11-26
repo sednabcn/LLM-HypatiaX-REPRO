@@ -1363,12 +1363,22 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
   # benchmark JSON. The audit script normally resolves v3c3 from the standard
   # non-PCA results tree, so pass the PCA benchmark file explicitly;
   # HYPATIAX_RESULTS_DIR independently selects the analysis output directory.
-  _BENCH_JSON_PCA=\$(ls -t \"\${_PCA15_DIR}\"/hypatiax_defi_benchmark_*results*.json 2>/dev/null | head -1 || true)
-  if [[ -z \"\${_BENCH_JSON_PCA}\" ]]; then
-    echo '::error::portfolio_variance_v3c2.py skipped — benchmark JSON not found in 15_pca/.'
+  # Select this shard's own results file deterministically. The benchmark writes
+  # hypatiax_defi_benchmark_pca_results.json for seed 42 (or a comma-list run) and
+  # hypatiax_defi_benchmark_pca_results_seed<N>.json for any other single seed.
+  # (Previously: newest file matching *results*.json, i.e. an arbitrary seed.)
+  case \"\${_SHARD_SEEDS}\" in
+    ''|*[!0-9]*|42) _BENCH_JSON_PCA=\"\${_PCA15_DIR}/hypatiax_defi_benchmark_pca_results.json\" ;;
+    *) _BENCH_JSON_PCA=\"\${_PCA15_DIR}/hypatiax_defi_benchmark_pca_results_seed\${_SHARD_SEEDS}.json\" ;;
+  esac
+  if [[ ! -f \"\${_BENCH_JSON_PCA}\" ]]; then
+    echo '::error::portfolio_variance_v3c2.py skipped — benchmark JSON not found:' \"\${_BENCH_JSON_PCA}\"
     exit 1
   else
     echo '[exp1b_pca] Running portfolio_variance_v3c2.py against:' \"\${_BENCH_JSON_PCA}\"
+    echo -n '[exp1b_pca] benchmark JSON top-level type and length: '
+    python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(type(d).__name__, len(d))' \"\${_BENCH_JSON_PCA}\" || true
+    echo '[exp1b_pca] NOTE: the PCA benchmark has no Portfolio Variance case and no PySR arm; this audit step is an offline smoke test, not a PCA validation.'
     # Strategy A is deliberately NOT enabled here: portfolio_variance_v3c2.py has no PCA split
     # (it uses the standard DeFi protocol split), so a sweep run here would be labelled PCA but
     # would not be one. Offline analysis only.

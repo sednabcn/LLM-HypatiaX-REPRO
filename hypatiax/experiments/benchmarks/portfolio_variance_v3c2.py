@@ -122,6 +122,8 @@ V3C3_RESULTS        = Path(os.environ.get(
     str(_find_input('hypatiax_defi_benchmark_v3c3_results.json')),
 ))
 V3C2_RESULTS        = _find_input('hypatiax_defi_benchmark_v3c2_results.json')
+print(f'   V3C3_RESULTS -> {V3C3_RESULTS} (exists={V3C3_RESULTS.exists()})')
+print(f'   V3C2_RESULTS -> {V3C2_RESULTS} (exists={V3C2_RESULTS.exists()})')
 
 # ── Output paths ──────────────────────────────────────────────────────────────
 CORRECTED_OUTPUT = RESULTS_DIR / 'hypatiax_defi_benchmark_v3c3_corrected.json'
@@ -224,14 +226,36 @@ else:
 
 # ── 1b: Helpers — load and flatten any benchmark results JSON ────────────────
 def load_results_json(path):
-    """Load a benchmark results JSON. Returns (data, error_str)."""
+    """Load a benchmark results JSON. Returns (data, error_str).
+
+    Always returns a dict of the form {"cases": [...], ...}.
+    hypatiax_defi_benchmark_pca.py writes a bare list of per-case records
+    (keyed by 'equation_id'), whereas the standard v3c3 file is a dict with
+    'cases'/'version'/'saved_at'/'total_cases' and records keyed by
+    'test_case'. Normalise both shapes here so downstream code (extract,
+    version diff, corrected-JSON writer) can rely on one schema.
+    """
     if not path.exists():
         return None, f'File not found: {path}'
     try:
         with open(path) as f:
-            return json.load(f), None
+            data = json.load(f)
     except Exception as e:
         return None, str(e)
+
+    if isinstance(data, list):
+        print(f'   NOTE: {path.name} is a bare list ({len(data)} records); '
+              f'wrapping as {{"cases": [...]}}')
+        data = {'cases': data, 'version': 'bare-list',
+                'saved_at': 'unknown', 'total_cases': len(data)}
+    elif not isinstance(data, dict):
+        return None, f'Unexpected JSON top-level type: {type(data).__name__}'
+
+    # PCA records use 'equation_id'; the audit code reads 'test_case'.
+    for c in data.get('cases', []):
+        if isinstance(c, dict) and not c.get('test_case'):
+            c['test_case'] = c.get('equation_id') or c.get('name', '')
+    return data, None
 
 
 def extract_all_cases(data):
@@ -269,6 +293,12 @@ if err:
     v3c3_data = df_v3c3 = None
 else:
     df_v3c3 = extract_all_cases(v3c3_data)
+    if df_v3c3.empty:
+        _cases = v3c3_data.get('cases', [])
+        raise SystemExit(
+            f'v3c3 file {V3C3_RESULTS} parsed but yielded 0 case x method rows. '
+            f'First record: {str(_cases[0])[:300] if _cases else None}'
+        )
     print(f'v3c3 results loaded : {len(df_v3c3)} case x method rows')
     print(f'   Version  : {v3c3_data.get("version", "unknown")}')
     print(f'   Saved at : {v3c3_data.get("saved_at", "unknown")}')
