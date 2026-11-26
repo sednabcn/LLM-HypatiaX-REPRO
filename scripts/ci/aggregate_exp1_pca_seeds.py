@@ -52,12 +52,13 @@ def aggregate_seed_artifacts(artifacts_dir: str | Path, output_dir: str | Path, 
                 continue
             train_size, test_size = split.get("train_size"), split.get("test_size")
             total_size = (train_size + test_size) if isinstance(train_size, int) and isinstance(test_size, int) else 0
+            expected_train_size = int(total_size * 0.4) if total_size > 0 else 0
             if (
                 split.get("name") != "pca_40_60_pc1"
                 or split.get("test_fraction") != 0.6
                 or total_size <= 0
-                or abs(train_size / total_size - 0.4) > 1e-9
-                or abs(test_size / total_size - 0.6) > 1e-9
+                or train_size != expected_train_size
+                or test_size != total_size - expected_train_size
             ):
                 bad_splits.append(row.get("equation_id"))
         if bad_splits:
