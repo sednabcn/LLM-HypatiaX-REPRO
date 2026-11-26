@@ -381,9 +381,9 @@ jobs:
               for ATTEMPT in $(seq 1 30); do
                 CANDIDATES="$(gh run list --repo "${REPO}" --workflow ci_runner_repro.yml \
                   --event workflow_dispatch --limit 30 \
-                  --json databaseId,createdAt,displayTitle,headBranch \
-                  --jq --arg branch "${REF}" --arg since "${STARTED_AT}" \
-                    '[.[] | select(.headBranch == $branch and .createdAt >= $since and (.displayTitle | test("exp1_ablation"; "i")))] | sort_by(.createdAt) | reverse | .[].databaseId' 2>/dev/null || true)"
+                  --json databaseId,createdAt,displayTitle,headBranch 2>/dev/null | \
+                  jq -r --arg branch "${REF}" --arg since "${STARTED_AT}" \
+                    '[.[] | select(.headBranch == $branch and .createdAt >= $since and (.displayTitle | test("exp1_ablation"; "i")))] | sort_by(.createdAt) | reverse | .[].databaseId' || true)"
                 while IFS= read -r CANDIDATE; do
                   [[ -z "${CANDIDATE}" ]] && continue
                   if [[ ! " ${RUN_IDS[*]} " =~ " ${CANDIDATE} " ]]; then
