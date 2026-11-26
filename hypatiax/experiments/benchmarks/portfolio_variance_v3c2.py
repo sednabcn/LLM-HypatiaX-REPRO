@@ -1020,7 +1020,8 @@ if _h_rows is not None:
 else: print('No HypatiaX sweep data available; paper numbers were not generated.')
 
 # ── 6b: LaTeX appendix seed-sweep table ──────────────────────────────────────
-if sweep_data and paper_nums and df_pysr is not None:
+if (sweep_data and paper_nums and df_pysr is not None and df_hypatia is not None
+        and 'pysr_N' in paper_nums and 'hypatia_N' in paper_nums):
     def fmt_r2(val):
         if val > 0.999: return r'\textbf{1.000}'
         elif val > 0:   return f'{val:.3f}'
@@ -1048,7 +1049,7 @@ if sweep_data and paper_nums and df_pysr is not None:
     lines = [
         r'\begin{table}[h]',
         r'\centering',
-        r'\caption{Portfolio Variance far-$R^2$ across random seeds. Success $= R^2 > 0.99$. Configured benchmark seed = {BENCHMARK_SEED}.}',
+        fr'\caption{{Portfolio Variance far-$R^2$ across random seeds. Success $= R^2 > 0.99$. Configured benchmark seed = {BENCHMARK_SEED}.}}',
         r'\label{tab:portfolio-variance-seed-sweep}',
         r'\begin{tabular}{lrllrll}',
         r'\toprule',
@@ -1074,13 +1075,14 @@ if sweep_data and paper_nums and df_pysr is not None:
 # ── 6c: Section 6 paragraph ──────────────────────────────────────────────────
 if paper_nums:
     N=paper_nums['hypatia_N']; X=paper_nums['hypatia_X']; Y=paper_nums['hypatia_Y_pct']
-    Np=paper_nums['pysr_N']; Xp=paper_nums['pysr_X']; Yp=paper_nums['pysr_Y_pct']
-    wh=paper_nums['hypatia_worst_far_r2']; wp=paper_nums['pysr_worst_far_r2']
+    has_pysr = 'pysr_N' in paper_nums
+    Np=paper_nums.get('pysr_N'); Xp=paper_nums.get('pysr_X'); Yp=paper_nums.get('pysr_Y_pct')
+    wh=paper_nums['hypatia_worst_far_r2']
     bs=paper_nums['hypatia_best_seed']; ws=paper_nums['hypatia_worst_seed']
     bd=paper_nums['benchmark_seed']
 
     _pysr_sentence = (f'PySR-only success: {Xp}/{Np} runs ({Yp:.1f}\\%).'
-        if 'pysr_N' in paper_nums else 'PySR-only comparison was unavailable in supplied result files.')
+        if has_pysr else 'PySR-only comparison was unavailable in supplied result files.')
     para6_lines = [
         r'\paragraph{Portfolio Variance: observed seed-level results.}',
         f'Across {N} valid HypatiaX observations, {X} exceeded the far-R2 threshold of 0.99 ({Y:.1f}\\%).',
@@ -1097,6 +1099,22 @@ if paper_nums:
     print('\n' + '-'*60)
     print(para6)
 
+# Seed-level audit values are prepared before both the footnote and corrected JSON.
+_observed_by_seed = {}
+if _h_rows is not None:
+    for _record in _h_rows:
+        try:
+            _seed = int(_record['seed'])
+            _score = float(_record[_key])
+            _observed_by_seed[str(_seed)] = _score if np.isfinite(_score) else None
+        except (KeyError, TypeError, ValueError):
+            continue
+_finite_observed = [value for value in _observed_by_seed.values() if value is not None]
+_successful_observed = [
+    int(seed) for seed, score in _observed_by_seed.items()
+    if score is not None and score > 0.99
+]
+
 # ── 6d: DeFi table footnote ──────────────────────────────────────────────────
 if paper_nums:
     N = paper_nums['hypatia_N']
@@ -1104,7 +1122,12 @@ if paper_nums:
     Y = paper_nums['hypatia_Y_pct']
     best_seed = paper_nums.get('hypatia_best_seed')
     benchmark_seed = paper_nums['benchmark_seed']
-    observed_successes = sorted(_successful_observed) if v3c3_data else []
+    observed_successes = sorted(
+        int(row['seed']) for row in (_h_rows or [])
+        if row.get('seed') is not None
+        and np.isfinite(pd.to_numeric(row.get(_key), errors='coerce'))
+        and float(row.get(_key)) > 0.99
+    )
     fn_lines = [
         '% -- Data-derived Portfolio Variance seed-sensitivity note --',
         f'Observed best seed: {best_seed}; configured benchmark seed: {benchmark_seed}.',
@@ -1126,15 +1149,6 @@ if v3c3_data:
     corrected['version'] = '3c3-corrected'
     corrected['provenance_note'] = 'Portfolio Variance annotations are derived from supplied records; no seed outcome is assumed.'
     corrected['saved_at'] = datetime.now(UTC).strftime('%Y-%m-%dT%H:%M:%SZ')
-    _observed_by_seed = {}
-    if _h_rows is not None:
-        for record in _h_rows:
-            try:
-                seed = int(record['seed']); score = float(record[_key])
-                _observed_by_seed[str(seed)] = score if np.isfinite(score) else None
-            except (KeyError, TypeError, ValueError): continue
-    _finite_observed = [v for v in _observed_by_seed.values() if v is not None]
-    _successful_observed = [int(seed) for seed, score in _observed_by_seed.items() if score is not None and score > 0.99]
     for case in corrected.get('cases', []):
         if 'portfolio' in case.get('test_case', '').lower():
             case['benchmark_seed'] = BENCHMARK_SEED
@@ -1163,12 +1177,12 @@ if paper_nums:
 audit = {
     'generated_at': datetime.now(UTC).strftime('%Y-%m-%dT%H:%M:%SZ'),
     'benchmark_seed': BENCHMARK_SEED,
-    'observed_seed_results': _observed_by_seed if v3c3_data else {},
+    'observed_seed_results': _observed_by_seed,
     'observed_seed_summary': {
-        'n_valid': len(_finite_observed) if v3c3_data else 0,
-        'n_success': len(_successful_observed) if v3c3_data else 0,
+        'n_valid': len(_finite_observed),
+        'n_success': len(_successful_observed),
         'success_threshold': 0.99,
-        'success_rate': len(_successful_observed) / len(_finite_observed) if v3c3_data and _finite_observed else None,
+        'success_rate': len(_successful_observed) / len(_finite_observed) if _finite_observed else None,
     },
     'paper_numbers': paper_nums,
     'files_generated': [
