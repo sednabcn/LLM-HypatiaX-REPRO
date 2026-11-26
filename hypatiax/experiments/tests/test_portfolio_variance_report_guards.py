@@ -34,7 +34,7 @@ def test_portfolio_footnote_uses_seed_audit_values_defined_before_it():
 
 def test_portfolio_latex_caption_interpolates_configured_seed():
     source = SOURCE.read_text(encoding="utf-8")
-    assert "fr'\\\\caption{{Portfolio Variance far-$R^2$" in source
+    assert "fr'\\caption{{Portfolio Variance far-$R^2$" in source
     assert "Configured benchmark seed = {BENCHMARK_SEED}" in source
 
 
