@@ -9,6 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 RUNNER = ROOT / "hypatiax" / "experiments" / "benchmarks" / "hypatiax_defi_benchmark_pca.py"
+V3C_RUNNER = ROOT / "hypatiax" / "experiments" / "benchmarks" / "hypatiax_defi_benchmark_v3c.py"
 
 
 def _source_and_tree():
@@ -22,6 +23,15 @@ def _function_names(tree):
         for node in ast.walk(tree)
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
     }
+
+
+def test_pca_runner_tracks_every_current_v3c_function_except_outer_split_adapter():
+    _, pca_tree = _source_and_tree()
+    v3c_source = V3C_RUNNER.read_text(encoding="utf-8")
+    v3c_tree = ast.parse(v3c_source, filename=str(V3C_RUNNER))
+    assert _function_names(pca_tree) - {"_pca_directed_split_40_60"} == (
+        _function_names(v3c_tree) - {"_random_split_80_20"}
+    )
 
 
 def test_pca_runner_carries_current_v3c_validation_and_fallback_components():
