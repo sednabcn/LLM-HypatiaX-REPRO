@@ -1155,9 +1155,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.julia
+          # Use an exact, workflow-versioned depot cache only. A broad restore prefix
+          # can resurrect a partially initialized PythonCall environment.
           key: julia-depot-${{ runner.os }}-${{ hashFiles('**/Project.toml', '**/Manifest.toml', '.github/workflows/ci_runner_repro.yml') }}
-          restore-keys: |
-            julia-depot-${{ runner.os }}-
 
       - name: Install Python dependencies
         if: steps.python_env_cache.outputs.cache-hit != 'true' || steps.python_env_check.outputs.valid != 'true'
@@ -1210,14 +1210,22 @@ jobs:
 
       - name: Precompile Julia / SymbolicRegression (if needed)
         if: ${{ needs.plan.outputs.needs_julia == 'true' }}
+        env:
+          EXPERIMENT: ${{ github.event.inputs.experiment }}
         run: |
           python3 - <<'PYEOF'
-          import subprocess, sys, os
+          import os, subprocess, sys
 
+          # Exercise the exact juliacall -> Julia PythonCall bridge used by PySR.
+          # A successful Julia executable check or "import pysr" alone does not
+          # prove that PythonCall is installed and usable in juliacall's project.
           warmup = """
           import numpy as np
           import pysr
-          X = np.random.randn(20, 1)
+          from juliacall import Main as jl
+
+          jl.seval('using PythonCall; println("PythonCall bridge OK; Julia project: ", Base.active_project())')
+          X = np.random.default_rng(42).normal(size=(20, 1))
           y = X[:, 0] * 2.0 + 1.0
           model = pysr.PySRRegressor(
               niterations=5,
@@ -1227,7 +1235,7 @@ jobs:
               tempdir="/tmp/pysr_warmup",
           )
           model.fit(X, y)
-          print("Julia/PySR precompile warmup OK")
+          print("Julia/PythonCall/PySR precompile warmup OK")
           """
           result = subprocess.run(
               [sys.executable, "-c", warmup],
@@ -1237,8 +1245,15 @@ jobs:
           )
           print(result.stdout or "")
           if result.returncode != 0:
-              print("WARNING: Julia precompile warmup failed (methods 5+6 may be N/A):")
-              print(result.stderr[-3000:] if result.stderr else "(no stderr)")
+              print("Julia/PythonCall/PySR bootstrap failed:")
+              print(result.stderr[-6000:] if result.stderr else "(no stderr)")
+              if os.environ.get("EXPERIMENT") == "exp1_ablation":
+                  print("ERROR: Exp1 requires a working Julia/PythonCall/PySR bridge; refusing to start shards.")
+                  print("Python:", sys.executable)
+                  print("JULIA_DEPOT_PATH:", os.environ.get("JULIA_DEPOT_PATH", "<default>"))
+                  print("JULIA_PROJECT:", os.environ.get("JULIA_PROJECT", "<default>"))
+                  sys.exit(result.returncode or 1)
+              print("WARNING: Julia warmup failed; optional PySR methods may be unavailable for this experiment.")
           PYEOF
 
       - name: Verify Julia threads
