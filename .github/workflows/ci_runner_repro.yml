@@ -4774,7 +4774,8 @@ jobs:
 
   pca_run_exp1b:
     name: "C5c-2 · Run exp1b_pca (DeFi portfolio seed sweep, PCA 40/60)"
-    needs: [pca_runner, pca_run_exp1, credential_preflight]
+    # exp1b_pca is an independent dispatch; do not depend on the separate exp1_pca job.
+    needs: [pca_runner, credential_preflight]
     if: needs.pca_runner.outputs.is_pca == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 340
