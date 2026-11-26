@@ -137,3 +137,10 @@ def test_workflow_runs_descriptive_aggregator_only_after_valid_gather():
     assert "scripts/ci/aggregate_exp1_ablation_multiseed.py --results-root" in gather
     assert 'git add -f "${ROOT}/exp1_ablation_multiseed"' in gather
     assert '"${DISPATCH_STATE}" == "failed"' in gather
+
+
+def test_dispatch_run_lookup_is_correlated_with_the_requested_seed():
+    workflow = (ROOT / ".github/workflows/ci_runner_repro.yml").read_text()
+    assert "format(' · seed={0}', inputs.seeds || '42')" in workflow
+    assert '--arg seed "${SEED}"' in workflow
+    assert 'test("seed=" + $seed; "i")' in workflow
