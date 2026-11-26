@@ -1636,7 +1636,7 @@ jobs:
           SHARD_CKPT:        checkpoint_worker_shard${{ matrix.shard }}.json
           RESULTS_DIR:       ${{ env.OUT_BASE }}
           REPRO_CFG:         ${{ env.REPRO_CFG }}
-          RESUME:            ${{ (github.event.inputs.fresh_mode == 'true' || github.event.inputs.experiment == 'exp1-provenance' || github.event.inputs.clean_llm_rerun == 'true') && 'false' || github.event.inputs.resume || 'true' }}
+          RESUME:            ${{ (github.event.inputs.fresh_mode == 'true' || github.event.inputs.experiment == 'exp1-provenance' || github.event.inputs.experiment == 'exp1_ablation_seeds' || github.event.inputs.clean_llm_rerun == 'true') && 'false' || github.event.inputs.resume || 'true' }}
           CLEAR_CHECKPOINT:  ${{ github.event.inputs.clean_llm_rerun == 'true' && '1' || '' }}
           DRY_RUN:           ${{ github.event.inputs.dry_run || 'false' }}
           SHARD:             ${{ matrix.shard }}
