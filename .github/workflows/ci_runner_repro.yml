@@ -1842,6 +1842,12 @@ jobs:
           shopt -s nullglob
           for SRC in "${DEST}"/*.json "${DEST}"/*.csv; do
             bn="$(basename "${SRC}")"
+            # The runner writes directly to this shard-local checkpoint path;
+            # keep it in place instead of suffixing it a second time.
+            if [[ "${bn}" == "exp1_ablation_checkpoint_shard${SHARD_INDEX}.json" ]]; then
+              echo "Retaining isolated shard checkpoint: ${SRC}"
+              continue
+            fi
             [[ "${bn}" =~ _shard[0-9]+\.(json|csv)$ ]] && continue
             [[ "${bn}" == _* ]] && continue
             stem="${bn%.*}"; ext="${bn##*.}"
