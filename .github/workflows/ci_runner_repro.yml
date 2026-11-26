@@ -524,7 +524,7 @@ jobs:
 
             exp1_ablation)
               SCRIPT="hypatiax/experiments/benchmarks/exp1_ablation.py"
-              NEEDS_JULIA=false
+              NEEDS_JULIA=true
               RESULT_SUBDIR="ablation/exp1_ablation"
               # One seed per dispatch (a full 5-shard run each). seed 42 (or empty) = canonical
               # dir; any other seed writes to ablation/exp1_ablation_seed<N> so repeat seeds
