@@ -27,3 +27,18 @@ def test_exp1b_pca_bash_c_payload_is_valid_shell():
         text=True,
     )
     assert checked.returncode == 0, checked.stderr
+
+
+
+def test_exp1b_pca_skip_guard_requires_all_five_seed_results_and_summaries():
+    repo_root = Path(__file__).resolve().parents[3]
+    workflow = (repo_root / ".github/workflows/ci_runner_repro.yml").read_text()
+    guard = workflow.split("- name: Check if exp1b_pca results already exist", 1)[1].split(
+        "- name: Set up Python", 1
+    )[0]
+    for seed in (42, 99, 123, 777, 2024):
+        assert f"hypatiax_defi_benchmark_pca_results_seed{seed}.json" in guard
+    assert "split_protocol_disclosure.json" in guard
+    assert "exp1b_pca_summary.json" in guard
+    assert "MISSING=()" in guard
+    assert '[[ ! -s "${FILE}" ]]' in guard
