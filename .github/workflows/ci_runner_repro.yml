@@ -3727,7 +3727,11 @@ jobs:
         with:
           name: results-exp1_pca-merged
           path: |
-            ${{ env.OUT_BASE }}/${{ env.RESULT_SUBDIR }}/hypatiax_defi_benchmark_pca_results_seed*.json
+            ${{ env.OUT_BASE }}/${{ env.RESULT_SUBDIR }}/hypatiax_defi_benchmark_pca_results_seed42.json
+            ${{ env.OUT_BASE }}/${{ env.RESULT_SUBDIR }}/hypatiax_defi_benchmark_pca_results_seed99.json
+            ${{ env.OUT_BASE }}/${{ env.RESULT_SUBDIR }}/hypatiax_defi_benchmark_pca_results_seed123.json
+            ${{ env.OUT_BASE }}/${{ env.RESULT_SUBDIR }}/hypatiax_defi_benchmark_pca_results_seed777.json
+            ${{ env.OUT_BASE }}/${{ env.RESULT_SUBDIR }}/hypatiax_defi_benchmark_pca_results_seed2024.json
             ${{ env.OUT_BASE }}/${{ env.RESULT_SUBDIR }}/pca_seed_aggregate_manifest.json
           if-no-files-found: error
           retention-days: 90
@@ -3739,7 +3743,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
-          git add -f "${TARGET}"/hypatiax_defi_benchmark_pca_results_seed*.json
+          for seed in 42 99 123 777 2024; do
+            git add -f "${TARGET}/hypatiax_defi_benchmark_pca_results_seed${seed}.json"
+          done
           git add -f "${TARGET}/pca_seed_aggregate_manifest.json"
           if git diff --cached --quiet; then
             echo "Validated PCA seed aggregate is already committed."
