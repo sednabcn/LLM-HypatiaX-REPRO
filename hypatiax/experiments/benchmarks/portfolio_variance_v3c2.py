@@ -352,8 +352,8 @@ if df_v3c3 is not None:
 """---
 ## §2 — Seed Sweep Analysis
 
-Builds comparison DataFrames and plots far-R² by seed for both methods.
-Confirms seed 42 = −882.9 and seed 99 = 1.000.
+Builds comparison DataFrames and plots far-R² by seed for available methods.
+All seed-level conclusions are derived from loaded result records.
 
 """
 
@@ -779,7 +779,7 @@ elif RERUN_STRATEGY == 'B' and not HYPATIA_AVAILABLE:
 ## §4 — Trace R²=1.000 Origin
 
 Deep-scans all JSON files under `PROJECT_ROOT` for Portfolio Variance entries with R² > 0.99.
-Cross-references with the seed sweep to confirm seed 99 is the only HypatiaX success seed.
+Cross-references the seed sweep and reports observed successful seeds without assuming their identities.
 
 """
 
@@ -851,22 +851,27 @@ else:
             .background_gradient(subset=['r2'], cmap='RdYlGn', vmin=-50, vmax=1)
             .applymap(lambda v: 'font-weight:bold;color:red' if v else '', subset=['flagged']))
 
-# ── 4b: Cross-reference — confirm seed 99 is the only success seed ──────────
-if SWEEP_JSON_ORIGINAL.exists():
-    with open(SWEEP_JSON_ORIGINAL) as f:
-        _sw = json.load(f)
+# ── 4b: Cross-reference seed-level outcomes (data-derived) ─────────────────
+if sweep_data:
+    def _successful_seed_ids(records, metric='far_r2', threshold=0.99):
+        successful = []
+        for record in records:
+            try:
+                score = float(record[metric])
+                if np.isfinite(score) and score > threshold:
+                    successful.append(int(record['seed']))
+            except (KeyError, TypeError, ValueError):
+                continue
+        return sorted(set(successful))
+    good_h = _successful_seed_ids(sweep_data.get('hypatia', []))
+    good_p = _successful_seed_ids(sweep_data.get('pysr_only', []))
+    print('Seed sweep outcomes (observed records):')
+    print(f'  HypatiaX successful seeds (far-R2 > 0.99): {good_h}')
+    print(f'  PySR-only successful seeds (far-R2 > 0.99): {good_p}')
+    print(f'  Benchmark seed {BENCHMARK_SEED} successful for HypatiaX: {BENCHMARK_SEED in good_h}')
+else:
+    print('Seed-level cross-reference skipped: no historical seed-sweep input is available.')
 
-    good_h = [r['seed'] for r in _sw['hypatia']   if r['far_r2'] > 0.99]
-    good_p = [r['seed'] for r in _sw['pysr_only'] if r['far_r2'] > 0.99]
-
-    print('Seed sweep confirmation:')
-    print(f'  Seeds where HypatiaX far-R2 > 0.99 : {good_h}')
-    print(f'  Seeds where PySR-only  far-R2 > 0.99: {good_p}')
-    if BENCHMARK_SEED not in good_h:
-        print(f'\nConfirmed: SEED={BENCHMARK_SEED} is NOT a success seed.')
-        print(f'Any R2=1.000 claim must originate from seed(s): {good_h}')
-    else:
-        print(f'\nSEED={BENCHMARK_SEED} IS a success seed — contradiction is elsewhere.')
 
 """---
 ## §5 — Validate Results & Compare v3c3 vs v3c2
@@ -882,260 +887,41 @@ df_current = None
 if V3C3_RESULTS.exists():
     v3c3_data, _ = load_results_json(V3C3_RESULTS)
     if v3c3_data:
-        df_current = extract_all_cases(v3c3_data)
-        print(f'Using v3c3 results: {len(df_current)} rows')
-
-if df_current is None:
-    print('No current results available — run Strategy A or B in §3.')
-
-# ── 5b: Diff v3c3 vs v3c2 ────────────────────────────────────────────────────
-DELTA_THRESHOLD = 0.1
-
-if df_current is not None and df_v3c2 is not None:
-    df_cmp = df_current.merge(
-        df_v3c2[['case','method','test_r2']],
-        on=['case','method'], suffixes=('_v3c3','_v3c2'), how='outer')
-    df_cmp['delta']     = df_cmp['test_r2_v3c3'] - df_cmp['test_r2_v3c2']
-    df_cmp['abs_delta'] = df_cmp['delta'].abs()
-    df_flagged = df_cmp[df_cmp['abs_delta'] > DELTA_THRESHOLD].sort_values('abs_delta', ascending=False)
-
-    print(f'Cases with |R2_v3c3 - R2_v3c2| > {DELTA_THRESHOLD}:\n')
-    if df_flagged.empty:
-        print('  None — results are stable across versions.')
-    else:
-        display(df_flagged[['case','method','test_r2_v3c3','test_r2_v3c2','delta']]
-                .style.format({'test_r2_v3c3':'{:.4f}','test_r2_v3c2':'{:.4f}','delta':'{:+.4f}'})
-                .background_gradient(subset=['delta'], cmap='RdYlGn', vmin=-1, vmax=1))
-        print(f'\n{len(df_flagged)} cases flagged.')
-
-elif df_current is not None:
-    print('v3c2 not available — showing current Portfolio Variance rows only.')
-    display(df_current[df_current['case'].str.lower().str.contains('portfolio')]
-            [['case','method','train_r2','test_r2','success','decision']])
-
-# ── 5c: R2 distribution plot ─────────────────────────────────────────────────
-if df_current is not None:
-    methods = df_current['method'].unique()[:2]
-    fig, axes = plt.subplots(1, len(methods), figsize=(14, 5))
-    if len(methods) == 1:
-        axes = [axes]
-    for ax, method in zip(axes, methods):
-        dm = df_current[df_current['method'] == method]['test_r2'].dropna()
-        ax.hist(dm, bins=30, color='#1565C0', edgecolor='white', alpha=0.85)
-        ax.axvline(0.99, color='#F44336', linestyle='--', linewidth=1.5, label='R2=0.99')
-        ax.axvline(0.0,  color='grey',    linestyle=':',  linewidth=1.0)
-        n_above = (dm > 0.99).sum()
-        ax.set_title(f'{method}\n{n_above}/{len(dm)} cases R2>0.99 ({100*n_above/74:.1f}%)',
-                     fontsize=11, fontweight='bold')
-        ax.set_xlabel('test R2', fontsize=11)
-        ax.set_ylabel('Count', fontsize=11)
-        ax.legend(fontsize=10)
-    plt.suptitle('DeFi Benchmark — test R2 Distribution (v3c3, SEED=42)', fontsize=13, y=1.02)
-    plt.tight_layout()
-    plt.savefig(RESULTS_DIR / 'fig_defi_r2_distribution.pdf', bbox_inches='tight')
-    plt.savefig(RESULTS_DIR / 'fig_defi_r2_distribution.png', dpi=150, bbox_inches='tight')
-    plt.show()
-    print('Figure saved')
-
-"""---
-## §6 — Compute Paper Numbers & Export All Outputs
-
-Consolidates seed sweep + benchmark results into `paper_nums`, then writes:
-
-| File | Contents |
-|------|----------|
-| `appendix_table_portfolio_variance.tex` | LaTeX seed-sweep table |
-| `section6_defi_paragraph.tex` | Ready-to-paste Section 6 paragraph |
-| `defi_table_footnote.tex` | Footnote for the DeFi results table |
-| `hypatiax_defi_benchmark_v3c3_corrected.json` | v3c3 results with provenance annotations |
-| `paper_numbers_v3c3.json` | All headline numbers |
-| `contradiction_audit_report.json` | Full audit trail |
-
-"""
-
-# ── 6a: Compute headline numbers ─────────────────────────────────────────────
-paper_nums = {}
-
-if defi_sweep_results:
-    _h_rows, _key, _label = defi_sweep_results, 'far_r2', 'HypatiaX (DeFi protocol, v3c3)'
-elif sweep_data:
-    _h_rows, _key, _label = sweep_data['hypatia'], 'far_r2', 'HypatiaX (ablation JSON)'
-else:
-    _h_rows = None
-
-if _h_rows is not None and sweep_data:
-    N  = len(_h_rows)
-    X  = sum(1 for r in _h_rows if r[_key] > 0.99)
-    Y  = 100 * X / N
-    Np = len(sweep_data['pysr_only'])
-    Xp = sum(1 for r in sweep_data['pysr_only'] if r['far_r2'] > 0.99)
-    Yp = 100 * Xp / Np
-    worst_h    = min(r[_key] for r in _h_rows)
-    worst_p    = min(r['far_r2'] for r in sweep_data['pysr_only'])
-    best_seed  = next((r['seed'] for r in _h_rows if r[_key] > 0.99), None)
-    worst_seed = next((r['seed'] for r in _h_rows if r[_key] == worst_h), None)
-
-    paper_nums = {
-        'hypatia_N': N, 'hypatia_X': X, 'hypatia_Y_pct': round(Y,1),
-        'hypatia_worst_far_r2': round(worst_h,1), 'hypatia_best_seed': best_seed,
-        'hypatia_worst_seed': worst_seed,
-        'pysr_N': Np, 'pysr_X': Xp, 'pysr_Y_pct': round(Yp,1),
-        'pysr_worst_far_r2': round(worst_p,1),
-        'benchmark_default_seed': BENCHMARK_SEED,
-    }
-    if df_current is not None:
-        for method in df_current['method'].unique():
-            dm = df_current[df_current['method'] == method]
-            n_above = (dm['test_r2'].dropna() > 0.99).sum()
-            paper_nums[f'{method}_R2_above_0.99_rate'] = f'{n_above}/74 ({100*n_above/74:.1f}%)'
-
-    print('='*55)
-    print(f'  {_label}')
-    print('='*55)
-    print(f'  N (seeds tested)       : {N}')
-    print(f'  X (successes, R2>0.99) : {X}')
-    print(f'  Y% success rate        : {Y:.0f}%')
-    print(f'  Best far-R2  (seed {best_seed}): {max(r[_key] for r in _h_rows):.4f}')
-    print(f'  Worst far-R2 (seed {worst_seed}): {worst_h:.1f}')
-    print(f'  PySR-only success rate : {Xp}/{Np} ({Yp:.0f}%)')
-    print('='*55)
-else:
-    print('No sweep data — place portfolio_variance_seed_sweep.json in PROJECT_ROOT.')
-
-# ── 6b: LaTeX appendix seed-sweep table ──────────────────────────────────────
-if sweep_data and paper_nums and df_pysr is not None:
-    def fmt_r2(val):
-        if val > 0.999: return r'\textbf{1.000}'
-        elif val > 0:   return f'{val:.3f}'
-        else:           return r'\textcolor{red}{' + f'{val:.1f}' + '}'
-
-    def tick(val):
-        return r'\checkmark' if val > 0.99 else r'$\times$'
-
-    N=paper_nums['hypatia_N']; X=paper_nums['hypatia_X']; Y=paper_nums['hypatia_Y_pct']
-    Np=paper_nums['pysr_N']; Xp=paper_nums['pysr_X']; Yp=paper_nums['pysr_Y_pct']
-
-    rows_tex = []
-    for seed in [s_ for s_ in SEEDS if (df_pysr.seed==s_).any() and (df_hypatia.seed==s_).any()]:
-        p = df_pysr[df_pysr.seed==seed].iloc[0]
-        h = df_hypatia[df_hypatia.seed==seed].iloc[0]
-        pe = p['expr'][:35].replace('**','^').replace('_',r'\_')
-        he = h['expr'][:35].replace('**','^').replace('_',r'\_')
-        ss = f'{seed} (default)' if seed==BENCHMARK_SEED else str(seed)
-        rows_tex.append(f'  {ss} & {fmt_r2(p.far_r2)} & '
-                        r'\texttt{' + pe + r'} & ' + tick(p.far_r2) + ' & '
-                        f'{fmt_r2(h.far_r2)} & '
-                        r'\texttt{' + he + r'} & ' + tick(h.far_r2) + r' \\')
-
-    body = '\n'.join(rows_tex)
-    lines = [
-        r'\begin{table}[h]',
-        r'\centering',
-        r'\caption{Portfolio Variance far-$R^2$ across random seeds. Success $= R^2 > 0.99$. Default benchmark seed = 42.}',
-        r'\label{tab:portfolio-variance-seed-sweep}',
-        r'\begin{tabular}{lrllrll}',
-        r'\toprule',
-        r'  & \multicolumn{3}{c}{\textbf{PySR-only}} & \multicolumn{3}{c}{\textbf{HypatiaX}} \\',
-        r'\cmidrule(lr){2-4} \cmidrule(lr){5-7}',
-        r'Seed & far-$R^2$ & Formula (truncated) & $\checkmark$ & far-$R^2$ & Formula (truncated) & $\checkmark$ \\',
-        r'\midrule',
-        body,
-        r'\midrule',
-        r'\textbf{Success} & \multicolumn{3}{c}{' + f'{Xp}/{Np} ({Yp:.0f}' + r'\%)' + r'} &',
-        r'                   \multicolumn{3}{c}{' + f'{X}/{N} ({Y:.0f}' + r'\%)' + r'} \\',
-        r'\bottomrule',
-        r'\end{tabular}',
-        r'\end{table}',
-    ]
-    latex_table = '\n'.join(lines) + '\n'
-    tex_path = RESULTS_DIR / 'appendix_table_portfolio_variance.tex'
-    tex_path.write_text(latex_table)
-    print('LaTeX table saved to:', tex_path)
-    print('\n' + '-'*60)
-    print(latex_table)
-
-# ── 6c: Section 6 paragraph ──────────────────────────────────────────────────
-if paper_nums:
-    N=paper_nums['hypatia_N']; X=paper_nums['hypatia_X']; Y=paper_nums['hypatia_Y_pct']
-    Np=paper_nums['pysr_N']; Xp=paper_nums['pysr_X']; Yp=paper_nums['pysr_Y_pct']
-    wh=paper_nums['hypatia_worst_far_r2']; wp=paper_nums['pysr_worst_far_r2']
-    bs=paper_nums['hypatia_best_seed']; ws=paper_nums['hypatia_worst_seed']
-    bd=paper_nums['benchmark_default_seed']
-
-    para6_lines = [
-        r'\paragraph{Portfolio Variance: seed sensitivity and prior conflict.}',
-        'Portfolio Variance exhibits pronounced seed-dependent behaviour,',
-        'revealing a failure mode of LLM-constrained initialisation.',
-        f'Across $N={N}$ random seeds,',
-        r'PySR-only recovers the exact closed-form formula',
-        r'$\sqrt{\sigma_1^2 + 2\rho\sigma_1\sigma_2 + \sigma_2^2}$',
-        f'in {Xp}/{Np} runs ({Yp:.0f}' + r'\%),' ,
-        f'while HypatiaX recovers it in only {X}/{N} runs ({Y:.0f}' + r'\%).',
-        'Critically, when HypatiaX fails, extrapolation degrades catastrophically:',
-        f'far-$R^2$ reaches as low as ${wh}$ at the default benchmark seed ({bd}),',
-        f'compared to PySR-only\'s worst failure of ${wp}$.',
-        r'We attribute this to the LLM prior biasing PySR initialisation toward',
-        r'financially-motivated linear approximations (e.g.\ $c_1(\sigma_1+\sigma_2)$)',
-        'that fit the training range but are structurally incompatible',
-        r"with the true formula's radical-quadratic form,",
-        'trapping the search in basins that collapse under extrapolation.',
-        r'Full seed-level results are in Table~\ref{tab:portfolio-variance-seed-sweep}.',
-    ]
-    para6 = '\n'.join(para6_lines) + '\n'
-    p6_path = RESULTS_DIR / 'section6_defi_paragraph.tex'
-    p6_path.write_text(para6)
-    print('Section 6 paragraph saved to:', p6_path)
-    print('\n' + '-'*60)
-    print(para6)
-
-# ── 6d: DeFi table footnote ──────────────────────────────────────────────────
-if paper_nums:
-    N=paper_nums['hypatia_N']; X=paper_nums['hypatia_X']; Y=paper_nums['hypatia_Y_pct']
-    wh=paper_nums['hypatia_worst_far_r2']; bs=paper_nums['hypatia_best_seed']
-    bd=paper_nums['benchmark_default_seed']
-
-    fn_lines = [
-        '% -- DeFi table footnote for Portfolio Variance R2=1.000 entry --',
-        '%',
-        '% In the table cell where HypatiaX R2=1.000 appears:',
-        r'%   1.000$^\dagger$',
-        '%',
-        '% In the table caption or note:',
-        '%',
-        f'$^{{\\dagger}}$~Result at seed~{bs} only.',
-        f'At the default benchmark seed~({bd}),',
-        f'HypatiaX achieves far-$R^2 = {wh}$.',
-        f'Across {N}~seeds, HypatiaX recovers the correct formula',
-        f'in {X}/{N}~runs ({Y:.0f}' + r'\%).',
-        r'See Section~6 and Table~\ref{tab:portfolio-variance-seed-sweep}.',
-    ]
-    fn = '\n'.join(fn_lines) + '\n'
-    fn_path = RESULTS_DIR / 'defi_table_footnote.tex'
-    fn_path.write_text(fn)
-    print('DeFi table footnote saved to:', fn_path)
-    print('\n' + '-'*60)
-    print(fn)
-
-# ── 6e: Corrected JSON with provenance annotations ───────────────────────────
-if v3c3_data:
     corrected = copy.deepcopy(v3c3_data)
     corrected['version'] = '3c3-corrected'
-    corrected['correction_note'] = (
-        'Portfolio Variance annotated with seed_sensitivity flag. '
-        f'At SEED={BENCHMARK_SEED} (benchmark default), HypatiaX fails catastrophically. '
-        'Exact formula recovery occurs only at seed=99. '
-        'See Section 6 and appendix seed-sweep table.'
+    corrected['provenance_note'] = (
+        'Portfolio Variance annotations are derived from supplied benchmark and seed-sweep records; '
+        'no seed-specific outcome is assumed.'
     )
     corrected['saved_at'] = datetime.now(UTC).strftime('%Y-%m-%dT%H:%M:%SZ')
-    for case in corrected['cases']:
-        if 'portfolio' in case.get('test_case','').lower():
-            case['seed_sensitivity_note'] = (
-                'HypatiaX recovers exact formula at seed=99 only (1/5 seeds, 20%). '
-                f'At SEED={BENCHMARK_SEED} (default), far-R2=-882.9. '
-                'See appendix seed-sweep table.')
+    _observed_by_seed = {}
+    if _h_rows is not None:
+        for _record in _h_rows:
+            try:
+                _seed = int(_record['seed'])
+                _score = float(_record[_key])
+                _observed_by_seed[str(_seed)] = _score if np.isfinite(_score) else None
+            except (KeyError, TypeError, ValueError):
+                continue
+    _finite_observed = [v for v in _observed_by_seed.values() if v is not None]
+    _successful_observed = [
+        int(seed) for seed, score in _observed_by_seed.items()
+        if score is not None and score > 0.99
+    ]
+    for case in corrected.get('cases', []):
+        if 'portfolio' in case.get('test_case', '').lower():
             case['benchmark_seed'] = BENCHMARK_SEED
-            case['successful_seeds'] = [99]
-            case['seed_sweep_success_rate'] = '1/5 (20%)'
+            case['observed_seed_results'] = _observed_by_seed
+            case['successful_seeds'] = sorted(_successful_observed)
+            case['seed_sweep_n_valid'] = len(_finite_observed)
+            case['seed_sweep_n_success'] = len(_successful_observed)
+            case['seed_sweep_success_rate'] = (
+                len(_successful_observed) / len(_finite_observed)
+                if _finite_observed else None
+            )
+            case['seed_sensitivity_note'] = (
+                'Derived from available finite seed-sweep records; see observed_seed_results.'
+            )
     with open(CORRECTED_OUTPUT, 'w') as f:
         json.dump(corrected, f, indent=2, default=str)
     print(f'Corrected results saved to: {CORRECTED_OUTPUT}')
@@ -1155,18 +941,16 @@ if paper_nums:
 audit = {
     'generated_at': datetime.now(UTC).strftime('%Y-%m-%dT%H:%M:%SZ'),
     'benchmark_seed': BENCHMARK_SEED,
-    'contradiction_summary': {
-        'claim_in_paper':           'HypatiaX R2=1.000 on Portfolio Variance (DeFi benchmark)',
-        'actual_result_at_seed_42': 'far-R2=-882.9 (catastrophic failure)',
-        'actual_result_at_seed_99': 'far-R2=1.000 (exact formula recovered)',
-        'conclusion':               'Paper claim originates from seed=99 only. Default seed=42 fails.',
+    'observed_seed_results': _observed_by_seed if v3c3_data else {},
+    'observed_seed_summary': {
+        'n_valid': len(_finite_observed) if v3c3_data else 0,
+        'n_success': len(_successful_observed) if v3c3_data else 0,
+        'success_threshold': 0.99,
+        'success_rate': (
+            len(_successful_observed) / len(_finite_observed)
+            if v3c3_data and _finite_observed else None
+        ),
     },
-    'fix_required': [
-        'Add footnote to DeFi table: R2=1.000 is seed=99 only',
-        'Add Section 6 paragraph on seed sensitivity',
-        'Add appendix seed-sweep table (Table A.X)',
-        'Do NOT change SEED=42 in v3c3 — report honest results',
-    ],
     'paper_numbers': paper_nums,
     'files_generated': [
         str(RESULTS_DIR / 'appendix_table_portfolio_variance.tex'),
