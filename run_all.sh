@@ -1368,7 +1368,7 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
     echo '::error::portfolio_variance_v3c2.py skipped — benchmark JSON not found in 15_pca/.'
     exit 1
   else
-    echo '[exp1b_pca] Running portfolio_variance_v3c2.py against:' \\"\${_BENCH_JSON_PCA}\\"
+    echo '[exp1b_pca] Running portfolio_variance_v3c2.py against:' \"\${_BENCH_JSON_PCA}\"
     # Strategy A is deliberately NOT enabled here: portfolio_variance_v3c2.py has no PCA split
     # (it uses the standard DeFi protocol split), so a sweep run here would be labelled PCA but
     # would not be one. Offline analysis only.
