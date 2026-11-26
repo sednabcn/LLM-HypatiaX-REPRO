@@ -113,7 +113,7 @@ def test_exp1_protocol_contracts_remain_unchanged():
     assert 'eq_seed = seed + EQ_ID.get(eq["name"], 0) * 7' in source
     assert 'Path(os.environ["EXP1_ABLATION_CHECKPOINT"])' in source
     assert '_assigned_keys = {str(EQ_ID[eq["name"]]) for eq in _CORE_15_RUN}' in source
-    assert re.search(r'"completed":\\s+True', source)
+    assert re.search(r'"completed":\s+True', source)
     assert '"test_scope":            "untouched_outer_test"' in source
     assert 'generate_data(\n            eq, N=200, noise_level=0.05, seed=eq_seed' in source
     # v3c diagnostics must not become a gate or alter completed/success semantics.
