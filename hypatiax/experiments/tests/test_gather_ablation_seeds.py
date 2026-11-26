@@ -144,3 +144,12 @@ def test_dispatch_run_lookup_is_correlated_with_the_requested_seed():
     assert "format(' · seed={0}', inputs.seeds || '42')" in workflow
     assert '--arg seed "${SEED}"' in workflow
     assert 'test("seed=" + $seed; "i")' in workflow
+
+    
+def test_ablation_seeds_parent_uses_dispatcher_without_duplicate_matrix():
+    workflow = (ROOT / ".github/workflows/ci_runner_repro.yml").read_text()
+    pca_gate = workflow.split("  pca_runner:", 1)[1].split("  plan:", 1)[0]
+    assert '"exp1_ablation_seeds"' in pca_gate
+    assert 'echo "skip_plan=true"' in pca_gate
+    dispatcher = workflow.split("  dispatch_exp1_ablation_multi_seed:", 1)[1].split("  pca_runner:", 1)[0]
+    assert "github.event.inputs.experiment == 'exp1_ablation_seeds'" in dispatcher
