@@ -1,0 +1,174 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=25mm]{geometry}
+\usepackage{booktabs,longtable,tabularx,array}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{microtype}
+\title{HypatiaX Core-15 LLM Ablation\\Performance Evaluation Report}
+\author{LLM-HypatiaX-REPRO}
+\date{26 November 2026}
+\begin{document}
+\maketitle
+\begin{abstract}
+This report evaluates the merged output of GitHub Actions run
+\href{https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/45869191966}{45869191966}
+(commit \texttt{b460be2475ad9527bb7a56c9aaa11e740d26dea6}).
+The experiment compares PySR-only, HypatiaX with its LLM component, and
+HypatiaX with the LLM disabled on 15 equations. The workflow completed
+successfully, but execution success is not evidence of scientific superiority.
+Median held-out test accuracy is essentially tied. HypatiaX has a lower
+observed median wall-clock time, but timing is heterogeneous and the arms
+were not run under identical computational budgets. Far-extrapolation
+results are mixed, with two non-finite/missing HypatiaX cases excluded from
+the paired extrapolation analysis. The reported paired test does not establish
+a statistically significant HypatiaX advantage ($p=0.0874$).
+\end{abstract}
+\section{Scope and provenance}
+The analyzed artifact is \texttt{results-exp1\_ablation-merged}, produced by
+run 45869191966. The merged JSON contains 15 equation records and the
+artifact contains 94 files, including checkpoints, shard outputs, logs,
+statistical summaries, provenance and LaTeX tables. The run used seed 42,
+30 populations and engine version 5.4 according to the merged metadata.
+Five shards are workload partitions, not five independent seed replications.
+\section{Experimental conditions}
+\begin{itemize}[leftmargin=*]
+\item PySR-only: symbolic-regression baseline.
+\item HypatiaX: hybrid system with LLM-assisted candidate generation/warm-start.
+\item HypatiaX-noLLM: hybrid system with the LLM disabled.
+\end{itemize}
+The merged records report 15 completed records in each arm. LLM was called
+for all 15 HypatiaX records. The primary far-extrapolation paired analysis
+contains 13 equations; Arrhenius and Impermanent Loss are excluded because
+the HypatiaX far-extrapolation result is non-finite/unavailable.
+\section{Aggregate results}
+\begin{table}[ht]
+\centering
+\caption{Descriptive aggregate metrics across Core-15.}
+\begin{tabular}{lrrr}
+\toprule
+Metric & PySR-only & HypatiaX & HypatiaX-noLLM\\
+\midrule
+Median test $R^2$ (n=15) & 0.99724 & 0.99722 & 0.99724\\
+Median test RMSE (n=15) & 0.08365 & 0.08374 & 0.08374\\
+Median far-OOD $R^2$ & 0.99994 (n=15) & 0.99971 (n=13) & 0.99957 (n=13)\\
+Mean far-OOD $R^2$ & -7.2545 (n=15) & 0.3387 (n=13) & 0.2254 (n=13)\\
+Median observed runtime (s) & 1101.30 & 362.49 & 385.71\\
+Median expression complexity & 7 & 33 & 33\\
+\bottomrule
+\end{tabular}
+\end{table}
+The far-OOD medians must not be compared without noting their different
+denominators. Excluding failed/non-finite cases can make a median look
+reassuring while hiding important reliability failures. The mean far-OOD
+values are highly sensitive to severe negative $R^2$ outliers.
+Negative $R^2$ means the model is worse than the constant test-mean predictor.
+The observed HypatiaX median runtime is about 3.04 times lower than PySR-only
+(1101.30/362.49). This is descriptive, not a controlled speedup claim:
+PySR-only has a 1400-second budget and one attempt, while HypatiaX has a
+3600-second budget and up to three attempts in the recorded configuration.
+Some HypatiaX cases complete in only a few seconds, while Gravitational Force
+takes about 1937 seconds. A matched-budget, repeated comparison is needed.
+\section{Far-extrapolation paired test}
+The saved primary analysis reports $n=13$, Wilcoxon signed-rank
+$W=17$, one-sided $p_{H>P}=0.0874$, and paired rank-biserial effect size
+$r=+0.48$. The predeclared 0.05 threshold is not crossed. The Mann--Whitney
+sensitivity analysis reports $U=89$, one-sided $p=0.4183$.
+The observed direction favours HypatiaX on three equations, with ten ties
+under the analysis' tie tolerance and no PySR-only wins. This is suggestive
+but not statistically significant evidence.
+\section{Equation-level findings}
+\begin{longtable}{p{35mm}p{30mm}p{85mm}}
+\toprule
+Equation & Domain & Interpretation\\
+\midrule
+Arrhenius & Chemistry & HypatiaX far-OOD result is unavailable/non-finite; near-OOD performance is poor. The saved analysis flags an LLM-prior/search-space failure mode.\\
+Henderson--Hasselbalch & Chemistry & Large improvement relative to PySR-only in far-OOD $R^2$ (approximately $-34.47$ to $0.999$).\\
+Rate Law & Chemistry & Both methods perform strongly; PySR-only is marginally higher in far-OOD.\\
+Allometric Scaling & Biology & Both methods reach near-perfect far-OOD scores.\\
+Michaelis--Menten & Biology & Both methods degrade under far extrapolation; HypatiaX improves from about 0.084 to 0.184 but remains weak.\\
+Logistic Growth & Biology & Both methods perform very strongly.\\
+Kinetic Energy & Physics & Both methods perform very strongly.\\
+Gravitational Force & Physics & Both methods fail badly in far extrapolation; HypatiaX is less negative but still poor.\\
+Ideal Gas Law & Physics & Both methods perform very strongly.\\
+Impermanent Loss & DeFi AMM & HypatiaX far-OOD result unavailable/non-finite; near/medium extrapolation also exposes instability.\\
+Price Impact & DeFi AMM & Both methods perform very strongly.\\
+Constant Product & DeFi AMM & Both methods perform very strongly.\\
+Value at Risk & DeFi Risk & Both methods perform very strongly.\\
+Liquidation Price & DeFi Risk & Both methods perform very strongly.\\
+Portfolio Std Dev & DeFi Risk & Both methods perform very strongly.\\
+\bottomrule
+\end{longtable}
+\section{LLM contribution}
+The saved LLM-contribution analysis reports 15 LLM calls, with HypatiaX and
+HypatiaX-noLLM far-OOD paired analysis on 13 equations. The Holm-adjusted
+one-sided Wilcoxon $p$-value is 0.375 for each of the three reported
+comparisons. There is no statistically significant evidence in this run
+that adding the LLM improves far-OOD performance over the no-LLM variant.
+The final selected expression is identical between HypatiaX and no-LLM in
+8 of 15 equation records, indicating that LLM invocation does not necessarily
+change the final selected model.
+\section{Validity threats and limitations}
+\begin{enumerate}[leftmargin=*]
+\item Only one random seed (42) is represented; five shards are not independent replicates.
+\item Two HypatiaX far-OOD results are unavailable/non-finite and must be counted as failures in reliability reporting, not silently dropped.
+\item The compute budgets and allowed attempt counts differ between baseline and hybrid arms.
+\item Expression complexity is higher for HypatiaX (median 33 versus 7), which may affect interpretability and overfitting risk.
+\item Very high scores on several equations and very poor scores on a few require per-equation reporting; averages alone are misleading.
+\item This report evaluates the single \texttt{exp1\_ablation} run, not all repository experiments.
+\end{enumerate}
+\section{Conclusions}
+The current evidence supports three restrained conclusions:
+\begin{itemize}[leftmargin=*]
+\item HypatiaX achieves held-out predictive accuracy comparable to PySR-only on this run.
+\item Its observed median runtime is lower, but a controlled equal-budget experiment is required before claiming a speed advantage.
+\item The run does not establish statistically significant far-extrapolation superiority or a significant incremental benefit from the LLM.
+\end{itemize}
+The main research risk is robustness: a small number of severe extrapolation failures and non-finite outcomes coexist with excellent results on many other equations.
+\section{Recommended evaluation programme}
+\begin{enumerate}[leftmargin=*]
+\item \textbf{Multi-seed replication.} Repeat all three arms with seeds
+42, 99, 123, 777 and 2024. Pair methods by equation and seed. Report mean,
+median, standard deviation, confidence intervals, win/tie/loss counts and
+failure rates. Treat seed as a repeated-measures factor; do not count shards
+as replicates.
+\item \textbf{Matched compute budgets.} Define one common wall-clock or CPU
+budget, attempt policy, hardware/software environment and stopping rule for
+all arms. Record actual CPU/GPU time, wall time, number of attempts and
+resource usage. Include both equal-budget and native-budget sensitivity runs.
+\item \textbf{Complete failure-aware reporting.} Preserve all 15 equations
+in tables. Report non-finite/failed predictions explicitly; provide success
+rates and worst-case/quantile metrics in addition to conditional metrics
+among successful cases. Keep near, medium and far OOD regimes separate.
+\item \textbf{LLM ablation.} Compare HypatiaX with LLM against the identical
+pipeline with LLM disabled, holding seeds, budgets, data splits, search
+settings and retry policy fixed. Log LLM calls, latency, token/cost, proposed
+formula, acceptance/rejection reason and whether the selected expression
+changed. Use paired per-equation/per-seed analysis with Holm correction.
+\item \textbf{Complexity and scientific validity.} Add symbolic complexity,
+dimensional consistency, domain constraints, singularity checks and
+equivalence-to-ground-truth checks where possible. Report a Pareto frontier
+of accuracy, extrapolation, runtime and complexity rather than accuracy alone.
+Have domain-specific checks pre-registered before examining outcomes.
+\end{enumerate}
+\section{Practical implementation sequence}
+First create a benchmark manifest fixing the 15 equations, train/test/OOD
+splits, five seeds and arm definitions. Next add a multi-seed matrix or
+orchestrator that dispatches one run per (seed, arm), with explicit seed
+pass-through and unique output directories. Then add a common budget
+configuration and persist actual resource accounting. Extend aggregation
+to retain failed records and produce a complete equation-by-seed-by-arm
+table. Finally add paired statistical analysis and complexity/scientific
+validity diagnostics. Run a small smoke subset before the full benchmark;
+the full multi-seed campaign should be launched only after configuration
+review and explicit approval.
+\section{Reproducibility references}
+\begin{itemize}[leftmargin=*]
+\item Workflow run: \url{https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/45869191966}
+\item Commit: \texttt{b460be2475ad9527bb7a56c9aaa11e740d26dea6}
+\item Primary source files in the merged artifact: \texttt{exp1\_ablation\_results.json},
+\texttt{exp1\_rf01\_mannwhitney.json}, \texttt{exp1\_llm\_contribution.json},
+\texttt{exp1\_instability\_stats.json}, and \texttt{wall\_clock\_flags.json}.
+\end{itemize}
+\end{document}
