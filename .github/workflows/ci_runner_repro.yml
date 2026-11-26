@@ -146,7 +146,7 @@ on:
         default: "false"
 
       force_rerun:
-        description: "exp2_feynman_pca only: clear stale exp2_pca_4060/*.json before running, bypassing the already-done skip-guard (true/false). Use after pipeline/aggregation fixes to force a clean regeneration."
+        description: "exp2_feynman_pca: clear stale exp2_pca_4060/*.json; exp1b_pca: bypass the existing-results guard and rerun the full PCA portfolio seed sweep (run_all.sh uses --force-fresh). Use after pipeline fixes to force clean regeneration (true/false)."
         required: false
         default: "false"
 
@@ -4795,16 +4795,22 @@ jobs:
         env:
           RESULTS_DIR: ${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
           EXP: ${{ github.event.inputs.experiment }}
+          FORCE_RERUN: ${{ github.event.inputs.force_rerun || 'false' }}
         run: |
           if [[ "$EXP" != "exp1b_pca" ]]; then
             echo "already_done=true" >> "$GITHUB_OUTPUT"
             echo "[skip] Not exp1b_pca — skipping this job."
             exit 0
           fi
+          if [[ "$FORCE_RERUN" == "true" ]]; then
+            echo "already_done=false" >> "$GITHUB_OUTPUT"
+            echo "[run] force_rerun=true — bypassing existing-results guard; run_all.sh will use --force-fresh."
+            exit 0
+          fi
           PCA15_DIR="${RESULTS_DIR}/comparison_results/noise-noiseless/15_pca"
           if [ -d "${PCA15_DIR}" ] && [ -n "$(ls -A "${PCA15_DIR}"/*.json 2>/dev/null)" ]; then
             echo "already_done=true" >> "$GITHUB_OUTPUT"
-            echo "[skip] Results already present in ${PCA15_DIR}."
+            echo "[skip] Results already present in ${PCA15_DIR}. Set force_rerun=true to regenerate."
           else
             echo "already_done=false" >> "$GITHUB_OUTPUT"
             echo "[run] No results found in ${PCA15_DIR} — will run."

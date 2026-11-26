@@ -120,3 +120,21 @@ def test_exp1b_pca_dispatch_is_selected_directly_and_only_needs_credentials():
     assert "pca_runner" not in needs_line
     assert "pca_run_exp1" not in needs_line
     assert "if: ${{ always() && github.event.inputs.experiment == 'exp1b_pca' && needs.credential_preflight.result == 'success' }}" in exp1b_job
+
+def test_exp1b_pca_force_rerun_bypasses_existing_results_guard():
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    lines = workflow.splitlines()
+    job_start = next(i for i, line in enumerate(lines) if line == "  pca_run_exp1b:")
+    job_end = next(
+        (i for i in range(job_start + 1, len(lines))
+         if lines[i].startswith("  ") and not lines[i].startswith("    ")
+         and lines[i].rstrip().endswith(":")),
+        len(lines),
+    )
+    exp1b_job = "\n".join(lines[job_start:job_end])
+    check = exp1b_job.split("- name: Check if exp1b_pca results already exist", 1)[1].split("- name: Set up Python", 1)[0]
+    assert "FORCE_RERUN: ${{ github.event.inputs.force_rerun || 'false' }}" in check
+    assert 'if [[ "$FORCE_RERUN" == "true" ]]' in check
+    assert "bypassing existing-results guard" in check
+    run_step = exp1b_job.split("- name: Run exp1b_pca via run_all.sh", 1)[1].split("- name: Commit and push results", 1)[0]
+    assert "bash run_all.sh --step exp1b_pca" in run_step
