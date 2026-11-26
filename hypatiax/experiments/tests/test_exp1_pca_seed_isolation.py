@@ -60,6 +60,25 @@ def test_pca_workers_use_private_staging_and_only_aggregate_job_commits_results(
     assert "pca_seed_aggregate_manifest.json" in aggregate
 
 
+
+def test_pythoncall_uses_runner_venv_and_disables_condapkg_fallback():
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    resolve_start = workflow.index("- name: Resolve JuliaCall project and install PythonCall (if needed)")
+    warmup_start = workflow.index("- name: Precompile Julia / SymbolicRegression (if needed)")
+    resolve_step = workflow[resolve_start:warmup_start]
+    assert 'PYTHON_EXECUTABLE="${GITHUB_WORKSPACE}/.venv/bin/python"' in resolve_step
+    assert 'JULIA_PYTHONCALL_EXE=${PYTHON_EXECUTABLE}' in resolve_step
+    assert 'JULIA_PYTHONCALL_LIB=${PYTHON_LIB}' in resolve_step
+    assert 'JULIA_CONDAPKG_BACKEND=Null' in resolve_step
+    assert 'pyconvert(String, pyimport("sys").executable)' in resolve_step
+    assert 'abspath(python_exe) == abspath(expected_exe)' in resolve_step
+
+    # The variables are persisted for the later JuliaCall -> PySR subprocess.
+    assert '>> "${GITHUB_ENV}"' in resolve_step
+    warmup = workflow[warmup_start:workflow.index("- name: Verify Julia threads", warmup_start)]
+    assert 'from juliacall import Main as jl' in warmup
+    assert 'PythonCall bridge OK' in warmup
+
 def test_pythoncall_cache_probe_does_not_start_julia_before_julia_setup():
     workflow = WORKFLOW.read_text(encoding="utf-8")
     probe = workflow.split("- name: Validate and activate shared Python environment", 1)[1].split("- name: Set up Julia 1.11", 1)[0]

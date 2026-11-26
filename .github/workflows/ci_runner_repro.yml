@@ -1215,6 +1215,27 @@ jobs:
           # force=True repairs stale juliapkg metadata that can claim resolution
           # even when the Manifest packages are absent from the depot.
           .venv/bin/python -c "import juliapkg; juliapkg.resolve(force=True)"
+          # PythonCall 0.9.28 defaults to a CondaPkg-managed interpreter.
+          # On current conda-forge that can resolve to Python builds without
+          # libpython, which this pinned PythonCall cannot embed. Use the
+          # already provisioned runner venv (Python 3.12) consistently instead.
+          PYTHON_EXECUTABLE="${GITHUB_WORKSPACE}/.venv/bin/python"
+          test -x "${PYTHON_EXECUTABLE}"
+          PYTHON_LIB="$("${PYTHON_EXECUTABLE}" -c 'import pathlib, sysconfig; p=pathlib.Path(sysconfig.get_config_var("LIBDIR") or "") / (sysconfig.get_config_var("LDLIBRARY") or ""); print(p.resolve() if p.is_file() else "")')"
+          if [[ -z "${PYTHON_LIB}" ]]; then
+            echo "::error::Runner Python shared library was not found; PythonCall cannot embed this interpreter."
+            "${PYTHON_EXECUTABLE}" -c 'import sysconfig; print("LIBDIR:", sysconfig.get_config_var("LIBDIR")); print("LDLIBRARY:", sysconfig.get_config_var("LDLIBRARY"))'
+            exit 1
+          fi
+          {
+            echo "JULIA_PYTHONCALL_EXE=${PYTHON_EXECUTABLE}"
+            echo "JULIA_PYTHONCALL_LIB=${PYTHON_LIB}"
+            echo "JULIA_CONDAPKG_BACKEND=Null"
+          } >> "${GITHUB_ENV}"
+          export JULIA_PYTHONCALL_EXE="${PYTHON_EXECUTABLE}"
+          export JULIA_PYTHONCALL_LIB="${PYTHON_LIB}"
+          export JULIA_CONDAPKG_BACKEND=Null
+
           JULIA_PROJECT="${GITHUB_WORKSPACE}/.venv/julia_env"
           test -f "${JULIA_PROJECT}/Project.toml"
           test -f "${JULIA_PROJECT}/Manifest.toml"
@@ -1223,7 +1244,11 @@ jobs:
           Pkg.instantiate()
           Pkg.precompile()
           using PythonCall
-          println("PythonCall package ready; active project: ", Base.active_project())
+          python_exe = pyconvert(String, pyimport("sys").executable)
+          expected_exe = ENV["JULIA_PYTHONCALL_EXE"]
+          abspath(python_exe) == abspath(expected_exe) ||
+              error("PythonCall selected unexpected Python: $(python_exe), expected $(expected_exe)")
+          println("PythonCall package ready; Python: ", python_exe, "; active project: ", Base.active_project())
           '
 
       - name: Precompile Julia / SymbolicRegression (if needed)
