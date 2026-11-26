@@ -110,3 +110,25 @@ def test_portfolio_seed_sweep_is_explicit_not_implicit_readiness_blocker():
     assert "optional diagnostic not run" in SOURCE
     assert 'checks.append(("C4 Portfolio seed sweep"' not in SOURCE
     assert 'parser.add_argument("--seed-sweep"' in SOURCE
+
+
+def test_exp1_juliacall_bootstrap_is_mandatory_before_shard_work():
+    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+    warmup = workflow.split("- name: Precompile Julia / SymbolicRegression (if needed)", 1)[1].split(
+        "- name: Verify Julia threads", 1
+    )[0]
+    assert 'from juliacall import Main as jl' in warmup
+    assert 'using PythonCall' in warmup
+    assert 'model.fit(X, y)' in warmup
+    assert 'os.environ.get("EXPERIMENT") == "exp1_ablation"' in warmup
+    assert 'sys.exit(result.returncode or 1)' in warmup
+    assert "refusing to start shards" in warmup
+
+
+def test_julia_depot_cache_does_not_restore_unversioned_fallback():
+    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+    worker_cache = workflow.split("- name: Cache Julia depot", 1)[1].split(
+        "- name: Install Python dependencies", 1
+    )[0]
+    assert "key: julia-depot-" in worker_cache
+    assert "restore-keys:" not in worker_cache
