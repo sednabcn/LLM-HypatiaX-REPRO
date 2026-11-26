@@ -2155,7 +2155,7 @@ def _instability_readiness_ok(csv_path: Path, *, shard_mode: bool = False) -> bo
         if not metric_columns:
             return False
         metrics = df[metric_columns].apply(_pd.to_numeric, errors="coerce")
-        return bool(metrics.applymap(np.isfinite).any().any())
+        return bool(np.isfinite(metrics.to_numpy(dtype=float)).any())
     if "instability_index" not in df.columns:
         return False
     instability = _pd.to_numeric(df["instability_index"], errors="coerce").fillna(0)
