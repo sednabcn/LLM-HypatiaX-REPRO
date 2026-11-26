@@ -80,7 +80,12 @@ def test_ci_requires_terminal_records_and_preserves_tables():
     runner = RUNNER_PATH.read_text(encoding="utf-8")
     workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
     assert 'v[a].get("completed") is not True' in runner
-    assert 'v[a].get("completed") is not True' in workflow
+    # The worker's assigned-equation completion gate now lives in the shared
+    # Exp1 contract helper; the workflow invokes that helper instead of
+    # duplicating the older inline all-rows expression.
+    assert "validate_shard_checkpoint" in workflow
+    assert "expected_equation_ids(shard_ids)" in workflow
+    assert 'data[key][arm].get("completed") is not True' in workflow
     assert "retained ${ntex} generated .tex table artifact(s)" in runner
     assert "find \"${abl_dir}\" -maxdepth 1 -name '*.tex' -delete" not in runner
 

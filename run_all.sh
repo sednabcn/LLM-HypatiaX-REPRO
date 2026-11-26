@@ -743,8 +743,8 @@ run portfolio "Portfolio Variance seed sweep + tables (Tab 5 + Fig G) -- portfol
 # exp1_ablation: full run, all three arms (pysr_only / hypatia / hypatia_nollm).
 #   * HYPATIAX_NOLLM_ARM defaults to 1 and HYPATIAX_STRICT is forced to 1
 #     (== `HYPATIAX_NOLLM_ARM=1 HYPATIAX_STRICT=1 python exp1_ablation.py`).
-#   * The existing checkpoint in the results dir is KEPT; the script's own
-#     resume logic only runs the missing equations.
+#   * CI uses one checkpoint file per shard; it never resumes from the shared
+#     master checkpoint. Local unsharded runs retain the canonical checkpoint.
 #   * In CI, DOMAIN_FILTER / SHARD_INDEX select this shard's domain.
 #   * A non-zero exit of exp1_ablation.py now FAILS the step (it used to be
 #     swallowed by `|| echo WARNING`).
@@ -757,16 +757,25 @@ _exp1_ablation_step() {
   local logf="${abl_dir}/exp1_ablation_run${sfx}.log"
   mkdir -p "${abl_dir}"
 
+  local checkpoint_override="${EXP1_ABLATION_CHECKPOINT:-}"
+  if [[ -z "${checkpoint_override}" && -n "${SHARD_INDEX:-}" ]]; then
+    checkpoint_override="${abl_dir}/exp1_ablation_checkpoint_shard${SHARD_INDEX}.json"
+  fi
+
   if [[ "${CLEAR_CHECKPOINT:-0}" == "1" ]]; then
     local backup_dir="${abl_dir}/checkpoint_backups/$(date -u +%Y%m%dT%H%M%SZ)"
     mkdir -p "${backup_dir}"
-    shopt -s nullglob
-    local _f
-    for _f in "${abl_dir}"/exp1_ablation_checkpoint*.json; do
-      mv "${_f}" "${backup_dir}"/
-    done
-    shopt -u nullglob
-    log "exp1_ablation: checkpoint files moved to ${backup_dir}"
+    if [[ -n "${checkpoint_override}" ]]; then
+      [[ -f "${checkpoint_override}" ]] && mv "${checkpoint_override}" "${backup_dir}/"
+    else
+      shopt -s nullglob
+      local _f
+      for _f in "${abl_dir}"/exp1_ablation_checkpoint*.json; do
+        mv "${_f}" "${backup_dir}"/
+      done
+      shopt -u nullglob
+    fi
+    log "exp1_ablation: selected checkpoint moved to ${backup_dir}"
   fi
 
   export HYPATIAX_NOLLM_ARM="${HYPATIAX_NOLLM_ARM:-1}"
@@ -781,13 +790,16 @@ _exp1_ablation_step() {
   fi
 
   log "exp1_ablation: NOLLM_ARM=${HYPATIAX_NOLLM_ARM} STRICT=${HYPATIAX_STRICT} shard=${SHARD_INDEX:-all} domain='${DOMAIN_FILTER:-<all>}'"
-  if [[ -f "${abl_dir}/exp1_ablation_checkpoint.json" ]]; then
-    log "exp1_ablation: keeping existing checkpoint ${abl_dir}/exp1_ablation_checkpoint.json"
+  if [[ -n "${checkpoint_override}" && -f "${checkpoint_override}" ]]; then
+    log "exp1_ablation: resuming shard-local checkpoint ${checkpoint_override}"
+  elif [[ -z "${checkpoint_override}" && -f "${abl_dir}/exp1_ablation_checkpoint.json" ]]; then
+    log "exp1_ablation: keeping existing local checkpoint ${abl_dir}/exp1_ablation_checkpoint.json"
   fi
 
   local rc=0
   PYTHONPATH="${REPO_ROOT}${PYTHONPATH:+:${PYTHONPATH}}" \
   RESULTS_DIR="${abl_dir}" \
+  EXP1_ABLATION_CHECKPOINT="${checkpoint_override}" \
   PYSR_POPULATIONS="${PYSR_POPULATIONS}" \
   PYSR_SEED="${PYSR_SEED}" \
   METHOD_TIMEOUT="${METHOD_TIMEOUT}" \
