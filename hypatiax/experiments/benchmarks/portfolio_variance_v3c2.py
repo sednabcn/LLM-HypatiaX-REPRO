@@ -1090,7 +1090,7 @@ if paper_nums:
         f'the worst was {wh:.6g} (seed {ws}).',
         _pysr_sentence,
         'These figures are computed from available finite records; missing and non-finite observations are counted in the accompanying JSON.',
-        r'Full seed-level results are in Table~\\ref{tab:portfolio-variance-seed-sweep}.',
+        r'Full seed-level results are in Table~\ref{tab:portfolio-variance-seed-sweep}.',
     ]
     para6 = '\n'.join(para6_lines) + '\n'
     p6_path = RESULTS_DIR / 'section6_defi_paragraph.tex'
@@ -1122,12 +1122,7 @@ if paper_nums:
     Y = paper_nums['hypatia_Y_pct']
     best_seed = paper_nums.get('hypatia_best_seed')
     benchmark_seed = paper_nums['benchmark_seed']
-    observed_successes = sorted(
-        int(row['seed']) for row in (_h_rows or [])
-        if row.get('seed') is not None
-        and np.isfinite(pd.to_numeric(row.get(_key), errors='coerce'))
-        and float(row.get(_key)) > 0.99
-    )
+    observed_successes = sorted(_successful_observed)
     fn_lines = [
         '% -- Data-derived Portfolio Variance seed-sensitivity note --',
         f'Observed best seed: {best_seed}; configured benchmark seed: {benchmark_seed}.',
