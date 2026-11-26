@@ -2623,55 +2623,44 @@ jobs:
           fi
           echo "  OK exp1c output files present in canonical path."
 
-      - name: Verify exp1_ablation output (all arms present, no-LLM arm made no LLM call)
+      - name: Verify exp1_ablation shard output (assigned equations only; arm isolation)
         if: ${{ needs.plan.outputs.exp_id == 'exp1_ablation' && steps.resolve_ids.outputs.has_work == 'true' && github.event.inputs.dry_run != 'true' }}
         env:
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+          SHARD_IDS: ${{ matrix.ids }}
         run: |
           set -euo pipefail
           python3 - <<'PYV'
           import json, os, sys
-          path = os.path.join(os.environ["OUT_BASE"], os.environ["RESULT_SUBDIR"],
-                              f"exp1_ablation_checkpoint_shard{os.environ['SHARD_INDEX']}.json")
+          from hypatiax.experiments.benchmarks.exp1_ablation_contracts import validate_shard_checkpoint
+
+          path = os.path.join(
+              os.environ["OUT_BASE"], os.environ["RESULT_SUBDIR"],
+              f"exp1_ablation_checkpoint_shard{os.environ['SHARD_INDEX']}.json",
+          )
+          task_ids = json.loads(os.environ["SHARD_IDS"])
           nollm = os.environ.get("HYPATIAX_NOLLM_ARM") == "1"
           arms = ["pysr_only", "hypatia"] + (["hypatia_nollm"] if nollm else [])
           try:
-              d = json.load(open(path))
-          except Exception as e:
-              print(f"::error::cannot read {path}: {e}"); sys.exit(1)
-          if not d:
-              print(f"::error::{path} is empty"); sys.exit(1)
-          bad = False
-          for k in sorted(d, key=lambda x: (not str(x).isdigit(), int(x) if str(x).isdigit() else 0, str(x))):
-              v = d[k]
-              miss = [a for a in arms
-                      if not isinstance(v.get(a), dict)
-                      or v[a].get("completed") is not True]
-              h  = (v.get("hypatia") or {}).get("llm_called")
-              nl = (v.get("hypatia_nollm") or {}).get("llm_called")
-              print(f"[{k}] {v.get('name', '?')}: arms={[a for a in arms if a not in miss]} llm_called(hypatia)={h} llm_called(nollm)={nl}")
-              if miss:
-                  print(f"::error::eq {k}: missing arm(s) {miss}"); bad = True
-              if nollm and nl is True:
-                  print(f"::error::eq {k}: hypatia_nollm made an LLM call - the no-LLM arm is contaminated"); bad = True
-              if nollm and nl is None and "hypatia_nollm" not in miss:
-                  print(f"::warning::eq {k}: hypatia_nollm has no llm_called flag - cannot prove it stayed LLM-free")
-              hy = v.get("hypatia") or {}
-              if h is not True:
-                  if hy.get("timed_out"):
-                      # timeout rows never record llm_called; a timeout is a legitimate (flagged) result, not a contamination
-                      print(f"::warning::eq {k}: hypatia arm timed out (llm_called not recorded) - legitimate negative result")
-                  else:
-                      print(f"::error::eq {k}: hypatia arm did not make a live LLM call (llm_called={h})"); bad = True
-              elif hy.get("success") is False:
-                  # the LLM WAS called and the method still failed: that is a finding (e.g. the Arrhenius failure mode), not a CI failure
-                  print(f"::warning::eq {k}: hypatia arm failed after a live LLM call (success=false, best_expression={hy.get('best_expression')!r}) - recorded as a negative result")
-          try:
-              import anthropic
-              print(f"anthropic SDK version: {anthropic.__version__}")
-          except Exception as e:
-              print(f"::warning::cannot read anthropic version: {e}")
-          sys.exit(1 if bad else 0)
+              with open(path, encoding="utf-8") as stream:
+                  checkpoint = json.load(stream)
+          except Exception as exc:
+              raise SystemExit(f"::error::cannot read {path}: {exc}")
+
+          errors, warnings = validate_shard_checkpoint(checkpoint, task_ids, arms)
+          for warning in warnings:
+              print(f"::warning::{warning}")
+          for error in errors:
+              print(f"::error::{error}")
+          assigned = sorted(
+              int(key) for key in checkpoint
+              if str(key).isdigit()
+          )
+          print(
+              f"Exp1 shard {os.environ['SHARD_INDEX']} task_ids={task_ids}; "
+              f"checkpoint equation keys={assigned}; arms={arms}"
+          )
+          sys.exit(1 if errors else 0)
           PYV
 
       - name: Verify exp1_five output files exist
