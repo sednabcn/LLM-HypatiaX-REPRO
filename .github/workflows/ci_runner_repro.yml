@@ -558,7 +558,10 @@ jobs:
             echo "::warning::Cross-seed aggregation skipped because one or more seed artifacts failed validation."
           fi
           set -e
-          git add -f "${ROOT}/exp1_ablation_seeds" "${ROOT}/exp1_ablation_multiseed"
+          git add -f "${ROOT}/exp1_ablation_seeds"
+          if [[ -d "${ROOT}/exp1_ablation_multiseed" ]]; then
+            git add -f "${ROOT}/exp1_ablation_multiseed"
+          fi
           if ! git diff --cached --quiet; then
             git commit -m "ci: exp1_ablation_seeds manifest and summary (seeds ${SEEDS_CSV}) - run ${{ github.run_id }} - $(date -u +%Y-%m-%dT%H:%M:%SZ) [skip ci]"
             PUSHED=false
