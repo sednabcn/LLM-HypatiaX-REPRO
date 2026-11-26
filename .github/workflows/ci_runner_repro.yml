@@ -384,6 +384,11 @@ jobs:
             SEEN[${S}]=1
           done
           SEEDS_CSV="$(IFS=,; echo "${SEEDS[*]}")"
+          CANONICAL_SEEDS="42,99,123,777,2024"
+          if [[ "${SEEDS_CSV}" != "${CANONICAL_SEEDS}" ]]; then
+            echo "::error::exp1_ablation_seeds is a fixed five-seed protocol. Expected ${CANONICAL_SEEDS}; received ${SEEDS_CSV}. Do not change the seed set or order."
+            exit 1
+          fi
           echo "seeds=${SEEDS_CSV}" >> "${GITHUB_OUTPUT}"
 
           if [[ "${GATHER_ONLY}" == "true" ]]; then
@@ -460,7 +465,20 @@ jobs:
             echo "Waiting for exp1_ablation seed=${SEED} run ${RUN_ID}"
             SLEEP=30
             while true; do
-              RUN_JSON="$(gh run view "${RUN_ID}" --repo "${REPO}" --json status,conclusion)"
+              RUN_JSON=""
+              for VIEW_ATTEMPT in 1 2 3 4 5; do
+                if RUN_JSON="$(gh run view "${RUN_ID}" --repo "${REPO}" --json status,conclusion 2>&1)"; then
+                  break
+                fi
+                echo "::warning::Could not query seed=${SEED} run=${RUN_ID} (attempt ${VIEW_ATTEMPT}/5): ${RUN_JSON}"
+                RUN_JSON=""
+                sleep $((VIEW_ATTEMPT * 5))
+              done
+              if [[ -z "${RUN_JSON}" ]]; then
+                echo "::warning::Status for seed=${SEED} run=${RUN_ID} is unknown after five API attempts; deferring gather to gather-only recovery."
+                PENDING_RUNS+=("${SEED}:${RUN_ID}:status_unknown")
+                break
+              fi
               STATUS="$(printf '%s' "${RUN_JSON}" | jq -r '.status')"
               CONCLUSION="$(printf '%s' "${RUN_JSON}" | jq -r '.conclusion // "none"')"
               echo "seed=${SEED} run=${RUN_ID} status=${STATUS} conclusion=${CONCLUSION}"
@@ -504,19 +522,19 @@ jobs:
 
           if [[ "${STATE}" == "failed" ]]; then
             echo "::error::One or more exp1_ablation seed runs failed: ${FAILED_RUNS[*]}"
-            exit 1
-          fi
-          if [[ "${STATE}" == "pending" ]]; then
+            echo "::warning::Gathering diagnostics before returning failure."
+          elif [[ "${STATE}" == "pending" ]]; then
             echo "::warning::exp1_ablation_seeds: not all seed runs finished inside the wait window (${PENDING_RUNS[*]}); gather deferred - see the job summary."
           else
             echo "::notice::All ${#SEEDS[@]} exp1_ablation seed runs completed successfully."
           fi
 
       - name: Gather per-seed results under hypatiax/data/results/ablation/
-        if: ${{ github.event.inputs.dry_run != 'true' && (steps.dispatch.outputs.state == 'complete' || steps.dispatch.outputs.state == 'gather_only') }}
+        if: ${{ github.event.inputs.dry_run != 'true' && (steps.dispatch.outputs.state == 'complete' || steps.dispatch.outputs.state == 'gather_only' || steps.dispatch.outputs.state == 'failed') }}
         env:
           SEEDS_CSV: ${{ steps.dispatch.outputs.seeds }}
           RUN_MAP:   ${{ steps.dispatch.outputs.run_map }}
+          DISPATCH_STATE: ${{ steps.dispatch.outputs.state }}
           REF:       ${{ github.ref_name }}
         run: |
           set -euo pipefail
@@ -526,23 +544,44 @@ jobs:
           git fetch --depth=1 origin "${REF}"
           git reset --hard FETCH_HEAD
           ROOT="hypatiax/data/results/ablation"
+          set +e
           python3 scripts/ci/gather_ablation_seeds.py \
             --results-root "${ROOT}" \
             --seeds "${SEEDS_CSV}" \
             ${RUN_MAP:+--run-map "${RUN_MAP}"}
-          git add -f "${ROOT}/exp1_ablation_seeds"
-          if git diff --cached --quiet; then
-            echo "Nothing new to commit."; exit 0
+          GATHER_STATUS=$?
+          AGGREGATE_STATUS=0
+          if [[ "${GATHER_STATUS}" -eq 0 ]]; then
+            python3 scripts/ci/aggregate_exp1_ablation_multiseed.py --results-root "${ROOT}"
+            AGGREGATE_STATUS=$?
+          else
+            echo "::warning::Cross-seed aggregation skipped because one or more seed artifacts failed validation."
           fi
-          git commit -m "ci: exp1_ablation_seeds manifest (seeds ${SEEDS_CSV}) - run ${{ github.run_id }} - $(date -u +%Y-%m-%dT%H:%M:%SZ) [skip ci]"
-          for i in 1 2 3 4 5; do
-            git pull --rebase -X theirs --autostash origin "${REF}" && \
-              git push origin HEAD:"${REF}" && { echo "Pushed exp1_ablation_seeds manifest."; exit 0; }
-            git rebase --abort 2>/dev/null || true
-            sleep $(( (RANDOM % 10) + 5 * i ))
-          done
-          echo "::error::Failed to push exp1_ablation_seeds manifest after 5 attempts."
-          exit 1
+          set -e
+          git add -f "${ROOT}/exp1_ablation_seeds" "${ROOT}/exp1_ablation_multiseed"
+          if ! git diff --cached --quiet; then
+            git commit -m "ci: exp1_ablation_seeds manifest and summary (seeds ${SEEDS_CSV}) - run ${{ github.run_id }} - $(date -u +%Y-%m-%dT%H:%M:%SZ) [skip ci]"
+            PUSHED=false
+            for i in 1 2 3 4 5; do
+              if git pull --rebase -X theirs --autostash origin "${REF}" && git push origin HEAD:"${REF}"; then
+                PUSHED=true
+                echo "Pushed exp1_ablation_seeds manifest and summary."
+                break
+              fi
+              git rebase --abort 2>/dev/null || true
+              sleep $(( (RANDOM % 10) + 5 * i ))
+            done
+            if [[ "${PUSHED}" != true ]]; then
+              echo "::error::Failed to push exp1_ablation_seeds manifest after 5 attempts."
+              exit 1
+            fi
+          else
+            echo "No new manifest or summary files to commit."
+          fi
+          if [[ "${GATHER_STATUS}" -ne 0 || "${AGGREGATE_STATUS}" -ne 0 || "${DISPATCH_STATE}" == "failed" ]]; then
+            echo "::error::exp1_ablation_seeds validation/dispatch failed (gather=${GATHER_STATUS}, aggregate=${AGGREGATE_STATUS}, dispatch=${DISPATCH_STATE})."
+            exit 1
+          fi
 
   pca_runner:
     name: "PCA gate - ${{ github.event.inputs.experiment }}"
