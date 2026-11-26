@@ -84,6 +84,21 @@ import time
 
 M5_FAILURES: list = []  # audit M5: one entry per swallowed fit/predict/metric failure; exclude these runs from statistics
 
+def _json_default(obj):
+    """Serialize NumPy values and non-finite floats in benchmark JSON artifacts."""
+    if isinstance(obj, np.integer):
+        return int(obj)
+    if isinstance(obj, (np.floating, float)):
+        if np.isnan(obj) or np.isinf(obj):
+            return None
+        return float(obj)
+    if isinstance(obj, np.bool_):
+        return bool(obj)
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    raise TypeError(f"Not serialisable: {type(obj)}")
+
+
 
 def _m5_record_failure(where, exc):
     """Record a swallowed failure and return None: a failed run must never enter the statistics as a number."""
@@ -1838,15 +1853,7 @@ def _load_checkpoint() -> tuple[list, int]:
 
 def _save_checkpoint(results: list):
     _validate_result_records(results)
-    def _default(obj):
-        if isinstance(obj, (np.integer,)):         return int(obj)
-        if isinstance(obj, (np.floating, float)):
-            if np.isnan(obj) or np.isinf(obj):    return None
-            return float(obj)
-        if isinstance(obj, np.bool_):              return bool(obj)
-        if isinstance(obj, np.ndarray):            return obj.tolist()
-        raise TypeError(f"Not serialisable: {type(obj)}")
-    CHECKPOINT_FILE.write_text(json.dumps(results, indent=2, default=_default))
+    CHECKPOINT_FILE.write_text(json.dumps(results, indent=2, default=_json_default))
 
 
 def _save_final(
@@ -1871,7 +1878,7 @@ def _save_final(
         if isinstance(obj, np.bool_):              return bool(obj)
         if isinstance(obj, np.ndarray):            return obj.tolist()
         raise TypeError(f"Not serialisable: {type(obj)}")
-    FINAL_OUTPUT.write_text(json.dumps(results, indent=2, default=_default))
+    FINAL_OUTPUT.write_text(json.dumps(results, indent=2, default=_json_default))
     print(f"\n✅ Final results saved → {FINAL_OUTPUT}")
 
 
@@ -2499,7 +2506,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
         },
     }
     _disclosure_path = RESULTS_DIR / "split_protocol_disclosure.json"
-    _disclosure_path.write_text(json.dumps(_disclosure, indent=2, default=_default))
+    _disclosure_path.write_text(json.dumps(_disclosure, indent=2, default=_json_default))
     print(f"📋 PCA split disclosure written → {_disclosure_path}")
 
     # Remove checkpoint on clean completion (not on verify-fix5 partial run)

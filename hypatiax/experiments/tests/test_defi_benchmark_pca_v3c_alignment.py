@@ -29,7 +29,7 @@ def test_pca_runner_tracks_every_current_v3c_function_except_outer_split_adapter
     _, pca_tree = _source_and_tree()
     v3c_source = V3C_RUNNER.read_text(encoding="utf-8")
     v3c_tree = ast.parse(v3c_source, filename=str(V3C_RUNNER))
-    assert _function_names(pca_tree) - {"_pca_directed_split_40_60"} == (
+    assert _function_names(pca_tree) - {"_pca_directed_split_40_60", "_json_default"} == (
         _function_names(v3c_tree) - {"_random_split_80_20"}
     )
 
@@ -129,3 +129,20 @@ def test_pca_cli_accepts_force_fresh_and_rejects_conflicting_resume_mode():
     assert 'if not resume:' in source
     assert 'CHECKPOINT_FILE.unlink()' in source
     assert 'FINAL_OUTPUT.unlink()' in source
+
+
+
+def test_pca_json_serializer_is_module_scoped_for_final_disclosure():
+    source, tree = _source_and_tree()
+    serializer = next(
+        node for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name == "_json_default"
+    )
+    assert serializer.lineno < next(
+        node.lineno for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name == "run_benchmark"
+    )
+    assert "default=_json_default" in source
+    assert "default=_default" not in source
+    assert "split_protocol_disclosure.json" in source
+    assert "Not serialisable:" in ast.get_source_segment(source, serializer)
