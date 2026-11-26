@@ -159,7 +159,7 @@ SEEDS = (
 )
 
 # ── Rerun strategy ────────────────────────────────────────────────────────────
-#  'A'    = run Portfolio Variance only at seed 42 (~2 min)
+#  'A'    = run Portfolio Variance at BENCHMARK_SEED (~2 min)
 #  'B'    = run full 74-case benchmark              (~2-4 hrs)
 #  'skip' = offline analysis only
 # Env-driven so run_all.sh can opt in without editing this file. Default 'skip'.
@@ -329,7 +329,7 @@ if df_v3c3 is not None:
         if any(r > 0.99 for r in pv_vals):
             print('\nCONTRADICTION CONFIRMED in JSON — R^2>0.99 present, but benchmark uses SEED=42.')
         elif all(r < 0 for r in pv_vals):
-            print('\nv3c3 JSON correctly shows failure at seed 42.')
+            print('\nv3c3 JSON shows a negative score at the configured benchmark seed.')
             print('Contradiction exists in the PAPER TEXT only — see §4 for the trace.')
 
 # ── 1e: 74-case benchmark summary ────────────────────────────────────────────
@@ -382,14 +382,22 @@ if sweep_data:
                 lambda v: 'color:green;font-weight:bold' if v else 'color:red',
                 subset=['success'])))
 
-    h42 = df_hypatia[df_hypatia.seed == 42].iloc[0]
-    p42 = df_pysr[df_pysr.seed == 42].iloc[0]
-    print('\nHypatiaX @ seed 42 (default benchmark seed):')
-    print(f'   far_r2 = {h42.far_r2:.1f}  <- catastrophic failure')
-    print(f'   expr   = {h42.expr}')
-    print('\nPySR-only @ seed 42:')
-    print(f'   far_r2 = {p42.far_r2:.3f}')
-    print(f'   expr   = {p42.expr}')
+    h_rows = df_hypatia[df_hypatia.seed == BENCHMARK_SEED]
+    p_rows = df_pysr[df_pysr.seed == BENCHMARK_SEED]
+    print(f'\nHypatiaX @ configured seed {BENCHMARK_SEED}:')
+    if not h_rows.empty:
+        h_row = h_rows.iloc[0]
+        print(f'   far_r2 = {h_row.far_r2:.6g}')
+        print(f'   expr   = {h_row.expr}')
+    else:
+        print('   no matching HypatiaX observation')
+    print(f'\nPySR-only @ configured seed {BENCHMARK_SEED}:')
+    if not p_rows.empty:
+        p_row = p_rows.iloc[0]
+        print(f'   far_r2 = {p_row.far_r2:.6g}')
+        print(f'   expr   = {p_row.expr}')
+    else:
+        print('   no matching PySR-only observation')
 else:
     print('No sweep data available — place portfolio_variance_seed_sweep.json in PROJECT_ROOT.')
 
@@ -1040,7 +1048,7 @@ if sweep_data and paper_nums and df_pysr is not None:
     lines = [
         r'\begin{table}[h]',
         r'\centering',
-        r'\caption{Portfolio Variance far-$R^2$ across random seeds. Success $= R^2 > 0.99$. Default benchmark seed = 42.}',
+        r'\caption{Portfolio Variance far-$R^2$ across random seeds. Success $= R^2 > 0.99$. Configured benchmark seed = {BENCHMARK_SEED}.}',
         r'\label{tab:portfolio-variance-seed-sweep}',
         r'\begin{tabular}{lrllrll}',
         r'\toprule',
