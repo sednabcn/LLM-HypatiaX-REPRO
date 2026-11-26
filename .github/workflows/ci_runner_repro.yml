@@ -1831,9 +1831,10 @@ jobs:
       - name: Preserve shard-specific exp1_ablation output
         if: always() && env.EXP == 'exp1_ablation'
         run: |
-          # Every shard starts from the committed master checkpoint/results (resume), so it
-          # would otherwise MODIFY committed files (the commit step's isolation guard rejects
-          # that, and the store step would prune them). Copy each top-level json/csv to a
+          # Each worker writes its own checkpoint path; other top-level outputs may
+          # still be shared/committed. Copy those outputs to a per-shard name, then restore
+          # committed originals so workers cannot overwrite one another's artifacts.
+          # Copy each top-level json/csv to a
           # per-shard name, then restore the committed original (or drop it if untracked).
           # The two files merge/verify key on stay top-level; per-shard analysis files go to
           # shards/ so they can never collide with the aggregate's own outputs.
