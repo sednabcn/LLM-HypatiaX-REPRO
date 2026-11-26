@@ -1,0 +1,57 @@
+{
+  "experiment_id": "exp1_pca",
+  "status": "passed",
+  "protocol": "pca_40_60_pc1",
+  "train_fraction": 0.4,
+  "test_fraction": 0.6,
+  "expected_seeds": [
+    42,
+    99,
+    123,
+    777,
+    2024
+  ],
+  "validated_seeds": [
+    42,
+    99,
+    123,
+    777,
+    2024
+  ],
+  "expected_cases_per_seed": 74,
+  "validated_case_records": 370,
+  "workflow_run_id": "45862881867",
+  "commit_sha": "4562fd394e31101c7e8fbf05c7aeb6f431239a06",
+  "shards": [
+    {
+      "shard": 0,
+      "seed": 42,
+      "result_file": "hypatiax_defi_benchmark_pca_results_seed42.json",
+      "case_count": 74
+    },
+    {
+      "shard": 1,
+      "seed": 99,
+      "result_file": "hypatiax_defi_benchmark_pca_results_seed99.json",
+      "case_count": 74
+    },
+    {
+      "shard": 2,
+      "seed": 123,
+      "result_file": "hypatiax_defi_benchmark_pca_results_seed123.json",
+      "case_count": 74
+    },
+    {
+      "shard": 3,
+      "seed": 777,
+      "result_file": "hypatiax_defi_benchmark_pca_results_seed777.json",
+      "case_count": 74
+    },
+    {
+      "shard": 4,
+      "seed": 2024,
+      "result_file": "hypatiax_defi_benchmark_pca_results_seed2024.json",
+      "case_count": 74
+    }
+  ]
+}
