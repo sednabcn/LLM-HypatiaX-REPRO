@@ -44,13 +44,22 @@ def aggregate_seed_artifacts(artifacts_dir: str | Path, output_dir: str | Path, 
         if len(set(equation_ids)) != 74 or any(not value for value in equation_ids):
             errors.append(f"{result_path.name}: expected 74 unique non-empty equation_id values")
             continue
-        bad_splits = [
-            row.get("equation_id") for row in records
-            if not isinstance(row.get("split_protocol"), dict)
-            or row["split_protocol"].get("name") != "pca_40_60_pc1"
-            or row["split_protocol"].get("train_fraction") != 0.4
-            or row["split_protocol"].get("test_fraction") != 0.6
-        ]
+        bad_splits = []
+        for row in records:
+            split = row.get("split_protocol")
+            if not isinstance(split, dict):
+                bad_splits.append(row.get("equation_id"))
+                continue
+            train_size, test_size = split.get("train_size"), split.get("test_size")
+            total_size = (train_size + test_size) if isinstance(train_size, int) and isinstance(test_size, int) else 0
+            if (
+                split.get("name") != "pca_40_60_pc1"
+                or split.get("test_fraction") != 0.6
+                or total_size <= 0
+                or abs(train_size / total_size - 0.4) > 1e-9
+                or abs(test_size / total_size - 0.6) > 1e-9
+            ):
+                bad_splits.append(row.get("equation_id"))
         if bad_splits:
             errors.append(f"{result_path.name}: PCA 40/60 split metadata missing/invalid for {bad_splits[:3]}")
             continue
