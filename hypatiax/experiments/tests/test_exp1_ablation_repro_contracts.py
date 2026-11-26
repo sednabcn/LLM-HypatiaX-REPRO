@@ -90,6 +90,22 @@ def test_ci_requires_terminal_records_and_preserves_tables():
     assert "find \"${abl_dir}\" -maxdepth 1 -name '*.tex' -delete" not in runner
 
 
+def test_exp1_preserve_step_never_copies_master_checkpoint_over_shard_checkpoint():
+    runner = RUNNER_PATH.read_text(encoding="utf-8")
+    preserve = runner.split("# exp1_ablation: full run", 1)[1].split("# exp1_ablation_aggregate:", 1)[0]
+    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+    step = workflow.split("- name: Preserve shard-specific exp1_ablation output", 1)[1].split(
+        "- name: Diagnostic - locate result files on disk", 1
+    )[0]
+
+    assert 'if [[ "${bn}" == "exp1_ablation_checkpoint.json" ]]; then' in step
+    assert "Leaving shared master checkpoint untouched" in step
+    assert step.index('if [[ "${bn}" == "exp1_ablation_checkpoint.json" ]]') < step.index(
+        'if [[ "${bn}" == "exp1_ablation_checkpoint_shard${SHARD_INDEX}.json" ]]'
+    )
+    assert 'checkpoint_override="${abl_dir}/exp1_ablation_checkpoint_shard${SHARD_INDEX}.json"' in preserve
+
+
 def test_portfolio_seed_sweep_is_explicit_not_implicit_readiness_blocker():
     assert "optional diagnostic not run" in SOURCE
     assert 'checks.append(("C4 Portfolio seed sweep"' not in SOURCE
