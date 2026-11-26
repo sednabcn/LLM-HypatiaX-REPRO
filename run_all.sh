@@ -743,8 +743,8 @@ run portfolio "Portfolio Variance seed sweep + tables (Tab 5 + Fig G) -- portfol
 # exp1_ablation: full run, all three arms (pysr_only / hypatia / hypatia_nollm).
 #   * HYPATIAX_NOLLM_ARM defaults to 1 and HYPATIAX_STRICT is forced to 1
 #     (== `HYPATIAX_NOLLM_ARM=1 HYPATIAX_STRICT=1 python exp1_ablation.py`).
-#   * The existing checkpoint in the results dir is KEPT; the script's own
-#     resume logic only runs the missing equations.
+#   * CI uses one checkpoint file per shard; it never resumes from the shared
+#     master checkpoint. Local unsharded runs retain the canonical checkpoint.
 #   * In CI, DOMAIN_FILTER / SHARD_INDEX select this shard's domain.
 #   * A non-zero exit of exp1_ablation.py now FAILS the step (it used to be
 #     swallowed by `|| echo WARNING`).
