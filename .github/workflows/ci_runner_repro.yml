@@ -1759,7 +1759,11 @@ jobs:
                 --output-dir "${_SCRATCH}" \
                 --force-fresh 2>&1 | tee /tmp/run_all_step.log || _PCA_RC=$?
 
-            _DEST_PCA="${RESULTS_DIR}/${RESULT_SUBDIR}/_worker_shards/shard${SHARD_INDEX}"
+            if [[ "${{ github.event.inputs.experiment }}" == "exp1_pca" ]]; then
+              _DEST_PCA="${RESULTS_DIR}/${RESULT_SUBDIR}/_worker_shards/shard${SHARD_INDEX}"
+            else
+              _DEST_PCA="${RESULTS_DIR}/${RESULT_SUBDIR}"
+            fi
             mkdir -p "${_DEST_PCA}"
             _re="seed${SHARD_SEEDS}([^0-9]|\$)"
             _COPIED=0
@@ -3433,12 +3437,12 @@ jobs:
         uses: actions/upload-artifact@v4.3.6
         with:
           name: results-${{ github.event.inputs.experiment }}-shard${{ matrix.shard }}
-          path: ${{ needs.plan.outputs.exp_id == 'exp1_pca_seeds' && format('{0}/{1}/_worker_shards/shard{2}/', env.OUT_BASE, needs.plan.outputs.result_subdir, matrix.shard) || ((needs.plan.outputs.exp_id == 'exp1_four_way_matched' || needs.plan.outputs.exp_id == 'exp2_protocol30_random_8020' || needs.plan.outputs.exp_id == 'exp2_protocol30_pca_4060') && format('{0}/{1}/shard{2}/', env.OUT_BASE, needs.plan.outputs.result_subdir, matrix.shard) || format('{0}/{1}/', env.OUT_BASE, needs.plan.outputs.result_subdir)) }}
+          path: ${{ needs.plan.outputs.exp_id == 'exp1_pca_seeds' && github.event.inputs.experiment == 'exp1_pca' && format('{0}/{1}/_worker_shards/shard{2}/', env.OUT_BASE, needs.plan.outputs.result_subdir, matrix.shard) || ((needs.plan.outputs.exp_id == 'exp1_four_way_matched' || needs.plan.outputs.exp_id == 'exp2_protocol30_random_8020' || needs.plan.outputs.exp_id == 'exp2_protocol30_pca_4060') && format('{0}/{1}/shard{2}/', env.OUT_BASE, needs.plan.outputs.result_subdir, matrix.shard) || format('{0}/{1}/', env.OUT_BASE, needs.plan.outputs.result_subdir)) }}
           if-no-files-found: error
           retention-days: ${{ github.event.inputs.experiment == 'exp1-provenance' && 90 || 30 }}
 
       - name: Commit and push shard results to repo
-        if: ${{ success() && github.event.inputs.fresh_mode != 'true' && github.event.inputs.four_way_smoke != 'true' && needs.plan.outputs.exp_id != 'exp1_pca_seeds' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_random_8020' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_pca_4060' }}
+        if: ${{ success() && github.event.inputs.fresh_mode != 'true' && github.event.inputs.four_way_smoke != 'true' && (needs.plan.outputs.exp_id != 'exp1_pca_seeds' || github.event.inputs.experiment != 'exp1_pca') && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_random_8020' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_pca_4060' }}
         env:
           EXP:           ${{ needs.plan.outputs.exp_id }}
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
@@ -3643,7 +3647,7 @@ jobs:
           done
 
       - name: Verify results committed to repo
-        if: ${{ success() && github.event.inputs.fresh_mode != 'true' && needs.plan.outputs.exp_id != 'exp1_pca_seeds' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_random_8020' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_pca_4060' }}
+        if: ${{ success() && github.event.inputs.fresh_mode != 'true' && (needs.plan.outputs.exp_id != 'exp1_pca_seeds' || github.event.inputs.experiment != 'exp1_pca') && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_random_8020' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_pca_4060' }}
         env:
           EXP:           ${{ needs.plan.outputs.exp_id }}
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
@@ -3691,7 +3695,7 @@ jobs:
   exp1_pca_seed_aggregate:
     name: "Aggregate - exp1_pca (validate five isolated seed workers)"
     needs: [plan, worker]
-    if: ${{ always() && github.event.inputs.dry_run != 'true' && needs.plan.outputs.exp_id == 'exp1_pca_seeds' && needs.worker.result == 'success' }}
+    if: ${{ always() && github.event.inputs.dry_run != 'true' && github.event.inputs.experiment == 'exp1_pca' && needs.plan.outputs.exp_id == 'exp1_pca_seeds' && needs.worker.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
