@@ -86,6 +86,8 @@ def validate_shard_checkpoint(
         nollm = row.get("hypatia_nollm") or {}
         if "hypatia_nollm" in arm_names and nollm.get("llm_called") is True:
             errors.append(f"equation {key}: hypatia_nollm made an LLM call")
+        elif "hypatia_nollm" in arm_names and nollm.get("llm_called") is None:
+            warnings.append(f"equation {key}: no llm_called flag on hypatia_nollm; LLM-free status is unproven")
         if "hypatia" in arm_names and hypatia.get("llm_called") is not True:
             if hypatia.get("timed_out"):
                 warnings.append(f"equation {key}: hypatia timed out before a live LLM call")
@@ -110,7 +112,7 @@ def formula_pathology_reasons(code: str | None) -> list[str]:
     if not isinstance(code, str) or not code.strip():
         return []
     reasons = []
-    if re.search(r"\\bnan\\b", code):
+    if re.search(r"\bnan\b", code):
         reasons.append("bare_nan_token")
     low = code.lower()
     for pattern, reason in (
