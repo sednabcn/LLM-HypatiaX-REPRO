@@ -3106,6 +3106,8 @@ jobs:
                   with open(ck, encoding="utf-8") as stream:
                       data = json.load(stream)
                   expected = [str(i) for i in expected_equation_ids(shard_ids)]
+                  if not expected:
+                      raise ValueError("shard task IDs resolve to no Core-15 equations")
               except Exception as e:
                   print(f"  [exp1_ablation] cannot validate {ck}: {e} - not marking done")
                   data = None
