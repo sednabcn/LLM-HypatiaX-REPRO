@@ -59,20 +59,8 @@ on:
         required: false
         default: ""
 
-      ablation_multi_seed:
-        description: "Legacy alias (exp1_ablation only): same as experiment=exp1_ablation_seeds. Prefer exp1_ablation_seeds."
-        required: false
-        type: boolean
-        default: false
-
-      ablation_seeds_gather_only:
-        description: "exp1_ablation_seeds only: skip dispatching; just verify the per-seed results already committed under hypatiax/data/results/ablation/ and (re)write exp1_ablation_seeds/exp1_ablation_seeds_manifest.json. Use after the dispatched seed runs finish if the dispatcher's 5h50m wait window ended first."
-        required: false
-        type: boolean
-        default: false
-
       n_shards:
-        description: "Number of parallel worker shards (user input). exp1-provenance: forced to 5 (one seed per worker, fixed seeds 42,99,123,777,2024). exp1b/exp1c/portfolio: forced to 5 (one shard per seed — table minimum, exact). exp1_ablation: forced to 5 (one shard per domain, exact); exp1_llm_sens: forced to 6 (one worker per condition). exp1_four_way_matched and both manuscript Protocol-30 variants: forced to 5 isolated equation shards with strict aggregation. exp3b: floored to 4 (table minimum). exp1b_seeds: exactly one shard (= one runner) per seed, so the default 99,123,777,2024 always runs as 4 parallel workers and the input is ignored (exp1_pca_seeds follows the same rule for the PCA 40/60 variant, default 99,123,777,2024) — running the seeds back-to-back on one worker would blow the 6h GitHub job clock. suppB: forced to 5 regardless of input (one shard per noise level — divmod(55,5)=11 tasks each, preserving one-noise-level-per-shard alignment required by run_all.sh STEP 10). suppB_sc: forced to 6 regardless of input (one shard per sample size — divmod(66,6)=11 tasks each). All other experiments: forced to 1 regardless of input. Input is accepted and logged but may be overridden by the per-experiment shard table."
+        description: "Parallel workers: exp1_ablation uses five domain shards for one seed; exp1_ablation_seeds uses five independent seed workers (42,99,123,777,2024), each running all five Core-15 domains. Per-experiment shard rules override this input."
         required: false
         default: "1"
 
@@ -340,213 +328,9 @@ jobs:
               -f fresh_mode="${FRESH_MODE:-false}"
           done
 
-  dispatch_exp1_ablation_multi_seed:
-    # exp1_ablation_seeds: one ordinary exp1_ablation run per seed (each = 5 domain
-    # shards, results in ablation/exp1_ablation[_seed<N>]), then gather them.
-    # Also reached by the legacy ablation_multi_seed=true input.
-    name: "Dispatch exp1_ablation_seeds (one exp1_ablation run per seed) + gather"
-    if: ${{ (github.event.inputs.experiment == 'exp1_ablation_seeds' || (github.event.inputs.experiment == 'exp1_ablation' && github.event.inputs.ablation_multi_seed == 'true')) && github.event.inputs.experiments == '' && github.event.inputs.aggregate_run_id == '' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 360
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4.2.2
-        with:
-          fetch-depth: 1
-
-      - name: Dispatch one exp1_ablation run per seed and wait
-        id: dispatch
-        env:
-          GH_TOKEN:          ${{ secrets.DISPATCH_PAT }}
-          REPO:               ${{ github.repository }}
-          REF:                ${{ github.ref_name }}
-          SEEDS_IN:           ${{ github.event.inputs.seeds }}
-          GATHER_ONLY:        ${{ github.event.inputs.ablation_seeds_gather_only || 'false' }}
-          N_SAMPLES:          ${{ github.event.inputs.n_samples || '200' }}
-          NOISE_LEVELS:       ${{ github.event.inputs.noise_levels || '0.0,0.05,0.1,0.5,1.0' }}
-          PYSR_GENERATIONS:   ${{ github.event.inputs.pysr_generations || '1000' }}
-          PYSR_POPULATIONS:   ${{ github.event.inputs.pysr_populations || '30' }}
-          DRY_RUN:            ${{ github.event.inputs.dry_run || 'false' }}
-          FORCE_RERUN:        ${{ github.event.inputs.force_rerun || 'false' }}
-        run: |
-          set -euo pipefail
-
-          # ── seeds: the `seeds` input, default the five-seed protocol ─────────
-          SEEDS_RAW="${SEEDS_IN:-42,99,123,777,2024}"
-          read -r -a SEEDS <<< "${SEEDS_RAW//,/ }"
-          if [[ ${#SEEDS[@]} -eq 0 ]]; then
-            echo "::error::exp1_ablation_seeds: no seeds given."; exit 1
-          fi
-          declare -A SEEN=()
-          for S in "${SEEDS[@]}"; do
-            [[ "${S}" =~ ^[0-9]+$ ]] || { echo "::error::exp1_ablation_seeds: invalid seed '${S}'."; exit 1; }
-            [[ -z "${SEEN[${S}]:-}" ]] || { echo "::error::exp1_ablation_seeds: duplicate seed ${S}."; exit 1; }
-            SEEN[${S}]=1
-          done
-          SEEDS_CSV="$(IFS=,; echo "${SEEDS[*]}")"
-          echo "seeds=${SEEDS_CSV}" >> "${GITHUB_OUTPUT}"
-
-          if [[ "${GATHER_ONLY}" == "true" ]]; then
-            echo "state=gather_only" >> "${GITHUB_OUTPUT}"
-            echo "::notice::gather_only: not dispatching; gathering seeds ${SEEDS_CSV} from branch ${REF}."
-            exit 0
-          fi
-
-          RUN_IDS=()
-          echo "::notice::Starting exp1_ablation_seeds: ${SEEDS[*]}"
-          echo "::notice::Each seed is a separate exp1_ablation dispatch with exactly five domain shards."
-          echo "::notice::resume=false is forced so every seed is a fresh independent replication."
-
-          for SEED in "${SEEDS[@]}"; do
-            STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            echo "Dispatching exp1_ablation seed=${SEED}"
-            OUTPUT="$(gh workflow run ci_runner_repro.yml \
-              --repo "${REPO}" --ref "${REF}" \
-              -f experiment=exp1_ablation \
-              -f seeds="${SEED}" \
-              -f n_shards=5 \
-              -f n_samples="${N_SAMPLES}" \
-              -f noise_levels="${NOISE_LEVELS}" \
-              -f pysr_generations="${PYSR_GENERATIONS}" \
-              -f pysr_populations="${PYSR_POPULATIONS}" \
-              -f resume=false \
-              -f dry_run="${DRY_RUN}" \
-              -f force_rerun="${FORCE_RERUN}" 2>&1)"
-            printf '%s\n' "${OUTPUT}"
-
-            RUN_ID="$(printf '%s\n' "${OUTPUT}" | grep -Eo 'actions/runs/[0-9]+' | cut -d/ -f3 | tail -1 || true)"
-            if [[ -z "${RUN_ID}" ]]; then
-              for ATTEMPT in $(seq 1 30); do
-                CANDIDATES="$(gh run list --repo "${REPO}" --workflow ci_runner_repro.yml \
-                  --event workflow_dispatch --limit 30 \
-                  --json databaseId,createdAt,displayTitle,headBranch 2>/dev/null | \
-                  jq -r --arg branch "${REF}" --arg since "${STARTED_AT}" \
-                    '[.[] | select(.headBranch == $branch and .createdAt >= $since and (.displayTitle | test("exp1_ablation"; "i")))] | sort_by(.createdAt) | reverse | .[].databaseId' || true)"
-                while IFS= read -r CANDIDATE; do
-                  [[ -z "${CANDIDATE}" ]] && continue
-                  if [[ ! " ${RUN_IDS[*]:-} " =~ " ${CANDIDATE} " ]]; then
-                    RUN_ID="${CANDIDATE}"
-                    break
-                  fi
-                done <<< "${CANDIDATES}"
-                [[ -n "${RUN_ID}" ]] && break
-                sleep 5
-              done
-            fi
-            if [[ -z "${RUN_ID}" ]]; then
-              echo "::error::Could not identify the workflow run dispatched for seed ${SEED}."
-              exit 1
-            fi
-            echo "Dispatched seed ${SEED} as workflow run ${RUN_ID}"
-            RUN_IDS+=("${RUN_ID}")
-          done
-
-          RUN_MAP=""
-          for INDEX in "${!SEEDS[@]}"; do RUN_MAP+="${SEEDS[${INDEX}]}:${RUN_IDS[${INDEX}]},"; done
-          RUN_MAP="${RUN_MAP%,}"
-          echo "run_map=${RUN_MAP}" >> "${GITHUB_OUTPUT}"
-          echo "All ${#SEEDS[@]} seed runs dispatched: ${RUN_MAP}"
-
-          # One shared wait window for ALL runs. A hosted job is capped at 6h and a seed
-          # run can take longer than that end-to-end (workers <=5.5h + aggregate), so
-          # this job must not pretend it can always wait. WAIT_SECS leaves ~10 min to gather.
-          WAIT_SECS="${WAIT_SECS:-21000}"
-          WAIT_DEADLINE=$(( $(date +%s) + WAIT_SECS ))
-          FAILED_RUNS=()
-          PENDING_RUNS=()
-          for INDEX in "${!RUN_IDS[@]}"; do
-            RUN_ID="${RUN_IDS[${INDEX}]}"
-            SEED="${SEEDS[${INDEX}]}"
-            echo "Waiting for exp1_ablation seed=${SEED} run ${RUN_ID}"
-            SLEEP=30
-            while true; do
-              RUN_JSON="$(gh run view "${RUN_ID}" --repo "${REPO}" --json status,conclusion)"
-              STATUS="$(printf '%s' "${RUN_JSON}" | jq -r '.status')"
-              CONCLUSION="$(printf '%s' "${RUN_JSON}" | jq -r '.conclusion // "none"')"
-              echo "seed=${SEED} run=${RUN_ID} status=${STATUS} conclusion=${CONCLUSION}"
-              if [[ "${STATUS}" == "completed" ]]; then
-                if [[ "${CONCLUSION}" != "success" ]]; then
-                  echo "::error::exp1_ablation seed ${SEED} run ${RUN_ID} completed with conclusion ${CONCLUSION}."
-                  FAILED_RUNS+=("${SEED}:${RUN_ID}:${CONCLUSION}")
-                fi
-                break
-              fi
-              if [[ $(date +%s) -ge ${WAIT_DEADLINE} ]]; then
-                echo "::warning::Wait window ended; seed ${SEED} run ${RUN_ID} is still ${STATUS}."
-                PENDING_RUNS+=("${SEED}:${RUN_ID}")
-                break
-              fi
-              sleep "${SLEEP}"
-              (( SLEEP < 120 )) && SLEEP=$(( SLEEP + 10 )) || true
-            done
-          done
-
-          if [[ ${#FAILED_RUNS[@]} -gt 0 ]]; then
-            STATE=failed
-          elif [[ ${#PENDING_RUNS[@]} -gt 0 ]]; then
-            STATE=pending
-          else
-            STATE=complete
-          fi
-          echo "state=${STATE}" >> "${GITHUB_OUTPUT}"
-
-          {
-            echo "## exp1_ablation_seeds (${STATE})"
-            for INDEX in "${!SEEDS[@]}"; do
-              echo "- Seed ${SEEDS[${INDEX}]}: workflow run ${RUN_IDS[${INDEX}]}"
-            done
-            if [[ "${STATE}" == "pending" ]]; then
-              echo ""
-              echo "Still running when the wait window ended: ${PENDING_RUNS[*]}"
-              echo "Results were NOT gathered. When they finish, dispatch experiment=exp1_ablation_seeds with ablation_seeds_gather_only=true and seeds=${SEEDS_CSV}."
-            fi
-          } >> "${GITHUB_STEP_SUMMARY}"
-
-          if [[ "${STATE}" == "failed" ]]; then
-            echo "::error::One or more exp1_ablation seed runs failed: ${FAILED_RUNS[*]}"
-            exit 1
-          fi
-          if [[ "${STATE}" == "pending" ]]; then
-            echo "::warning::exp1_ablation_seeds: not all seed runs finished inside the wait window (${PENDING_RUNS[*]}); gather deferred - see the job summary."
-          else
-            echo "::notice::All ${#SEEDS[@]} exp1_ablation seed runs completed successfully."
-          fi
-
-      - name: Gather per-seed results under hypatiax/data/results/ablation/
-        if: ${{ github.event.inputs.dry_run != 'true' && (steps.dispatch.outputs.state == 'complete' || steps.dispatch.outputs.state == 'gather_only') }}
-        env:
-          SEEDS_CSV: ${{ steps.dispatch.outputs.seeds }}
-          RUN_MAP:   ${{ steps.dispatch.outputs.run_map }}
-          REF:       ${{ github.ref_name }}
-        run: |
-          set -euo pipefail
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          # The seed runs committed their results to ${REF} after this job checked out.
-          git fetch --depth=1 origin "${REF}"
-          git reset --hard FETCH_HEAD
-          ROOT="hypatiax/data/results/ablation"
-          python3 scripts/ci/gather_ablation_seeds.py \
-            --results-root "${ROOT}" \
-            --seeds "${SEEDS_CSV}" \
-            ${RUN_MAP:+--run-map "${RUN_MAP}"}
-          git add -f "${ROOT}/exp1_ablation_seeds"
-          if git diff --cached --quiet; then
-            echo "Nothing new to commit."; exit 0
-          fi
-          git commit -m "ci: exp1_ablation_seeds manifest (seeds ${SEEDS_CSV}) - run ${{ github.run_id }} - $(date -u +%Y-%m-%dT%H:%M:%SZ) [skip ci]"
-          for i in 1 2 3 4 5; do
-            git pull --rebase -X theirs --autostash origin "${REF}" && \
-              git push origin HEAD:"${REF}" && { echo "Pushed exp1_ablation_seeds manifest."; exit 0; }
-            git rebase --abort 2>/dev/null || true
-            sleep $(( (RANDOM % 10) + 5 * i ))
-          done
-          echo "::error::Failed to push exp1_ablation_seeds manifest after 5 attempts."
-          exit 1
-
   pca_runner:
     name: "PCA gate - ${{ github.event.inputs.experiment }}"
-    if: github.event.inputs.experiments == '' && github.event.inputs.aggregate_run_id == '' && github.event.inputs.experiment != 'exp1_ablation_seeds' && !(github.event.inputs.experiment == 'exp1_ablation' && github.event.inputs.ablation_multi_seed == 'true')
+    if: github.event.inputs.experiments == '' && github.event.inputs.aggregate_run_id == ''
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -743,17 +527,21 @@ jobs:
               SCRIPT="hypatiax/experiments/benchmarks/exp1_ablation.py"
               NEEDS_JULIA=true
               RESULT_SUBDIR="ablation/exp1_ablation"
-              # One seed per dispatch (a full 5-shard run each). seed 42 (or empty) = canonical
-              # dir; any other seed writes to ablation/exp1_ablation_seed<N> so repeat seeds
-              # never touch the committed seed-42 results. Dispatch once per seed, e.g. 99, 123.
               ABL_SEED="${SEEDS_IN:-42}"
               if [[ ! "${ABL_SEED}" =~ ^[0-9]+$ ]]; then
-                echo "::error::exp1_ablation takes exactly ONE seed per dispatch (got '${ABL_SEED}'). Dispatch once per seed."
+                echo "::error::exp1_ablation takes exactly ONE seed per dispatch."
                 exit 1
               fi
               if [[ "${ABL_SEED}" != "42" ]]; then RESULT_SUBDIR="ablation/exp1_ablation_seed${ABL_SEED}"; fi
               DEFAULT_SEEDS="${ABL_SEED}"
               echo "ablation_seed=${ABL_SEED}" >> "$GITHUB_OUTPUT"
+              ;;
+
+            exp1_ablation_seeds)
+              SCRIPT="hypatiax/experiments/benchmarks/exp1_ablation.py"
+              NEEDS_JULIA=true
+              RESULT_SUBDIR="ablation/exp1_ablation_seeds"
+              DEFAULT_SEEDS="${SEEDS_IN:-42,99,123,777,2024}"
               ;;
 
             exp1_llm_sens)
@@ -979,7 +767,8 @@ jobs:
               "exp1b_seeds":        4,   # documented default; enforced below as one shard per seed
               "exp1_pca_seeds":    4,   # same rule as exp1b_seeds (PCA 40/60 variant)
               "exp1c":              5,
-              "exp1_ablation":      5,   # one shard per domain (chemistry, defi_risk, biology, physics, defi_amm)
+              "exp1_ablation":      5,   # one domain shard for one seed
+              "exp1_ablation_seeds": 5,   # one independent worker per fixed seed
                "exp1_llm_sens":      6,   # one shard per preregistered arm/description condition
               "exp1_four_way_matched": 5, # Core-15 equation IDs partitioned into five isolated workers
               "exp2_protocol30_random_8020": 5, # 30 manuscript equations, five isolated workers
@@ -1031,10 +820,10 @@ jobs:
           SEEDS        = [s.strip() for s in os.environ["EFFECTIVE_SEEDS"].split(",") if s.strip()]
           NOISE_LEVELS = [l.strip() for l in os.environ["NOISE_LEVELS"].split(",") if l.strip()]
 
-          if EXP == "exp1-provenance":
+          if EXP in ("exp1-provenance", "exp1_ablation_seeds"):
               required_seeds = ["42", "99", "123", "777", "2024"]
               if SEEDS != required_seeds:
-                  print(f"ERROR: exp1-provenance requires the fixed seed set {required_seeds}; got {SEEDS}", file=sys.stderr)
+                  print(f"ERROR: {EXP} requires the fixed seed set {required_seeds}; got {SEEDS}", file=sys.stderr)
                   sys.exit(1)
               N_SHARDS = 5
           elif EXP in ("exp1b_seeds", "exp1_pca_seeds"):
@@ -1094,6 +883,8 @@ jobs:
           SUPPB_SC_IDS = [f"sc_n{n}__{eq}" for n in SUPPB_SC_SAMPLE_COUNTS
                           for eq in FEYNMAN_DOMAINS]
 
+          ABLATION_DOMAINS = ["chemistry", "defi_risk", "biology", "physics", "defi_amm"]
+
           registry = {
               "exp1":              DEFI_TASKS,
               # Seed-major order gives exactly 10 domain tasks (all 74 cases) to each seed shard.
@@ -1108,7 +899,8 @@ jobs:
               "exp1b_seeds":       [f"{d}_seed{s}" for s in SEEDS for d in DEFI_TASKS],
               "exp1_pca_seeds":   [f"{d}_seed{s}" for s in SEEDS for d in DEFI_TASKS],
               "exp1c":             [f"seed{s}" for s in SEEDS],
-              "exp1_ablation":     ["chemistry", "defi_risk", "biology", "physics", "defi_amm"],
+              "exp1_ablation":     ABLATION_DOMAINS,
+              "exp1_ablation_seeds": [f"{d}_seed{s}" for s in SEEDS for d in ABLATION_DOMAINS],
                "exp1_llm_sens":     ["pysr_only__na", "hypatia_nollm__na", "pure_llm__named", "pure_llm__neutral", "hypatia__named", "hypatia__neutral"],
               "exp1_four_way_matched": [str(i) for i in range(15)],
               "exp2_protocol30_random_8020": MULTI30,
@@ -1134,6 +926,9 @@ jobs:
               "extrap":            FEYNMAN_DOMAINS,
           }
 
+          if EXP == "exp1_ablation_seeds" and OVERRIDE:
+              print("ERROR: exp1_ablation_seeds does not allow task_ids_override; all five domains are required for every seed.", file=sys.stderr)
+              sys.exit(1)
           all_ids = OVERRIDE if OVERRIDE else registry.get(EXP, [])
           if EXP == "exp1_four_way_matched":
               if FOUR_WAY_SMOKE:
@@ -1841,7 +1636,7 @@ jobs:
           SHARD_CKPT:        checkpoint_worker_shard${{ matrix.shard }}.json
           RESULTS_DIR:       ${{ env.OUT_BASE }}
           REPRO_CFG:         ${{ env.REPRO_CFG }}
-          RESUME:            ${{ (github.event.inputs.fresh_mode == 'true' || github.event.inputs.experiment == 'exp1-provenance' || github.event.inputs.clean_llm_rerun == 'true') && 'false' || github.event.inputs.resume || 'true' }}
+          RESUME:            ${{ (github.event.inputs.fresh_mode == 'true' || github.event.inputs.experiment == 'exp1-provenance' || github.event.inputs.experiment == 'exp1_ablation_seeds' || github.event.inputs.clean_llm_rerun == 'true') && 'false' || github.event.inputs.resume || 'true' }}
           CLEAR_CHECKPOINT:  ${{ github.event.inputs.clean_llm_rerun == 'true' && '1' || '' }}
           DRY_RUN:           ${{ github.event.inputs.dry_run || 'false' }}
           SHARD:             ${{ matrix.shard }}
@@ -1897,7 +1692,7 @@ jobs:
             # One condition per shard; all explicitly requested seeds run for that condition.
             SHARD_SEEDS="${EFFECTIVE_SEEDS}"
             echo "  [exp1_llm_sens] condition shard ${SHARD_INDEX}; seeds=${SHARD_SEEDS}"
-          elif [[ "${EXP}" == "exp1b_seeds" || "${EXP}" == "exp1_pca_seeds" || "${EXP}" == "exp1-provenance" ]]; then
+          elif [[ "${EXP}" == "exp1b_seeds" || "${EXP}" == "exp1_pca_seeds" || "${EXP}" == "exp1-provenance" || "${EXP}" == "exp1_ablation_seeds" ]]; then
             # pending IDs are "<domain>_seed<N>"; exp1's benchmark filters on the bare domain keys.
             TASK_IDS="$(sed -E 's/_seed[0-9]+$//' /tmp/pending_ids.txt | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
             SHARD_SEEDS="$(sed -nE 's/.*_seed([0-9]+)$/\1/p' /tmp/pending_ids.txt | sort -un | paste -sd, -)"
@@ -2040,6 +1835,18 @@ jobs:
               echo "::error::exp1_pca_seeds seed ${SHARD_SEEDS}: ${SCRIPT_PATH} exited ${_PCA_RC} (any partial results were copied above)."
               exit "${_PCA_RC}"
             fi
+          elif [[ "${EXP}" == "exp1_ablation_seeds" ]]; then
+            # One matrix worker owns one seed and runs all five Core-15 domains.
+            _SEED_OUT="${RESULT_SUBDIR}/seed${SHARD_SEEDS}"
+            TASK_IDS="${TASK_IDS}" SHARD_IDS="${_RUN_SHARD_IDS}" \
+            SHARD="0" SHARD_INDEX="0" SHARD_ID="1" N_SHARDS="1" \
+            RESULTS_DIR="${RESULTS_DIR}" OUT_BASE="${RESULTS_DIR}" \
+            REPO_ROOT="${{ github.workspace }}" \
+            SHARD_SEEDS="${SHARD_SEEDS}" PYSR_SEED="${SHARD_SEEDS}" \
+            EXPERIMENT_SEED="${SHARD_SEEDS}" DOMAIN_FILTER="${TASK_IDS}" \
+            ABLATION_SUBDIR="${_SEED_OUT}" EXP1_ABLATION_SEED_IN_DIR="1" \
+            NUMERICAL_ONLY="true" \
+              bash run_all.sh --step exp1_ablation_seeds 2>&1 | tee /tmp/run_all_step.log
           else
             TASK_IDS="${TASK_IDS}" \
             SHARD_IDS="${_RUN_SHARD_IDS}" \
@@ -2070,6 +1877,37 @@ jobs:
             fi
           fi
 
+      - name: Verify exp1_ablation_seeds output and seed isolation
+        if: ${{ needs.plan.outputs.exp_id == 'exp1_ablation_seeds' && steps.resolve_ids.outputs.has_work == 'true' && github.event.inputs.dry_run != 'true' }}
+        env:
+          SHARD_IDS: ${{ matrix.ids }}
+          RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          ids = json.loads(os.environ["SHARD_IDS"])
+          seeds = sorted({t.rsplit("_seed", 1)[1] for t in ids if "_seed" in t})
+          domains = {t.rsplit("_seed", 1)[0] for t in ids if "_seed" in t}
+          if len(seeds) != 1 or len(domains) != 5:
+              raise SystemExit(f"expected one seed and all five domains, got seeds={seeds}, domains={sorted(domains)}")
+          seed = seeds[0]
+          out = Path(os.environ["OUT_BASE"]) / os.environ["RESULT_SUBDIR"] / f"seed{seed}"
+          result = out / "exp1_ablation_results.json"
+          if not result.is_file() or result.stat().st_size == 0:
+              raise SystemExit(f"missing completed seed result: {result}")
+          data = json.loads(result.read_text())
+          if not isinstance(data, dict) or len(data) != 15:
+              raise SystemExit(f"seed {seed}: expected 15 Core-15 equations, found {len(data) if isinstance(data, dict) else type(data).__name__}")
+          arms = ("pysr_only", "hypatia", "hypatia_nollm")
+          missing = {k: [a for a in arms if not isinstance(v, dict) or not isinstance(v.get(a), dict) or v[a].get("completed") is not True]
+                     for k, v in data.items()}
+          missing = {k: v for k, v in missing.items() if v}
+          if missing:
+              raise SystemExit(f"seed {seed}: incomplete equation arms: {missing}")
+          print(f"Verified exp1_ablation_seeds seed={seed}: 15 equations x 3 complete arms at {result}")
+          PY
       - name: Verify Exp1 LLM-sensitivity shard output and arm isolation
         if: ${{ needs.plan.outputs.exp_id == 'exp1_llm_sens' && steps.resolve_ids.outputs.has_work == 'true' && github.event.inputs.dry_run != 'true' }}
         env:

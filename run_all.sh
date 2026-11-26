@@ -266,7 +266,7 @@ ONLY_STEP=""
 FROM_STEP=""
 DRY_RUN=false
 
-_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1_ablation exp1_llm_sens exp1_ablation_aggregate exp1_four_way_matched exp1_four_way_matched_aggregate exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_regression_tests exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2_protocol30_random_8020 exp2_protocol30_pca_4060 exp2_protocol30_random_8020_aggregate exp2_protocol30_pca_4060_aggregate exp2 exp2_all_domains_pca_4060 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
+_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1_ablation exp1_ablation_seeds exp1_llm_sens exp1_ablation_aggregate exp1_four_way_matched exp1_four_way_matched_aggregate exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_regression_tests exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2_protocol30_random_8020 exp2_protocol30_pca_4060 exp2_protocol30_random_8020_aggregate exp2_protocol30_pca_4060_aggregate exp2 exp2_all_domains_pca_4060 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
 _DEFERRED_STEPS="instability exp2_all_domains_pca_4060 exp1_four_way_matched_aggregate exp2_protocol30_random_8020_aggregate exp2_protocol30_pca_4060_aggregate"
 RUN_DEFERRED="${RUN_DEFERRED:-0}"
 
@@ -830,6 +830,23 @@ _exp1_ablation_step() {
 
 # PYPROV: exp1_ablation checkpoint policy is complete.
 run exp1_ablation "Core-15 LLM ablation: PySR-only vs HypatiaX vs HypatiaX-noLLM (Tab 5, §10.6)" _exp1_ablation_step
+# Five-seed replication: one workflow matrix worker owns one complete seed.
+# Within each worker the five Core-15 domains run as one local shard; outputs
+# and checkpoints are isolated below ablation/exp1_ablation_seeds/seed<N>.
+_exp1_ablation_seeds_step() {
+  local seed="${SHARD_SEEDS:-${PYSR_SEED:-42}}"
+  if [[ ! "${seed}" =~ ^[0-9]+$ ]]; then
+    echo "::error::exp1_ablation_seeds requires one numeric seed per worker (got ${seed})."
+    return 1
+  fi
+  export PYSR_SEED="${seed}"
+  export N_SHARDS=1 SHARD_INDEX=0 SHARD=0 SHARD_ID=1
+  export EXP1_ABLATION_SEED_IN_DIR=1
+  export ABLATION_SUBDIR="${ABLATION_SUBDIR:-ablation/exp1_ablation_seeds/seed${seed}}"
+  _exp1_ablation_step
+}
+run exp1_ablation_seeds "Core-15 five-seed replication (one independent worker per seed)" _exp1_ablation_seeds_step
+
 
 # Exp1 LLM-sensitivity: six preregistered condition shards, 27 cases each.
 # One worker runs exactly one condition and all explicitly requested seeds.
