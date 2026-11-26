@@ -2548,8 +2548,11 @@ Examples:
   python hypatiax_defi_benchmark_v3.py --output-dir ./results --resume  # resume from a custom directory
         """,
     )
-    parser.add_argument("--resume",      action="store_true",
-                        help="Resume from checkpoint")
+    run_mode = parser.add_mutually_exclusive_group()
+    run_mode.add_argument("--resume", action="store_true",
+                          help="Resume from checkpoint")
+    run_mode.add_argument("--force-fresh", action="store_true",
+                          help="Explicitly start fresh, deleting this run's checkpoint and final output")
     parser.add_argument("--verify-fix5", action="store_true",
                         help="Run only the 4 cases targeted by Fix 5 to verify the fix")
     parser.add_argument("--report-only", action="store_true",
