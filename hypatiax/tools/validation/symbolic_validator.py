@@ -178,10 +178,20 @@ class SymbolicValidator:
 
         try:
             # 1. Parse -------------------------------------------------------
-            if from_latex:
-                expr = self._safe_parse_latex(expression)
-            else:
-                expr = safe_sympify(expression, list(variable_definitions.keys()))
+            try:
+                if from_latex:
+                    expr = self._safe_parse_latex(expression)
+                else:
+                    expr = safe_sympify(expression, list(variable_definitions.keys()))
+            except ValueError as exc:
+                # Restricted-parser rejections (for example, an undeclared
+                # engineered feature such as ratio_HA_A) are expected invalid
+                # candidates, not unexpected validator failures. Keep the
+                # strict variable allowlist and return a structured rejection.
+                results["errors"].append(f"Expression parsing failed: {exc}")
+                results["valid"] = False
+                logger.info("Rejected expression during safe parsing: %s", exc)
+                return self._finalize_results(results)
 
             if expr is None:
                 results["errors"].append("Cannot parse expression")
