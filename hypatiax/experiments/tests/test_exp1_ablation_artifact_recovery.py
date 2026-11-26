@@ -81,3 +81,12 @@ def test_recovery_dispatch_is_aggregate_only_and_downloads_source_run_artifacts(
     assert "bash run_all.sh --step exp1_ablation_aggregate" in job
     assert "needs.worker.result" not in job
     assert "PYSR_SEED: \"42\"" in job
+
+def test_core15_aggregate_job_is_not_selected_for_ablation_recovery():
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    job = workflow.split("exp1_four_way_matched_aggregate:", 1)[1].split(
+        "exp1_ablation_aggregate:", 1
+    )[0]
+    condition = next(line for line in job.splitlines() if line.strip().startswith("if:"))
+    assert "aggregate_run_id != '' && github.event.inputs.experiment == 'exp1_four_way_matched'" in condition
+    assert "aggregate_run_id == '' && needs.plan.outputs.exp_id == 'exp1_four_way_matched'" in condition
