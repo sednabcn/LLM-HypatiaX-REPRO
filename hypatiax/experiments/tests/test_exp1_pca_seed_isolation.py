@@ -53,6 +53,7 @@ def test_pca_workers_use_private_staging_and_only_aggregate_job_commits_results(
     assert "needs.plan.outputs.exp_id != 'exp1_pca_seeds'" in commit
     assert "needs.plan.outputs.exp_id != 'exp1_pca_seeds'" in verify
     aggregate = workflow.split("exp1_pca_seed_aggregate:", 1)[1].split("protocol30_aggregate:", 1)[0]
+    assert "github.event.inputs.experiment == 'exp1_pca'" in aggregate
     assert "needs.worker.result == 'success'" in aggregate
     assert "pattern: results-exp1_pca-shard*" in aggregate
     assert "aggregate_exp1_pca_seeds.py" in aggregate
