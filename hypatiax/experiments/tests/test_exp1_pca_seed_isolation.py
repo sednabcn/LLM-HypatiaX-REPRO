@@ -103,3 +103,12 @@ def test_pythoncall_cache_probe_does_not_start_julia_before_julia_setup():
     assert "using PythonCall" in warmup
     assert '("exp1_ablation", "exp1_pca", "exp1_pca_seeds")' in warmup
     assert "refusing to start shards" in warmup
+
+def test_exp1b_pca_dispatch_does_not_depend_on_exp1_pca_job():
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    exp1b_job = workflow.split("  pca_run_exp1b:\\n", 1)[1].split("\\n  gate_a_split_protocol_test:", 1)[0]
+    needs_line = next(line.strip() for line in exp1b_job.splitlines() if line.strip().startswith("needs:"))
+    assert "pca_runner" in needs_line
+    assert "credential_preflight" in needs_line
+    assert "pca_run_exp1" not in needs_line
+    assert "if: needs.pca_runner.outputs.is_pca == 'true'" in exp1b_job
