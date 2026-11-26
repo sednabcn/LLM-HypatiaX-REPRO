@@ -327,7 +327,7 @@ if df_v3c3 is not None:
                 .background_gradient(subset=['test_r2'], cmap='RdYlGn', vmin=-10, vmax=1))
         pv_vals = [r for r in df_pv['test_r2'].values if r == r]
         if any(r > 0.99 for r in pv_vals):
-            print('\nCONTRADICTION CONFIRMED in JSON — R^2>0.99 present, but benchmark uses SEED=42.')
+            print('\nCONTRADICTION CONFIRMED in JSON — R^2>0.99 present, but benchmark uses the configured seed.')
         elif all(r < 0 for r in pv_vals):
             print('\nv3c3 JSON shows a negative score at the configured benchmark seed.')
             print('Contradiction exists in the PAPER TEXT only — see §4 for the trace.')
@@ -459,7 +459,7 @@ if df_pysr is not None and df_hypatia is not None:
 
 | Value | Action | Time |
 |-------|--------|------|
-| `'A'` | Portfolio Variance only at SEED=42 (honest result) | ~2 min |
+| `'A'` | Portfolio Variance at the configured benchmark seed | ~2 min |
 | `'B'` | Full 74-case benchmark via v3c3 CLI | ~2–4 hrs |
 | `'skip'` | Offline — use existing JSONs | instant |
 
@@ -610,11 +610,11 @@ def find_portfolio_variance_case(proto):
 
 print('Helper functions defined')
 
-# ── 3c: Strategy A — single-case rerun at SEED=42 ────────────────────────────
+# ── 3c: Strategy A — single-case rerun at configured benchmark seed ────────────────────────────
 strategy_a_result = None
 
 if RERUN_STRATEGY == 'A' and HYPATIA_AVAILABLE and PV_SWEEP_ONLY:
-    print('PV_SWEEP_ONLY: skipping the separate seed-42 single-case rerun; the per-seed sweep below is the sole Strategy A evaluation.')
+    print('PV_SWEEP_ONLY: skipping the separate configured-seed single-case rerun; the per-seed sweep below is the sole Strategy A evaluation.')
 elif RERUN_STRATEGY == 'A' and HYPATIA_AVAILABLE and PCA_PORTFOLIO_SWEEP:
     print('Strategy A single-case rerun (3c) skipped — _run_case_full uses its own split; '
           'the PCA protocol is applied only to the audited seed sweep (3d).')
@@ -623,7 +623,7 @@ elif RERUN_STRATEGY == 'A' and HYPATIA_AVAILABLE and _run_case_full is None:
     print('Strategy A single-case rerun (3c) skipped — _run_case_full unavailable.')
 
 elif RERUN_STRATEGY == 'A' and HYPATIA_AVAILABLE:
-    print('Running Strategy A: Portfolio Variance at SEED=42 ...')
+    print(f'Running Strategy A: Portfolio Variance at configured seed {BENCHMARK_SEED} ...')
     set_all_seeds(BENCHMARK_SEED)
     proto = DeFiExperimentProtocol()
     try:
