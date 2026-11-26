@@ -1189,9 +1189,8 @@ jobs:
           fi
           .venv/bin/python -m pip check
           .venv/bin/python -c "import numpy, pandas, torch, anthropic, psutil; print('Base runner environment verified.')"
-          if [[ "${NEEDS_JULIA}" == "true" ]]; then
-            .venv/bin/python -c "import pysr; print('PySR runner environment verified.')"
-          fi
+          # Do not import PySR in this step: PySR imports JuliaCall, and the
+          # JuliaCall project must be instantiated after Julia is on PATH.
 
       - name: Reuse cached Python environment
         if: steps.python_env_cache.outputs.cache-hit == 'true' && steps.python_env_check.outputs.valid == 'true'
@@ -1207,10 +1206,25 @@ jobs:
             hypatiax/experiments/tests/test_exp2_extrapolation_scoring.py \
             hypatiax/experiments/tests/test_exp2_extrap_smoke_validator.py
 
-      - name: Install Julia / SymbolicRegression (if needed)
+      - name: Resolve JuliaCall project and install PythonCall (if needed)
         if: ${{ needs.plan.outputs.needs_julia == 'true' }}
         run: |
-          python3 -c "import pysr; pysr.install()"
+          set -euo pipefail
+          # Resolve the package requirements declared by the installed PySR and
+          # JuliaCall distributions without importing PySR/JuliaCall first.
+          # force=True repairs stale juliapkg metadata that can claim resolution
+          # even when the Manifest packages are absent from the depot.
+          .venv/bin/python -c "import juliapkg; juliapkg.resolve(force=True)"
+          JULIA_PROJECT="${GITHUB_WORKSPACE}/.venv/julia_env"
+          test -f "${JULIA_PROJECT}/Project.toml"
+          test -f "${JULIA_PROJECT}/Manifest.toml"
+          julia --project="${JULIA_PROJECT}" --startup-file=no -e '
+          using Pkg
+          Pkg.instantiate()
+          Pkg.precompile()
+          using PythonCall
+          println("PythonCall package ready; active project: ", Base.active_project())
+          '
 
       - name: Precompile Julia / SymbolicRegression (if needed)
         if: ${{ needs.plan.outputs.needs_julia == 'true' }}
