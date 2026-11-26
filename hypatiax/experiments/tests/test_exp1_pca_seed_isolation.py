@@ -66,6 +66,19 @@ def test_pythoncall_cache_probe_does_not_start_julia_before_julia_setup():
     assert "importlib.util.find_spec('pysr')" in probe
     assert "import pysr" not in probe
     assert "PythonCall" in probe
+
+    dependency_install = workflow.split("- name: Install Python dependencies", 1)[1].split("- name: Reuse cached Python environment", 1)[0]
+    assert "import pysr" not in dependency_install
+    assert "PySR runner environment verified" not in dependency_install
+
+    resolve_start = workflow.index("- name: Resolve JuliaCall project and install PythonCall (if needed)")
+    warmup_start = workflow.index("- name: Precompile Julia / SymbolicRegression (if needed)")
+    resolve_step = workflow[resolve_start:warmup_start]
+    assert "juliapkg.resolve(force=True)" in resolve_step
+    assert 'julia_env' in resolve_step
+    assert "Pkg.instantiate()" in resolve_step
+    assert "using PythonCall" in resolve_step
+
     warmup = workflow.split("- name: Precompile Julia / SymbolicRegression (if needed)", 1)[1].split("- name: Verify Julia threads", 1)[0]
     assert "from juliacall import Main as jl" in warmup
     assert "using PythonCall" in warmup
