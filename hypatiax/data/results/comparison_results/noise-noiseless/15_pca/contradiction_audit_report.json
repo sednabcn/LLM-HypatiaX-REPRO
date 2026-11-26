@@ -1,0 +1,52 @@
+{
+  "generated_at": "2026-11-26T23:58:57Z",
+  "benchmark_seed": 42,
+  "observed_seed_results": {
+    "42": -0.02324580930019149,
+    "123": -18.089537749619463,
+    "777": 1.0,
+    "2024": 1.0,
+    "99": -15.19133971138071
+  },
+  "observed_seed_summary": {
+    "n_valid": 5,
+    "n_success": 2,
+    "success_threshold": 0.99,
+    "success_rate": 0.4
+  },
+  "paper_numbers": {
+    "hypatia_N": 5,
+    "hypatia_X": 2,
+    "hypatia_Y_pct": 40.0,
+    "hypatia_best_far_r2": 1.0,
+    "hypatia_best_seed": 777,
+    "hypatia_worst_far_r2": -18.089537749619463,
+    "hypatia_worst_seed": 123,
+    "benchmark_seed": 42,
+    "success_threshold": 0.99,
+    "hypatia_nonfinite_or_missing_excluded": 0,
+    "pysr_N": 5,
+    "pysr_X": 0,
+    "pysr_Y_pct": 0.0,
+    "pysr_worst_far_r2": -118.44821877388537,
+    "pysr_nonfinite_or_missing_excluded": 0,
+    "neural_network_R2_above_0.99": {
+      "n_valid": 73,
+      "n_above_threshold": 22,
+      "rate_pct": 30.1
+    },
+    "hybrid_R2_above_0.99": {
+      "n_valid": 73,
+      "n_above_threshold": 35,
+      "rate_pct": 47.9
+    }
+  },
+  "files_generated": [
+    "/home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/noise-noiseless/15_pca/appendix_table_portfolio_variance.tex",
+    "/home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/noise-noiseless/15_pca/section6_defi_paragraph.tex",
+    "/home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/noise-noiseless/15_pca/defi_table_footnote.tex",
+    "/home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/noise-noiseless/15_pca/hypatiax_defi_benchmark_v3c3_corrected.json",
+    "/home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/noise-noiseless/15_pca/paper_numbers_v3c3.json",
+    "/home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/noise-noiseless/15_pca/contradiction_audit_report.json"
+  ]
+}
