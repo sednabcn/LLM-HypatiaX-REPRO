@@ -28,6 +28,29 @@ def _load_source_function(name):
     return namespace[name]
 
 
+
+def test_shard_instability_readiness_defers_nonzero_index_to_aggregate(tmp_path):
+    helper = _load_source_function("_instability_readiness_ok")
+    csv_path = tmp_path / "instability.csv"
+    csv_path.write_text(
+        "equation,extrap_r2_near,extrap_r2_far,instability_index\n"
+        "Price Impact,1.0,1.0,0.0\n"
+        "Constant Product,0.999,0.999,0.0\n",
+        encoding="utf-8",
+    )
+    # A shard with valid finite measurements is ready even if its domain's
+    # instability indices are all zero; the full aggregate retains the gate.
+    assert helper(csv_path, shard_mode=True) is True
+    assert helper(csv_path, shard_mode=False) is False
+
+    csv_path.write_text(
+        "equation,extrap_r2_near,extrap_r2_far,instability_index\n"
+        "Arrhenius,0.8,0.4,0.4\n",
+        encoding="utf-8",
+    )
+    assert helper(csv_path, shard_mode=False) is True
+
+
 def test_hybrid_discover_receives_equation_specific_seed():
     assert '"random_seed":             eq_seed' in SOURCE
     assert SOURCE.index('"random_seed":             eq_seed') < SOURCE.index('res = hybrid.discover(')
