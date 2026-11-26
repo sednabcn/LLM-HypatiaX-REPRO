@@ -5108,12 +5108,26 @@ jobs:
             exit 0
           fi
           PCA15_DIR="${RESULTS_DIR}/comparison_results/noise-noiseless/15_pca"
-          if [ -d "${PCA15_DIR}" ] && [ -n "$(ls -A "${PCA15_DIR}"/*.json 2>/dev/null)" ]; then
+          REQUIRED=(
+            "${PCA15_DIR}/hypatiax_defi_benchmark_pca_results_seed42.json"
+            "${PCA15_DIR}/hypatiax_defi_benchmark_pca_results_seed99.json"
+            "${PCA15_DIR}/hypatiax_defi_benchmark_pca_results_seed123.json"
+            "${PCA15_DIR}/hypatiax_defi_benchmark_pca_results_seed777.json"
+            "${PCA15_DIR}/hypatiax_defi_benchmark_pca_results_seed2024.json"
+            "${PCA15_DIR}/split_protocol_disclosure.json"
+            "${PCA15_DIR}/exp1b_pca_summary.json"
+          )
+          MISSING=()
+          for FILE in "${REQUIRED[@]}"; do
+            if [[ ! -s "${FILE}" ]]; then MISSING+=("${FILE}"); fi
+          done
+          if [[ ${#MISSING[@]} -eq 0 ]]; then
             echo "already_done=true" >> "$GITHUB_OUTPUT"
-            echo "[skip] Results already present in ${PCA15_DIR}. Set force_rerun=true to regenerate."
+            echo "[skip] Complete five-seed exp1b_pca outputs verified in ${PCA15_DIR}."
           else
             echo "already_done=false" >> "$GITHUB_OUTPUT"
-            echo "[run] No results found in ${PCA15_DIR} — will run."
+            echo "[run] exp1b_pca outputs incomplete; missing/empty files:"
+            printf '  - %s\\n' "${MISSING[@]}"
           fi
 
       - name: Set up Python
