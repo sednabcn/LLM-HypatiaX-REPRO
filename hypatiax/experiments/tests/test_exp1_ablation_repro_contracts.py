@@ -23,7 +23,7 @@ def _load_source_function(name):
         if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) and item.name == name
     )
     isolated = ast.Module(body=[node], type_ignores=[])
-    namespace = {"np": np}
+    namespace = {"np": np, "Path": Path}
     exec(compile(isolated, str(SOURCE_PATH), "exec"), namespace)
     return namespace[name]
 
