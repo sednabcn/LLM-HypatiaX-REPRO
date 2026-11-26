@@ -1,6 +1,6 @@
 
 name: "HypatiaX - runner (repro)"
-run-name: "HypatiaX - runner (repro) · ${{ inputs.experiment }}"
+run-name: "HypatiaX - runner (repro) · ${{ inputs.experiment }}${{ inputs.experiment == 'exp1_ablation' && format(' · seed={0}', inputs.seeds || '42') || '' }}"
 
 on:
   workflow_dispatch:
@@ -425,8 +425,7 @@ jobs:
                 CANDIDATES="$(gh run list --repo "${REPO}" --workflow ci_runner_repro.yml \
                   --event workflow_dispatch --limit 30 \
                   --json databaseId,createdAt,displayTitle,headBranch 2>/dev/null | \
-                  jq -r --arg branch "${REF}" --arg since "${STARTED_AT}" \
-                    '[.[] | select(.headBranch == $branch and .createdAt >= $since and (.displayTitle | test("exp1_ablation"; "i")))] | sort_by(.createdAt) | reverse | .[].databaseId' || true)"
+                  jq -r --arg branch "${REF}" --arg since "${STARTED_AT}" --arg seed "${SEED}" '[.[] | select(.headBranch == $branch and .createdAt >= $since and (.displayTitle | test("exp1_ablation"; "i")) and (.displayTitle | test("seed=" + $seed; "i")))] | sort_by(.createdAt) | reverse | .[].databaseId' || true)"
                 while IFS= read -r CANDIDATE; do
                   [[ -z "${CANDIDATE}" ]] && continue
                   if [[ ! " ${RUN_IDS[*]:-} " =~ " ${CANDIDATE} " ]]; then
