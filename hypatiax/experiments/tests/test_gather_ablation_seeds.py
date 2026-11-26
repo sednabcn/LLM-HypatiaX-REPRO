@@ -116,3 +116,24 @@ def test_gatherer_rejects_bad_run_map_entries():
             pass
         else:
             raise AssertionError(f"invalid run map accepted: {raw}")
+
+
+def test_workflow_enforces_fixed_seeds_and_gathers_failed_run_diagnostics():
+    workflow = (ROOT / ".github/workflows/ci_runner_repro.yml").read_text()
+    assert 'CANONICAL_SEEDS="42,99,123,777,2024"' in workflow
+    assert "steps.dispatch.outputs.state == 'failed'" in workflow
+    assert "DISPATCH_STATE: ${{ steps.dispatch.outputs.state }}" in workflow
+    assert "Gathering diagnostics before returning failure." in workflow
+    assert "GATHER_STATUS=$?" in workflow
+    assert 'git add -f "${ROOT}/exp1_ablation_seeds"' in workflow
+
+
+def test_workflow_runs_descriptive_aggregator_only_after_valid_gather():
+    workflow = (ROOT / ".github/workflows/ci_runner_repro.yml").read_text()
+    gather = workflow.split("- name: Gather per-seed results", 1)[1].split(
+        "  pca_runner:", 1
+    )[0]
+    assert 'if [[ "${GATHER_STATUS}" -eq 0 ]]' in gather
+    assert "scripts/ci/aggregate_exp1_ablation_multiseed.py --results-root" in gather
+    assert 'git add -f "${ROOT}/exp1_ablation_multiseed"' in gather
+    assert '"${DISPATCH_STATE}" == "failed"' in gather
