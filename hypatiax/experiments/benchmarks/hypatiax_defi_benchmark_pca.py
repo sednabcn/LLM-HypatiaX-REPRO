@@ -1,34 +1,31 @@
 #!/usr/bin/env python3
 """
-hypatiax_defi_benchmark_pca.py
-================================
-HypatiaX DeFi Benchmark — PCA-directed 40/60 split variant (FIX-C3)
+HypatiaX DeFi Benchmark - v3c-aligned PCA-directed 40/60 variant.
 
-This is a direct derivative of hypatiax_defi_benchmark_v3c.py.
-All logic (74 cases, LLM/NN/Hybrid methods, report) is identical.
+This runner tracks the current v3c benchmark implementation: NN + Hybrid
+arms, formula validation and trust gates, training-only validation, NN/Ridge
+fallback accounting, routing diagnostics, and result provenance.
 
-The single change vs v3c is the data-split protocol applied to every
-test case in run_benchmark():
+The intentional protocol difference is the outer train/test split:
+  - fit PCA(n_components=1) on raw features for split design;
+  - stable-sort rows by oriented PC1;
+  - train on the lowest 40%, test on the highest 60%.
 
-  OLD (v3c):  _aggressive_split() — percentile cut on a single feature axis
-  NEW (pca):  pca_directed_split() — sort by PC1, take lowest 40% as train
+The split is transductive by design: PCA sees all feature rows only to define
+the holdout boundary. Targets are not used to construct the split. Models
+receive the original, untransformed feature rows. Split metadata records this
+protocol and its transductive nature.
 
-This mirrors the FIX-C3 split used in the Feynman benchmark
-(run_comparative_suite_benchmark_pca.py §10.7) so that the DeFi
-extrapolation results (§6.4) are produced under the same protocol
-and are directly comparable.
-
-pca_directed_split is imported from hypatiax.tools.utils.pca_split_utils,
-the reference implementation used by Gate A of ci_runner_disclosure.yml
-(so this script requires the hypatiax package on sys.path).
+Do not replace this with v3c's random 80/20 split: that changes the scientific
+protocol and invalidates comparison with the PCA benchmark.
 
 Output files:
-  hypatiax_defi_benchmark_pca_checkpoint.json
-  hypatiax_defi_benchmark_pca_results.json
-  split_protocol_disclosure.json  (written on completion)
+  hypatiax_defi_benchmark_pca_checkpoint[_{seed}].json
+  hypatiax_defi_benchmark_pca_results[_{seed}].json
+  split_protocol_disclosure.json
 
 Author : HypatiaX Team
-Version: 1.0 — PCA 40/60 split variant of v3c
+Version: v3c-aligned PCA 40/60
 Date   : 2026
 """
 
@@ -41,23 +38,30 @@ import re
 import sys
 from pathlib import Path
 
+# ── project root ──────────────────────────────────────────────────────────────
+# Resolve the repository from this file, not the caller's working directory.
+# This must precede every import from the local hypatiax package: CI invokes
+# this benchmark through run_all.sh, and Python otherwise searches only the
+# script directory plus the installed environment.
+_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+sys.path.insert(0, str(_ROOT))
+
 # ── third-party ───────────────────────────────────────────────────────────────
 import numpy as np
-from hypatiax.core.r2_canonical import r2_checked as _r2_checked
 import torch
 import torch.nn as nn
 from dotenv import load_dotenv
 from scipy import stats
 from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import Ridge
 
-# ── project root ──────────────────────────────────────────────────────────────
-_ROOT = Path(__file__).resolve().parent.parent.parent.parent
-sys.path.insert(0, str(_ROOT))
+from hypatiax.core.r2_canonical import r2_checked as _r2_checked
 
 from hypatiax.core.routing import (
-    kde_ood_probability, route_decision_from_diagnostics,
-    structural_risk_tokens, training_edge_split_indices,
+    kde_ood_probability, route_decision_from_diagnostics, structural_risk_tokens,
+    training_edge_split_indices,
 )
+from hypatiax.tools.utils.pca_split_utils import pca_directed_split
 
 # ── env / API key ─────────────────────────────────────────────────────────────
 for _ep in [
@@ -73,6 +77,7 @@ for _ep in [
 
 # ── reproducibility ───────────────────────────────────────────────────────────
 SEED = 42
+LLM_MODEL = "claude-sonnet-4-6"
 
 import random
 import time
@@ -167,16 +172,16 @@ def _resolve_seed():
     return None  # sentinel → caller keeps its own default
 # ─────────────────────────────────────────────────────────────────────────────
 
-# [MULTI-SEED] SEED used to be hard-wired to 42.  The seed is now resolved from
-# PYSR_SEED / EXPERIMENT_SEED / NN_SEED BEFORE the RNGs are seeded, so one process
-# == one seed (same mechanism as hypatiax_defi_benchmark_v3c.py FIX-SEED-HONOURED).
-# The caller (CI shard / run_all.sh) sets the seed, e.g. PYSR_SEED=99.
-# Unset -> SEED stays 42 and every existing seed-42 run (filenames included) is
-# unchanged.
+# [FIX-SEED-HONOURED] SEED used to be hard-wired to 42: PYSR_SEED / EXPERIMENT_SEED /
+# DEFI_SEEDS were parsed in run_benchmark() and printed but never applied, so a
+# "seed 99" run silently reproduced seed 42. Resolve the env seed BEFORE the RNGs
+# are seeded. Unset/non-integer (e.g. a comma list) -> SEED stays 42, so every
+# existing seed-42 run is unchanged.
 _import_seed = _resolve_seed()
 if _import_seed is not None:
     SEED = _import_seed
-# Non-42 runs tag their output/checkpoint filenames so seeds never collide.
+# Non-42 runs tag their output/checkpoint filenames so parallel shards (one seed
+# each) never collide on the same path. Seed 42 keeps the original filenames.
 _SEED_TAG = "" if SEED == 42 else f"_seed{SEED}"
 print(f"🎲 SEED={SEED}" + ("" if SEED == 42 else f"  (output tag {_SEED_TAG!r})"))
 
@@ -250,8 +255,9 @@ class _MLP(nn.Module):
         return self.net(x)
 
 
-# Fixed per seed → deterministic NN scores across resume sessions, but must vary
-# with SEED or every seed would train the NN identically.
+# [FIX-SEED-HONOURED] fixed per seed → deterministic NN scores across resume sessions.
+# _train_and_eval_nn() re-seeds the GLOBAL numpy/torch RNGs from this value for every
+# case, so it must vary with SEED or the data draws would be identical across seeds.
 # SEED=42 -> 2024 (unchanged); 99 -> 2081; 123 -> 2105; 777 -> 2759; 2024 -> 4006.
 _NN_SEED = 2024 + (SEED - 42)
 
@@ -261,6 +267,35 @@ _NN_MAX_TIME_S = 120  # Wall-clock cap per NN training run (Issue 2 fix).
                       # Ratio (29,088 s in the reported run, 96.7% of total NN time).
                       # 120 s is generous for a 200-sample MLP; consistent with the
                       # PySR timeout_in_seconds used in Experiments 1–3.
+
+
+def _log_ridge_domain_eligible(X_train: np.ndarray, y_train: np.ndarray) -> bool:
+    """Return whether the positive-domain log-linear Ridge candidate is defined.
+
+    This is a domain check only; it does not fit a model or establish that the
+    candidate generalizes. Signed inputs (for example, correlations) are
+    intentionally ineligible for this log transform.
+    """
+    X_train = np.asarray(X_train, dtype=float)
+    y_train = np.asarray(y_train, dtype=float).reshape(-1)
+    return bool(np.all(X_train > 0) and np.all(y_train > 0))
+
+
+def _signed_ridge_domain_eligible(X_train: np.ndarray, y_train: np.ndarray) -> bool:
+    """Return whether a finite signed-feature Ridge candidate can be fitted.
+
+    Unlike the log-Ridge candidate, this model accepts zero and negative
+    feature/target values. Eligibility is only a shape/finite-value check;
+    predictive value is determined separately on the training-only edge
+    validation partition.
+    """
+    X_train = np.asarray(X_train, dtype=float)
+    y_train = np.asarray(y_train, dtype=float).reshape(-1)
+    return bool(
+        X_train.ndim == 2 and len(X_train) == len(y_train)
+        and X_train.shape[0] >= 8 and X_train.shape[1] > 0
+        and np.isfinite(X_train).all() and np.isfinite(y_train).all()
+    )
 
 
 def _feature_augmentation_schema(X: np.ndarray) -> tuple[tuple[bool, ...], tuple[bool, ...]]:
@@ -311,66 +346,290 @@ def _train_and_eval_nn(
     seed: int = _NN_SEED,
     max_time_s: float = _NN_MAX_TIME_S,
     augment: bool = True,
+    patience: int = 30,
+    min_delta: float = 1e-6,
+    split_metadata: dict | None = None,
 ) -> dict:
     """
-    Train a small MLP on (X_train, y_train) and evaluate on both splits.
-    Returns dict: train_r2, test_r2, success, y_pred_train, y_pred_test.
+    Train an MLP with a deterministic validation split drawn ONLY from the
+    outer training partition. The extrapolation test partition is evaluated
+    once, after model selection, and is never used for early stopping.
 
-    max_time_s: hard wall-clock limit.  Training stops early if exceeded.
-    The early-stop flag is returned as 'timed_out' so callers can log it.
-    augment: if True (default), adds log/sqrt/ratio features before training
-             (v3c2-fix4: physics-informed feature augmentation).
+    A wall-clock timeout is a failed/incomplete fit (success=False), even when
+    a usable best-so-far checkpoint exists. This keeps partial runs out of the
+    reported fallback-success denominator.
     """
-    torch.manual_seed(seed); np.random.seed(seed)
-    hidden = hidden or [128, 64, 32]
-
-    # Fit the augmentation layout on training rows only, then reuse it for
-    # held-out rows. This prevents train/test feature-width drift and leakage.
-    if augment:
-        augmentation_schema = _feature_augmentation_schema(X_train)
-        X_train = _augment_features(X_train, schema=augmentation_schema)
-        X_test  = _augment_features(X_test, schema=augmentation_schema)
-
-    sx, sy = StandardScaler(), StandardScaler()
-    Xtr = sx.fit_transform(X_train)
-    ytr = sy.fit_transform(y_train.reshape(-1, 1)).flatten()
-
-    model = _MLP(X_train.shape[1], hidden)
-    opt   = torch.optim.Adam(model.parameters(), lr=0.001)
-    crit  = nn.MSELoss()
-    Xt = torch.FloatTensor(Xtr)
-    yt = torch.FloatTensor(ytr).reshape(-1, 1)
-
-    timed_out  = False
-    _wall_start = time.time()
-    model.train()
-    for epoch in range(epochs):
-        opt.zero_grad(); loss = crit(model(Xt), yt); loss.backward(); opt.step()
-        # Check wall-clock every 25 epochs to avoid per-epoch overhead
-        if epoch % 25 == 0 and (time.time() - _wall_start) >= max_time_s:
-            timed_out = True
-            print(f"    ⏱  NN wall-clock limit ({max_time_s}s) reached at epoch {epoch} — stopping early")
-            break
-
-    def _decode(raw): return sy.inverse_transform(raw.reshape(-1, 1)).flatten()
-    def _r2(yt_, yp_):
-        ss_r = np.sum((yt_ - yp_) ** 2); ss_t = np.sum((yt_ - yt_.mean()) ** 2)
-        return float(_r2_checked(yt_, yp_)[0])  # NaN for a degenerate target
-
-    model.eval()
-    with torch.no_grad():
-        yp_tr = _decode(model(Xt).numpy().flatten())
-        Xte   = torch.FloatTensor(sx.transform(X_test))  # X_test already augmented above
-        yp_te = _decode(model(Xte).numpy().flatten())
-
-    return {
-        "train_r2":    _r2(y_train, yp_tr),
-        "test_r2":     _r2(y_test,  yp_te),
-        "success":     True,
-        "timed_out":   timed_out,
-        "y_pred_train": yp_tr,
-        "y_pred_test":  yp_te,
+    started = time.time()
+    result = {
+        "train_r2": float("nan"), "test_r2": float("nan"),
+        "success": False, "timed_out": False,
+        "epochs_completed": 0, "best_epoch": None,
+        "validation_loss": None, "training_time_s": 0.0,
+        "failure_reason": None, "y_pred_train": None, "y_pred_test": None,
+        "train_r2_status": None, "test_r2_status": None,
+        "nn_edge_r2_status": None,
+        "validation_split_realized_method": None,
+        "validation_split_fallback_reason": None,
     }
+    try:
+        X_train = np.asarray(X_train, dtype=float)
+        y_train = np.asarray(y_train, dtype=float).reshape(-1)
+        X_test = np.asarray(X_test, dtype=float)
+        y_test = np.asarray(y_test, dtype=float).reshape(-1)
+        if (X_train.ndim != 2 or X_test.ndim != 2
+                or X_train.shape[1] != X_test.shape[1]
+                or len(X_train) != len(y_train) or len(X_test) != len(y_test)
+                or len(X_train) < 8 or len(X_test) == 0):
+            raise ValueError("invalid_or_insufficient_nn_input_shapes")
+        if not (np.isfinite(X_train).all() and np.isfinite(y_train).all()
+                and np.isfinite(X_test).all() and np.isfinite(y_test).all()):
+            raise ValueError("nonfinite_nn_input")
+
+        # Preserve the benchmark's established per-case RNG reset while
+        # using a local RandomState below for the validation partition.
+        torch.manual_seed(seed)
+        np.random.seed(seed)
+        hidden = hidden or [128, 64, 32]
+        # Match the benchmark's actual one-sided extrapolation direction.
+        # The outer test partition remains untouched: validation is the
+        # corresponding edge of X_train, selected only from training covariates.
+        split_metadata = split_metadata or {}
+        split_type = str(
+            split_metadata.get(
+                "validation_split_type", split_metadata.get("split_type", "high")
+            )
+        ).lower()
+        if split_type not in {"high", "low"}:
+            raise ValueError("invalid_directional_validation_split_type")
+        realized_method = split_metadata.get(
+            "validation_split_realized_method",
+            split_metadata.get("realized_method", "primary_feature_percentile"),
+        )
+        split_var_idx = int(
+            split_metadata.get(
+                "validation_split_var_idx", split_metadata.get("split_var_idx", 0)
+            )
+        )
+        validation_split_fallback_reason = None
+        if realized_method == "row_index_fallback":
+            order = np.arange(len(X_train), dtype=int)
+            validation_split_realized_method = "row_index_fallback"
+        elif split_var_idx < 0 or split_var_idx >= X_train.shape[1]:
+            # Metadata can become stale when a protocol changes its feature
+            # layout. Keep validation strictly inside X_train and use the
+            # protocol's documented row-order fallback rather than failing the
+            # entire NN arm. Record the fallback so it is visible in results.
+            order = np.arange(len(X_train), dtype=int)
+            validation_split_realized_method = "row_index_fallback"
+            validation_split_fallback_reason = (
+                f"feature_index_out_of_range:{split_var_idx}:n_features={X_train.shape[1]}"
+            )
+        else:
+            order = np.argsort(X_train[:, split_var_idx], kind="mergesort")
+            validation_split_realized_method = "primary_feature_percentile"
+        n_val = max(5, int(np.ceil(len(X_train) * 0.20)))
+        if len(X_train) - n_val < 8 or n_val >= len(X_train):
+            raise ValueError("insufficient_rows_for_directional_edge_validation")
+        val_idx = order[-n_val:] if split_type == "high" else order[:n_val]
+        fit_idx = np.setdiff1d(np.arange(len(X_train)), val_idx, assume_unique=True)
+        if len(fit_idx) < 8 or len(val_idx) < 5:
+            raise ValueError("insufficient_rows_for_directional_edge_validation")
+        X_fit, y_fit = X_train[fit_idx], y_train[fit_idx]
+        X_val, y_val = X_train[val_idx], y_train[val_idx]
+
+        # Log-Ridge captures positive power-law/product/ratio relationships.
+        # Signed Ridge handles finite signed features (e.g. correlations) in
+        # their original domain. Both candidates are fitted on X_fit/y_fit and
+        # judged on the same directional validation rows; outer test labels
+        # never participate in candidate selection.
+        ridge_edge_r2 = float("nan")
+        ridge_eligible = _log_ridge_domain_eligible(X_train, y_train)
+        if ridge_eligible:
+            try:
+                ridge_probe = Ridge(alpha=1.0)
+                ridge_probe.fit(np.log(X_fit), np.log(y_fit))
+                ridge_edge_pred = np.exp(np.clip(ridge_probe.predict(np.log(X_val)), -700, 700))
+                ridge_edge_r2 = float(_r2_checked(y_val, ridge_edge_pred)[0])
+            except Exception:
+                ridge_edge_r2 = float("nan")
+
+        signed_ridge_edge_r2 = float("nan")
+        signed_ridge_eligible = _signed_ridge_domain_eligible(X_train, y_train)
+        if signed_ridge_eligible:
+            try:
+                signed_scaler = StandardScaler()
+                signed_X_fit = signed_scaler.fit_transform(X_fit)
+                signed_X_val = signed_scaler.transform(X_val)
+                signed_probe = Ridge(alpha=1.0)
+                signed_probe.fit(signed_X_fit, y_fit)
+                signed_edge_pred = signed_probe.predict(signed_X_val)
+                signed_ridge_edge_r2 = float(_r2_checked(y_val, signed_edge_pred)[0])
+            except Exception:
+                signed_ridge_edge_r2 = float("nan")
+
+        if augment:
+            augmentation_schema = _feature_augmentation_schema(X_fit)
+            X_fit = _augment_features(X_fit, schema=augmentation_schema)
+            X_val = _augment_features(X_val, schema=augmentation_schema)
+            X_train_eval = _augment_features(X_train, schema=augmentation_schema)
+            X_test_eval = _augment_features(X_test, schema=augmentation_schema)
+        else:
+            X_train_eval, X_test_eval = X_train, X_test
+
+        sx, sy = StandardScaler(), StandardScaler()
+        X_fit_scaled = sx.fit_transform(X_fit)
+        X_val_scaled = sx.transform(X_val)
+        y_fit_scaled = sy.fit_transform(y_fit.reshape(-1, 1)).reshape(-1)
+        y_val_scaled = sy.transform(y_val.reshape(-1, 1)).reshape(-1)
+
+        model = _MLP(X_fit_scaled.shape[1], hidden)
+        opt = torch.optim.Adam(model.parameters(), lr=0.001)
+        crit = nn.MSELoss()
+        Xt = torch.as_tensor(X_fit_scaled, dtype=torch.float32)
+        yt = torch.as_tensor(y_fit_scaled, dtype=torch.float32).reshape(-1, 1)
+        Xv = torch.as_tensor(X_val_scaled, dtype=torch.float32)
+        yv = torch.as_tensor(y_val_scaled, dtype=torch.float32).reshape(-1, 1)
+
+        best_loss = float("inf")
+        best_state = None
+        best_epoch = None
+        stale_epochs = 0
+        timed_out = False
+        for epoch in range(1, int(epochs) + 1):
+            if (time.time() - started) >= max_time_s:
+                timed_out = True
+                break
+            model.train()
+            opt.zero_grad()
+            fit_loss = crit(model(Xt), yt)
+            fit_loss.backward()
+            opt.step()
+
+            model.eval()
+            with torch.no_grad():
+                val_loss = float(crit(model(Xv), yv).item())
+            result["epochs_completed"] = epoch
+            if not np.isfinite(val_loss):
+                raise ValueError("nonfinite_validation_loss")
+            # Enforce the wall-clock budget after every completed epoch too:
+            # a slow final epoch must not be reported as a successful fit just
+            # because early stopping fires before the next loop-top check.
+            if (time.time() - started) >= max_time_s:
+                timed_out = True
+                break
+            if val_loss < best_loss - float(min_delta):
+                best_loss = val_loss
+                best_epoch = epoch
+                best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
+                stale_epochs = 0
+            else:
+                stale_epochs += 1
+            if stale_epochs >= int(patience):
+                break
+
+        if timed_out:
+            result["timed_out"] = True
+            result["failure_reason"] = "training_wall_clock_timeout"
+            return result
+        if best_state is None:
+            raise ValueError("no_valid_validation_checkpoint")
+        model.load_state_dict(best_state)
+        result["best_epoch"] = int(best_epoch)
+        result["validation_loss"] = float(best_loss)
+
+        # Refit the feature scaler using the complete outer training partition;
+        # retain the model's fit-subset scaler for inference to avoid changing
+        # the coordinate system in which the selected weights were learned.
+        Xtr_eval = torch.as_tensor(sx.transform(X_train_eval), dtype=torch.float32)
+        Xte_eval = torch.as_tensor(sx.transform(X_test_eval), dtype=torch.float32)
+        model.eval()
+        with torch.no_grad():
+            raw_train = model(Xtr_eval).cpu().numpy().reshape(-1)
+            raw_test = model(Xte_eval).cpu().numpy().reshape(-1)
+        yp_train = sy.inverse_transform(raw_train.reshape(-1, 1)).reshape(-1)
+        yp_test = sy.inverse_transform(raw_test.reshape(-1, 1)).reshape(-1)
+        if (yp_train.shape != y_train.shape or yp_test.shape != y_test.shape
+                or not np.isfinite(yp_train).all() or not np.isfinite(yp_test).all()):
+            raise ValueError("invalid_nn_prediction_shape_or_values")
+
+        train_r2, train_r2_status = _r2_checked(y_train, yp_train)
+        test_r2, test_r2_status = _r2_checked(y_test, yp_test)
+        train_r2, test_r2 = float(train_r2), float(test_r2)
+        # Score the NN on the same directional edge used for model selection.
+        # X_val is already augmented above using the training-fitted schema.
+        # Applying _augment_features a second time changes its width and raises
+        # a schema/input-width mismatch for every default (augment=True) fit.
+        edge_pred_scaled = torch.as_tensor(
+            sx.transform(X_val), dtype=torch.float32
+        )
+        with torch.no_grad():
+            edge_raw = model(edge_pred_scaled).cpu().numpy().reshape(-1)
+        edge_pred = sy.inverse_transform(edge_raw.reshape(-1, 1)).reshape(-1)
+        nn_edge_r2, nn_edge_r2_status = _r2_checked(y_val, edge_pred)
+        nn_edge_r2 = float(nn_edge_r2)
+
+        selected_model = "nn"
+        edge_candidates = []
+        if ridge_eligible and np.isfinite(ridge_edge_r2):
+            edge_candidates.append(("log_ridge", ridge_edge_r2))
+        if signed_ridge_eligible and np.isfinite(signed_ridge_edge_r2):
+            edge_candidates.append(("signed_ridge", signed_ridge_edge_r2))
+        best_ridge = max(edge_candidates, key=lambda item: item[1]) if edge_candidates else None
+        minimum_edge_score = max(
+            0.0, nn_edge_r2 if np.isfinite(nn_edge_r2) else -np.inf
+        )
+        use_ridge = bool(
+            best_ridge is not None and best_ridge[1] > minimum_edge_score
+        )
+        abstained = bool(use_ridge or not np.isfinite(nn_edge_r2) or nn_edge_r2 < 0.0)
+        if use_ridge and best_ridge[0] == "log_ridge":
+            ridge_final = Ridge(alpha=1.0).fit(np.log(X_train), np.log(y_train))
+            yp_train = np.exp(np.clip(ridge_final.predict(np.log(X_train)), -700, 700))
+            yp_test = np.exp(np.clip(ridge_final.predict(np.log(np.maximum(X_test, 1e-12))), -700, 700))
+            selected_model = "log_ridge"
+        elif use_ridge and best_ridge[0] == "signed_ridge":
+            signed_final_scaler = StandardScaler()
+            signed_X_train = signed_final_scaler.fit_transform(X_train)
+            signed_X_test = signed_final_scaler.transform(X_test)
+            signed_final = Ridge(alpha=1.0).fit(signed_X_train, y_train)
+            yp_train = signed_final.predict(signed_X_train)
+            yp_test = signed_final.predict(signed_X_test)
+            selected_model = "signed_ridge"
+        elif abstained:
+            # No Ridge candidate beat the positive validation threshold: abstain to
+            # the training-mean predictor rather than extrapolating with the MLP.
+            mean_value = float(np.mean(y_train))
+            yp_train = np.full(len(y_train), mean_value, dtype=float)
+            yp_test = np.full(len(y_test), mean_value, dtype=float)
+            selected_model = "training_mean"
+
+        train_r2, train_r2_status = _r2_checked(y_train, yp_train)
+        test_r2, test_r2_status = _r2_checked(y_test, yp_test)
+        train_r2, test_r2 = float(train_r2), float(test_r2)
+        result.update({
+            "train_r2": train_r2, "test_r2": test_r2,
+            "train_r2_status": train_r2_status,
+            "test_r2_status": test_r2_status,
+            "nn_edge_r2_status": nn_edge_r2_status,
+            "validation_split_realized_method": validation_split_realized_method,
+            "validation_split_fallback_reason": validation_split_fallback_reason,
+            "success": bool(np.isfinite(train_r2) and np.isfinite(test_r2)),
+            "y_pred_train": yp_train, "y_pred_test": yp_test,
+            "nn_edge_r2": nn_edge_r2, "ridge_edge_r2": ridge_edge_r2,
+            "ridge_eligible": ridge_eligible,
+            "signed_ridge_edge_r2": signed_ridge_edge_r2,
+            "signed_ridge_eligible": signed_ridge_eligible,
+            "abstained": abstained,
+            "selected_model": selected_model,
+            "failure_reason": None if (np.isfinite(train_r2) and np.isfinite(test_r2))
+                              else "undefined_train_or_test_metric",
+        })
+        return result
+    except Exception as exc:
+        result["failure_reason"] = f"{type(exc).__name__}: {exc}"
+        return result
+    finally:
+        result["training_time_s"] = round(time.time() - started, 6)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -419,46 +678,89 @@ _EXEC_GLOBALS = {
 }
 
 
-def _execute_formula(llm_code: str, X: np.ndarray,
-                     constants: dict = None) -> np.ndarray | None:
-    """Evaluate an LLM formula through the restricted AST interpreter."""
+def _execute_formula_diagnostic(
+    llm_code: str, X: np.ndarray, constants: dict = None,
+) -> dict:
+    """Execute a restricted formula and retain a machine-readable failure class.
+
+    This diagnostic API is intended for calibration/replay. The legacy
+    _execute_formula wrapper below preserves the benchmark's None/array contract.
+    """
     from hypatiax.safe_formula import parse_formula
 
     try:
         X = np.asarray(X, dtype=float)
-        if X.ndim != 2 or X.shape[0] == 0 or X.shape[1] == 0:
-            return None
-        if not np.all(np.isfinite(X)):
-            return None
+    except Exception as exc:
+        return {"ok": False, "failure_reason": "invalid_input", "detail": f"{type(exc).__name__}: {exc}"}
+    if X.ndim == 1:
+        X = X.reshape(-1, 1)
+    if X.ndim != 2 or X.shape[0] == 0 or X.shape[1] == 0:
+        return {"ok": False, "failure_reason": "invalid_input_shape"}
+    if not np.all(np.isfinite(X)):
+        return {"ok": False, "failure_reason": "nonfinite_input"}
 
+    try:
         func = parse_formula(llm_code, constants=constants)
-        args = [X[:, i] for i in range(X.shape[1])]
+    except Exception as exc:
+        return {"ok": False, "failure_reason": "parse_error", "detail": f"{type(exc).__name__}: {exc}"}
+
+    args = [X[:, i] for i in range(X.shape[1])]
+    execution_mode = "vectorized"
+    try:
+        raw = func(*args)
+    except Exception as vector_exc:
+        execution_mode = "rowwise"
         try:
-            preds = func(*args)
-        except Exception:
-            preds = np.asarray([func(*row) for row in X], dtype=float)
+            raw = np.asarray([func(*row) for row in X], dtype=float)
+        except Exception as row_exc:
+            return {
+                "ok": False, "failure_reason": "execution_error",
+                "execution_mode": execution_mode,
+                "detail": f"{type(row_exc).__name__}: {row_exc}",
+                "vectorized_detail": f"{type(vector_exc).__name__}: {vector_exc}",
+            }
 
-        preds = np.asarray(preds, dtype=float)
-        if preds.ndim == 0:
-            preds = np.full(X.shape[0], float(preds))
-        if preds.ndim != 1 or preds.shape != (X.shape[0],):
-            return None
+    try:
+        preds = np.asarray(raw, dtype=float)
+    except Exception as exc:
+        return {"ok": False, "failure_reason": "invalid_output_type",
+                "execution_mode": execution_mode, "detail": f"{type(exc).__name__}: {exc}"}
+    if preds.ndim == 0:
+        preds = np.full(X.shape[0], float(preds))
+    if preds.ndim != 1 or preds.shape != (X.shape[0],):
+        return {
+            "ok": False, "failure_reason": "invalid_output_shape",
+            "execution_mode": execution_mode,
+            "output_shape": list(preds.shape), "expected_shape": [int(X.shape[0])],
+        }
 
-        invalid = ~np.isfinite(preds)
-        invalid_fraction = float(np.mean(invalid))
-        if invalid_fraction > 0.1:
-            return None
-        if invalid_fraction:
-            finite_values = preds[~invalid]
-            if finite_values.size == 0:
-                return None
-            preds[invalid] = float(np.median(finite_values))
+    invalid = ~np.isfinite(preds)
+    invalid_fraction = float(np.mean(invalid))
+    if invalid_fraction > 0.1:
+        return {"ok": False, "failure_reason": "excessive_nonfinite_predictions",
+                "execution_mode": execution_mode, "nonfinite_fraction": invalid_fraction}
+    if invalid_fraction:
+        finite_values = preds[~invalid]
+        if finite_values.size == 0:
+            return {"ok": False, "failure_reason": "all_predictions_nonfinite",
+                    "execution_mode": execution_mode, "nonfinite_fraction": invalid_fraction}
+        preds[invalid] = float(np.median(finite_values))
+    if not np.all(np.isfinite(preds)):
+        return {"ok": False, "failure_reason": "nonfinite_predictions_after_repair",
+                "execution_mode": execution_mode}
+    prediction_std = float(np.std(preds))
+    if prediction_std < 1e-12:
+        return {"ok": False, "failure_reason": "constant_predictions",
+                "execution_mode": execution_mode, "prediction_std": prediction_std}
+    return {"ok": True, "predictions": preds, "execution_mode": execution_mode,
+            "nonfinite_fraction": invalid_fraction, "prediction_std": prediction_std}
 
-        if not np.all(np.isfinite(preds)) or np.std(preds) < 1e-12:
-            return None
-        return preds
-    except Exception:
-        return None
+
+def _execute_formula(llm_code: str, X: np.ndarray,
+                     constants: dict = None) -> np.ndarray | None:
+    """Backward-compatible evaluator; detailed diagnostics are opt-in."""
+    result = _execute_formula_diagnostic(llm_code, X, constants=constants)
+    return result.get("predictions") if result.get("ok") else None
 
 
 def _compute_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict:
@@ -496,53 +798,74 @@ def _eval_formula_r2(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SECTION 3 — Manuscript routing helpers
+# SECTION 3 — Routing helpers (Fixes 1, 2, 4)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _extrapolation_probe(
-    X_train: np.ndarray,
-    y_train: np.ndarray,
-    probe_frac: float | None = None,
+    X_train: np.ndarray, y_train: np.ndarray, probe_frac: float | None = None
 ) -> dict:
-    """Fit an NN on the central training region and score both training tails."""
-    X = np.asarray(X_train, dtype=float)
-    y = np.asarray(y_train, dtype=float).reshape(-1)
+    """Train on the central training region and probe both training-set tails.
+
+    The PCA axis, split, NN fit and both R² scores use only the outer training
+    partition. probe_frac is the total fraction assigned to the two edge tails.
+    No held-out/query covariates or labels are accepted.
+    """
+    X_train = np.asarray(X_train, dtype=float)
+    y_train = np.asarray(y_train, dtype=float).reshape(-1)
+    n = len(X_train)
+    if X_train.ndim != 2 or X_train.shape[0] != y_train.size:
+        raise ValueError("X_train and y_train have incompatible shapes")
     if probe_frac is None:
+        _raw_fraction = os.environ.get("HYPATIAX_ROUTING_EDGE_FRACTION", "0.15").strip()
         try:
-            probe_frac = float(os.getenv("HYPATIAX_ROUTING_EDGE_FRACTION", "0.15"))
+            probe_frac = float(_raw_fraction)
         except ValueError:
-            return {"status": "invalid_probe_fraction", "delta": None}
+            probe_frac = None
+    if probe_frac is None or not np.isfinite(float(probe_frac)):
+        return {"status": "invalid_probe_fraction", "delta": None,
+                "r2_train": None, "r2_edge": None, "n_fit": 0, "n_edge": 0}
+    if not 0.05 <= float(probe_frac) <= 0.4:
+        raise ValueError("probe_frac must be between 0.05 and 0.4")
+    if n < 20 or not np.isfinite(X_train).all() or not np.isfinite(y_train).all():
+        return {"status": "insufficient_or_nonfinite_training_data", "delta": None,
+                "r2_train": None, "r2_edge": None, "n_fit": 0, "n_edge": 0}
     try:
-        core_idx, edge_idx = training_edge_split_indices(X, probe_frac)
-        if len(core_idx) < 10 or len(edge_idx) < 5:
-            return {"status": "insufficient_rows", "delta": None}
+        core_idx, edge_idx = training_edge_split_indices(X_train, probe_frac)
+    except ValueError:
+        return {"status": "insufficient_core_rows", "delta": None,
+                "r2_train": None, "r2_edge": None, "n_fit": 0, "n_edge": 0}
+    if len(core_idx) < 10 or len(edge_idx) < 5:
+        return {"status": "insufficient_core_rows", "delta": None,
+                "r2_train": None, "r2_edge": None,
+                "n_fit": int(len(core_idx)), "n_edge": int(len(edge_idx))}
+    Xf, yf = X_train[core_idx], y_train[core_idx]
+    Xp, yp = X_train[edge_idx], y_train[edge_idx]
+    try:
         probe_result = _train_and_eval_nn(
-            X[core_idx], y[core_idx], X[edge_idx], y[edge_idx],
-            epochs=200, hidden=[64, 32], seed=_NN_SEED,
+            Xf, yf, Xp, yp, epochs=200, hidden=[64, 32], seed=_NN_SEED
         )
-        r2_core = float(probe_result["train_r2"])
+        r2_train = float(probe_result["train_r2"])
         r2_edge = float(probe_result["test_r2"])
-        if not (
-            probe_result.get("success", False)
-            and np.isfinite(r2_core) and np.isfinite(r2_edge)
-        ):
+        if not (np.isfinite(r2_train) and np.isfinite(r2_edge)):
             return {"status": "nonfinite_probe_scores", "delta": None,
-                    "r2_core": r2_core, "r2_edge": r2_edge}
+                    "r2_train": r2_train, "r2_edge": r2_edge,
+                    "n_fit": int(len(Xf)), "n_edge": int(len(Xp))}
         return {
-            "status": "ok", "r2_train": r2_core, "r2_core": r2_core,
-            "r2_edge": r2_edge, "delta": float(r2_core - r2_edge),
+            "status": "ok", "r2_train": r2_train, "r2_edge": r2_edge,
+            "delta": float(r2_train - r2_edge),
+            "n_fit": int(len(Xf)), "n_edge": int(len(Xp)),
             "probe_fraction": float(probe_frac),
-            "n_core": int(len(core_idx)), "n_edge": int(len(edge_idx)),
             "edge_sides": 2,
         }
     except Exception as exc:
         _m5_record_failure("_extrapolation_probe", exc)
         return {"status": "error", "delta": None,
-                "error": f"{type(exc).__name__}: {exc}"}
+                "r2_train": None, "r2_edge": None,
+                "n_fit": int(len(Xf)), "n_edge": int(len(Xp))}
 
 
 def _routing_delta_tau() -> float | None:
-    """Read a pre-calibrated training-only tau; absent or invalid fails closed."""
+    """Read only a pre-calibrated training-only tau; absent/invalid means fail closed."""
     raw = os.environ.get("HYPATIAX_ROUTING_DELTA_TAU", "").strip()
     if not raw:
         return None
@@ -564,13 +887,21 @@ def _ensemble_llm_nn(
     blend_weights: dict | None = None,
 ) -> np.ndarray:
     """
-    Ensemble LLM and NN predictions. Manuscript weights, when supplied, are
-    applied per query; the legacy training-residual blend remains a fallback.
+    Ensemble LLM and NN predictions. If manuscript blend weights are supplied,
+    apply them per query; otherwise retain the legacy training-residual blend.
     """
     if blend_weights is not None:
+        llm_pred_test = np.asarray(llm_pred_test, dtype=float).reshape(-1)
+        nn_pred_test = np.asarray(nn_pred_test, dtype=float).reshape(-1)
         llm_w = np.asarray(blend_weights["llm"], dtype=float).reshape(-1)
         nn_w = np.asarray(blend_weights["nn"], dtype=float).reshape(-1)
         n_query = len(llm_pred_test)
+        if (
+            len(nn_pred_test) != n_query
+            or not np.isfinite(llm_pred_test).all()
+            or not np.isfinite(nn_pred_test).all()
+        ):
+            raise ValueError("LLM/NN query predictions must be shape-aligned and finite")
         if llm_w.size == 1:
             llm_w = np.full(n_query, llm_w.item())
         if nn_w.size == 1:
@@ -606,14 +937,24 @@ def _generate_llm_formula(
 ) -> dict:
     """
     Call the Anthropic API to generate a Python formula function.
-    Returns dict with keys: python_code, formula, success, error.
+    The request honours the runner's LLM_METHOD_TIMEOUT and disables hidden
+    SDK retries so the configured per-request wall-clock budget is meaningful.
     """
+    timeout_s = None
     try:
+        timeout_s = float(os.environ.get("LLM_METHOD_TIMEOUT", "120"))
+        if not np.isfinite(timeout_s) or timeout_s <= 0:
+            raise ValueError("LLM_METHOD_TIMEOUT must be a finite positive number")
         from anthropic import Anthropic
-        client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+        client = Anthropic(
+            api_key=os.environ["ANTHROPIC_API_KEY"],
+            timeout=timeout_s,
+            max_retries=0,
+        )
     except Exception as e:
         return {"python_code": None, "formula": None, "success": False,
                 "llm_called": False, "bypass_kind": "none",
+                "llm_source": "v3c_builtin_failed", "timeout_s": timeout_s,
                 "error": f"API client error: {e}"}
 
     var_list = ", ".join(var_names)
@@ -643,14 +984,26 @@ Example output:
 def formula({var_list}):
     return <expression>
 """
+    call_info = {}
+    api_attempted = False
+    api_request_time_s = None
+    usage = None
+    api_start = None
     try:
-        from hypatiax.core.llm_call import create_message  # UNIFIED-TEMPERATURE
+        from hypatiax.core.llm_call import create_message, last_call_info  # UNIFIED-TEMPERATURE
+        # Set immediately before entering the single-attempt API wrapper. A
+        # timeout/provider error is still an attempted live request.
+        api_attempted = True
+        api_start = time.perf_counter()
         resp = create_message(
-        client,
-            model="claude-sonnet-4-6",
+            client,
+            model=LLM_MODEL,
             max_tokens=1000,
             messages=[{"role": "user", "content": prompt}],
         )
+        api_request_time_s = time.perf_counter() - api_start
+        usage = getattr(resp, "usage", None)
+        call_info = last_call_info()
         code = resp.content[0].text.strip()
         # Strip markdown fences if present
         if "```" in code:
@@ -659,34 +1012,53 @@ def formula({var_list}):
             code  = "\n".join(lines).strip()
         return {"python_code": code, "formula": code,
                 "success": "def formula" in code, "error": None,
-                "llm_called": True, "bypass_kind": "live"}
+                "llm_called": True, "bypass_kind": "live",
+                "llm_source": "v3c_builtin", "timeout_s": timeout_s,
+                "api_request_time_s": api_request_time_s,
+                "input_tokens": getattr(usage, "input_tokens", None),
+                "output_tokens": getattr(usage, "output_tokens", None),
+                "temperature_requested": call_info.get("temperature_requested"),
+                "temperature_sent": call_info.get("temperature_sent", False)}
     except Exception as e:
+        if api_start is not None and api_request_time_s is None:
+            api_request_time_s = time.perf_counter() - api_start
+        if "last_call_info" in locals():
+            call_info = last_call_info()
         return {"python_code": None, "formula": None,
                 "success": False, "error": str(e),
-                "llm_called": False, "bypass_kind": "none"}
+                "llm_called": api_attempted, "bypass_kind": "none",
+                "llm_source": "v3c_builtin_failed", "timeout_s": timeout_s,
+                "api_request_time_s": api_request_time_s,
+                "input_tokens": getattr(usage, "input_tokens", None),
+                "output_tokens": getattr(usage, "output_tokens", None),
+                "temperature_requested": call_info.get("temperature_requested"),
+                "temperature_sent": call_info.get("temperature_sent", False)}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 5 — Hybrid routing (Fix 5b: trustworthiness guard)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _formula_has_pathological_behavior(code: str) -> bool:
-    """
-    FIX 10 (v3c2-fix2): Detect formulas with patterns known to cause degenerate output.
-    Returns True if any bad pattern is found → formula should not be trusted.
-
-    BUGFIX: bare "nan" substring was matching identifiers like "nominal", "channel",
-    any variable name containing "nan" — causing valid LLM formulas to be wrongly
-    rejected → train_r2 = NaN.  Fixed with whole-word matching via regex.
-    "np.inf", "1/0", "**1000" are unambiguous — substring match is fine.
-    """
-    # Whole-word match for bare "nan" — avoids false positives in identifiers
+def _formula_pathology_reasons(code: str) -> list[str]:
+    """Return stable reason codes for formula patterns rejected by the trust gate."""
+    reasons = []
+    # Whole-word matching avoids rejecting identifiers such as "nominal".
     if re.search(r'\bnan\b', code):
-        return True
-    # These patterns are unambiguous — substring match is fine
-    unambiguous = ["1/0", "np.inf", "**1000"]
+        reasons.append("bare_nan_token")
     low = code.lower()
-    return any(p.lower() in low for p in unambiguous)
+    for pattern, reason in (
+        ("1/0", "literal_division_by_zero"),
+        ("np.inf", "numpy_infinity_literal"),
+        ("**1000", "extreme_power_literal"),
+    ):
+        if pattern in low:
+            reasons.append(reason)
+    return reasons
+
+
+def _formula_has_pathological_behavior(code: str) -> bool:
+    """Preserve the boolean API while exposing auditable rejection reasons."""
+    return bool(_formula_pathology_reasons(code))
 
 
 def _hybrid_predict_and_eval(
@@ -694,154 +1066,444 @@ def _hybrid_predict_and_eval(
     X_train: np.ndarray, y_train: np.ndarray,
     X_test:  np.ndarray, y_test:  np.ndarray,
     var_names: list[str], metadata: dict,
+    llm_attempt_state: dict | None = None,
+    nn_result: dict | None = None,
+    split_metadata: dict | None = None,
+    nn_seed: int | None = None,
 ) -> dict:
-    """Apply the manuscript five-stage routing policy to one PCA-split case."""
+    """Run the Exp1 LLM/NN route and report metrics for the predictor used."""
     llm_result = _generate_llm_formula(description, domain, var_names, metadata)
     llm_code = llm_result.get("python_code") or ""
     has_formula = bool(llm_code and "def formula" in llm_code)
+    if llm_attempt_state is not None:
+        llm_attempt_state.update({
+            "llm_called": bool(llm_result.get("llm_called", False)),
+            "bypass_kind": llm_result.get("bypass_kind", "none"),
+            "llm_source": llm_result.get("llm_source", "unknown"),
+            "llm_timeout_s": llm_result.get("timeout_s"),
+            "llm_api_request_time_s": llm_result.get("api_request_time_s"),
+            "llm_input_tokens": llm_result.get("input_tokens"),
+            "llm_output_tokens": llm_result.get("output_tokens"),
+            "llm_temperature_requested": llm_result.get("temperature_requested"),
+            "llm_temperature_sent": llm_result.get("temperature_sent", False),
+            "llm_code": llm_code if has_formula else None,
+        })
     constants = metadata.get("constants") or {}
-
     llm_train_r2, llm_train_ok = (
         _eval_formula_r2(llm_code, X_train, y_train, constants=constants)
         if has_formula else (float("nan"), False)
     )
-    llm_trustworthy = (
-        has_formula
-        and llm_train_ok
-        and np.isfinite(llm_train_r2)
-        and llm_train_r2 >= 0.5
-        and not _formula_has_pathological_behavior(llm_code)
+    try:
+        llm_train_r2_numeric = float(llm_train_r2)
+    except (TypeError, ValueError, OverflowError):
+        llm_train_r2_numeric = float("nan")
+    llm_train_r2_finite = bool(np.isfinite(llm_train_r2_numeric))
+    formula_pathology_reasons = _formula_pathology_reasons(llm_code) if has_formula else []
+    trust_gate_rejection_reasons = []
+    if not has_formula:
+        trust_gate_rejection_reasons.append("formula_missing")
+    if has_formula and not llm_train_ok:
+        trust_gate_rejection_reasons.append("formula_training_evaluation_failed")
+    if not llm_train_r2_finite:
+        trust_gate_rejection_reasons.append("training_r2_nonfinite")
+    elif llm_train_r2_numeric < 0.5:
+        trust_gate_rejection_reasons.append("training_r2_below_0_5")
+    trust_gate_rejection_reasons.extend(
+        "pathological_formula:" + reason for reason in formula_pathology_reasons
     )
-
+    llm_trustworthy = not trust_gate_rejection_reasons
+    trust_gate_diagnostics = {
+        "schema_version": 1,
+        "passed": bool(llm_trustworthy),
+        "formula_present": bool(has_formula),
+        "training_evaluation_ok": bool(llm_train_ok),
+        "training_r2": (
+            llm_train_r2_numeric if llm_train_r2_finite else None
+        ),
+        "training_r2_finite": llm_train_r2_finite,
+        "minimum_training_r2": 0.5,
+        "pathology_reasons": formula_pathology_reasons,
+        "rejection_reasons": trust_gate_rejection_reasons,
+    }
+    if llm_attempt_state is not None:
+        llm_attempt_state["trust_gate_diagnostics"] = trust_gate_diagnostics
     structural_tokens = structural_risk_tokens(llm_code)
-    degradation_probe = (
+    structural_risk_flag = bool(structural_tokens)
+    # This NN-trained edge probe is a separate NN robustness diagnostic.
+    # It is NOT an estimate of the frozen LLM formula's degradation and must
+    # never be passed to the pure-LLM routing gate.
+    nn_degradation_probe = (
         _extrapolation_probe(X_train, y_train)
         if llm_trustworthy else
-        {"status": "trust_gate_failed", "delta": None,
-         "r2_train": None, "r2_edge": None}
+        {"status": "trust_gate_failed", "delta": None, "r2_train": None, "r2_edge": None}
     )
+    # The LLM-specific calibration cohort/manifest is not yet ready. Keep the
+    # LLM degradation estimand explicitly unavailable and fail closed even if
+    # an NN-derived probe or an environment tau happens to be present.
+    llm_degradation_delta = None
+    llm_degradation_status = "not_calibrated"
     degradation_tau = _routing_delta_tau()
     try:
         ood_diagnostic = kde_ood_probability(X_train, X_test)
     except Exception as exc:
         _m5_record_failure("kde_ood_probability", exc)
         ood_diagnostic = {"status": "error", "p_ood": None, "p_ood_per_query": []}
-
     p_query = np.asarray(ood_diagnostic.get("p_ood_per_query") or [], dtype=float)
-    if (
-        p_query.size != len(X_test)
-        or not np.isfinite(p_query).all()
-        or np.any((p_query < 0.0) | (p_query > 1.0))
-    ):
+    if (p_query.size != len(X_test) or not np.isfinite(p_query).all()
+            or np.any((p_query < 0.0) | (p_query > 1.0))):
         p_query = np.zeros(len(X_test), dtype=float)
-    llm_weights = 0.3 + 0.7 * p_query
-    nn_weights = 1.0 - llm_weights
-    query_blend_weights = {
-        "llm": llm_weights.astype(float).tolist(),
-        "nn": nn_weights.astype(float).tolist(),
-    }
-
+    llm_w = 0.3 + 0.7 * p_query
+    query_blend_weights = {"llm": llm_w.astype(float).tolist(),
+                           "nn": (1.0 - llm_w).astype(float).tolist()}
     policy = route_decision_from_diagnostics(
         bool(llm_trustworthy), llm_train_r2, structural_tokens,
-        degradation_probe.get("delta"), degradation_tau,
+        llm_degradation_delta, degradation_tau,
     )
     decision = "llm" if policy["decision"] == "fitted_llm" else policy["decision"]
     route_reason = policy["route_reason"]
-    route_execution_status = "selected_route_executed"
     nn_rerun_time_s = 0.0
+    route_execution_status = "selected_route_executed"
+    selected_train_r2 = float("nan")
+    train_r2_source = "unavailable"
     test_r2 = float("nan")
+    ensemble_train_r2 = float("nan")
+    ensemble_test_r2 = float("nan")
+    llm_test_preds_for_metric = None
+    llm_test_evaluation_attempted = False
+
+    def _metric(value):
+        try:
+            value = float(value)
+        except (TypeError, ValueError, OverflowError):
+            return float("nan")
+        return value if np.isfinite(value) else float("nan")
+
+    nn_prediction_validation = {
+        "schema_version": 1, "status": "not_checked",
+        "reported_success": None, "metrics_recomputed": False,
+    }
+
+    def _valid_nn_result(candidate):
+        nonlocal nn_prediction_validation
+        if not isinstance(candidate, dict):
+            nn_prediction_validation = {
+                "schema_version": 1, "status": "invalid_candidate_record",
+                "reported_success": None, "metrics_recomputed": False,
+            }
+            return False
+        nn_prediction_validation = {
+            "schema_version": 1, "status": "checking_predictions",
+            "reported_success": bool(candidate.get("success", False)),
+            "metrics_recomputed": False,
+        }
+        try:
+            pred_train = np.asarray(candidate.get("y_pred_train"), dtype=float).reshape(-1)
+            pred_test = np.asarray(candidate.get("y_pred_test"), dtype=float).reshape(-1)
+            # Apply only semantic, predeclared physical bounds; never estimate
+            # bounds from observed or held-out target values.
+            case_name = str(description).lower()
+            bounds = None
+            if "options delta" in case_name or case_name.strip() == "delta":
+                bounds = (0.0, 1.0)
+            elif "utilisation" in case_name or "utilization" in case_name:
+                bounds = (0.0, 1.0)
+            if bounds is not None:
+                pred_train = np.clip(pred_train, *bounds)
+                pred_test = np.clip(pred_test, *bounds)
+                candidate["y_pred_train"] = pred_train
+                candidate["y_pred_test"] = pred_test
+                candidate["train_r2"] = float(_r2_checked(np.asarray(y_train).reshape(-1), pred_train)[0])
+                candidate["test_r2"] = float(_r2_checked(np.asarray(y_test).reshape(-1), pred_test)[0])
+                candidate["physical_bounds_applied"] = list(bounds)
+            if (
+                pred_train.shape != np.asarray(y_train).reshape(-1).shape
+                or pred_test.shape != np.asarray(y_test).reshape(-1).shape
+            ):
+                nn_prediction_validation["status"] = "prediction_shape_mismatch"
+                return False
+            if not np.isfinite(pred_train).all() or not np.isfinite(pred_test).all():
+                nn_prediction_validation["status"] = "nonfinite_predictions"
+                return False
+            # Never trust cached/stale component metrics: score the exact
+            # predictions that this route would select on the supplied targets.
+            train_r2 = _metric(_compute_metrics(
+                np.asarray(y_train, dtype=float).reshape(-1), pred_train
+            ).get("r2"))
+            test_r2 = _metric(_compute_metrics(
+                np.asarray(y_test, dtype=float).reshape(-1), pred_test
+            ).get("r2"))
+            candidate["train_r2"] = train_r2
+            candidate["test_r2"] = test_r2
+            valid_metrics = bool(np.isfinite(train_r2) and np.isfinite(test_r2))
+            nn_prediction_validation.update({
+                "status": "valid_predictions_metrics_recomputed" if valid_metrics else "undefined_recomputed_metrics",
+                "metrics_recomputed": True,
+                "recomputed_train_r2": train_r2 if np.isfinite(train_r2) else None,
+                "recomputed_test_r2": test_r2 if np.isfinite(test_r2) else None,
+            })
+            return valid_metrics
+        except (TypeError, ValueError, OverflowError):
+            nn_prediction_validation["status"] = "prediction_conversion_failed"
+            return False
+
+    def _raw_nn():
+        nonlocal nn_rerun_time_s
+        if _valid_nn_result(nn_result):
+            return nn_result
+        t0 = time.time()
+        nn_kwargs = {"split_metadata": split_metadata}
+        if nn_seed is not None:
+            nn_kwargs["seed"] = int(nn_seed)
+        trained = _train_and_eval_nn(
+            X_train, y_train, X_test, y_test, **nn_kwargs
+        )
+        nn_rerun_time_s += time.time() - t0
+        return trained
+
+    def _use_nn_fallback(nn_result, reason):
+        nonlocal selected_train_r2, train_r2_source, test_r2, query_blend_weights
+        nonlocal decision, route_reason, route_execution_status
+        valid = _valid_nn_result(nn_result)
+        selected_train_r2 = _metric(nn_result.get("train_r2")) if valid else float("nan")
+        test_r2 = _metric(nn_result.get("test_r2")) if valid else float("nan")
+        abstained = bool(nn_result.get("abstained", False))
+        if abstained:
+            # Preserve the explicit abstention route used by the ensemble
+            # branch: the replacement predictor is selected, not the MLP.
+            train_r2_source = "nn_abstention_" + str(
+                nn_result.get("selected_model", "fallback")
+            )
+            route_execution_status = (
+                "nn_abstention_fallback_executed"
+                if valid else "nn_abstention_fallback_failed"
+            )
+            query_blend_weights = {
+                # No LLM/NN blend is executed on abstention. The NN quality
+                # gate selected a separate replacement predictor instead.
+                "llm": [0.0] * len(X_test),
+                "nn": [0.0] * len(X_test),
+                "replacement": [1.0] * len(X_test),
+            }
+        else:
+            train_r2_source = "nn_fallback"
+            route_execution_status = (
+                "nn_fallback_executed" if valid else "nn_fallback_failed"
+            )
+        decision = "nn_fallback" if valid else "nn_unavailable"
+        route_reason = reason
 
     if decision == "llm":
-        test_r2, ok = _eval_formula_r2(
-            llm_code, X_test, y_test, constants=constants
+        selected_train_r2 = _metric(llm_train_r2)
+        train_r2_source = "llm_formula"
+        llm_test_evaluation_attempted = True
+        llm_test_preds_for_metric = _execute_formula(
+            llm_code, X_test, constants=constants
         )
-        if not ok or not np.isfinite(test_r2):
-            _t_nn0 = time.time()
-            nn_m = _train_and_eval_nn(X_train, y_train, X_test, y_test)
-            nn_rerun_time_s = time.time() - _t_nn0
-            test_r2 = float(nn_m.get("test_r2", float("nan")))
-            decision = "nn_fallback" if nn_m.get("success") and np.isfinite(test_r2) else "nn_unavailable"
-            route_reason = (
-                "pure_llm_evaluation_failed_nn_fallback"
-                if decision == "nn_fallback"
-                else "pure_llm_evaluation_and_nn_fallback_failed"
-            )
-            route_execution_status = decision
-
-    elif decision == "ensemble":
-        llm_test_preds = _execute_formula(llm_code, X_test, constants=constants)
-        llm_train_preds = _execute_formula(llm_code, X_train, constants=constants)
-        _t_nn0 = time.time()
-        nn_m = _train_and_eval_nn(X_train, y_train, X_test, y_test)
-        nn_rerun_time_s = time.time() - _t_nn0
-        nn_available = (
-            nn_m.get("success", False)
-            and nn_m.get("y_pred_test") is not None
-            and nn_m.get("y_pred_train") is not None
+        ok = llm_test_preds_for_metric is not None
+        test_r2 = (
+            _metric(_compute_metrics(y_test, llm_test_preds_for_metric).get("r2"))
+            if ok else float("nan")
         )
-        if llm_test_preds is not None and llm_train_preds is not None and nn_available:
-            ensemble_pred = _ensemble_llm_nn(
-                llm_pred_test=llm_test_preds,
-                nn_pred_test=nn_m["y_pred_test"],
-                llm_pred_train=llm_train_preds,
-                nn_pred_train=nn_m["y_pred_train"],
-                y_train=y_train,
-                llm_r2=llm_train_r2,
-                nn_r2=nn_m["train_r2"],
-                blend_weights=query_blend_weights,
-            )
-            metrics = _compute_metrics(y_test, ensemble_pred)
-            test_r2 = float(metrics.get("r2", float("nan")))
-            route_execution_status = (
-                "ensemble_executed" if np.isfinite(test_r2)
-                else "ensemble_metrics_undefined"
+        if not np.isfinite(test_r2):
+            nn_m = _raw_nn()
+            _use_nn_fallback(
+                nn_m, "hybrid_llm_evaluation_failed_nn_fallback"
+                if _valid_nn_result(nn_m)
+                else "hybrid_llm_evaluation_and_nn_fallback_failed",
             )
         else:
-            test_r2 = float(nn_m.get("test_r2", float("nan")))
-            decision = (
-                "nn_fallback"
-                if nn_available and np.isfinite(test_r2)
-                else "nn_unavailable"
-            )
-            route_reason = (
-                "ensemble_inputs_unavailable_nn_fallback"
-                if decision == "nn_fallback"
-                else "ensemble_and_nn_fallback_failed"
-            )
-            route_execution_status = decision
+            route_execution_status = "llm_executed"
 
+    elif decision == "ensemble" and has_formula:
+        llm_test_preds = _execute_formula(llm_code, X_test, constants=constants)
+        llm_test_evaluation_attempted = True
+        llm_test_preds_for_metric = llm_test_preds
+        nn_m = _raw_nn()
+        llm_train_preds = _execute_formula(llm_code, X_train, constants=constants)
+        if (llm_test_preds is None or llm_train_preds is None
+                or nn_m.get("y_pred_test") is None or nn_m.get("y_pred_train") is None
+                or not _valid_nn_result(nn_m)):
+            _use_nn_fallback(
+                nn_m, "ensemble_inputs_unavailable_nn_fallback"
+                if _valid_nn_result(nn_m)
+                else "ensemble_and_nn_fallback_failed",
+            )
+        elif bool(nn_m.get("abstained", False)):
+            decision = "nn_abstention_fallback"
+            # The NN quality gate rejected the MLP. Its replacement (log-Ridge
+            # or training mean) is the selected predictor; do not let rejected
+            # NN output enter the LLM/NN ensemble.
+            selected_train_r2 = _metric(nn_m.get("train_r2"))
+            test_r2 = _metric(nn_m.get("test_r2"))
+            train_r2_source = "nn_abstention_" + str(nn_m.get("selected_model", "fallback"))
+            route_execution_status = "nn_abstention_fallback_executed"
+            query_blend_weights = {
+                # No LLM/NN blend is executed on abstention. The NN quality
+                # gate selected a separate replacement predictor instead.
+                "llm": [0.0] * len(X_test),
+                "nn": [0.0] * len(X_test),
+                "replacement": [1.0] * len(X_test),
+            }
+        else:
+            ensemble_test = _ensemble_llm_nn(
+                llm_pred_test=llm_test_preds, nn_pred_test=nn_m["y_pred_test"],
+                llm_pred_train=llm_train_preds, nn_pred_train=nn_m["y_pred_train"],
+                y_train=y_train, llm_r2=llm_train_r2, nn_r2=nn_m.get("train_r2"),
+                blend_weights=query_blend_weights,
+            )
+            ensemble_train = _ensemble_llm_nn(
+                llm_pred_test=llm_train_preds, nn_pred_test=nn_m["y_pred_train"],
+                llm_pred_train=llm_train_preds, nn_pred_train=nn_m["y_pred_train"],
+                y_train=y_train, llm_r2=llm_train_r2, nn_r2=nn_m.get("train_r2"),
+            )
+            ensemble_train_r2 = _metric(_compute_metrics(y_train, ensemble_train).get("r2"))
+            ensemble_test_r2 = _metric(_compute_metrics(y_test, ensemble_test).get("r2"))
+            selected_train_r2 = ensemble_train_r2
+            train_r2_source = "ensemble_training_residual_blend"
+            test_r2 = ensemble_test_r2
+            route_execution_status = (
+                "ensemble_executed"
+                if np.isfinite(selected_train_r2) and np.isfinite(test_r2)
+                else "ensemble_metrics_undefined"
+            )
     else:
-        # Trust-gate failure: use the standalone NN path; no LLM feature or
-        # held-out label is used to choose the route.
-        _t_nn0 = time.time()
-        nn_m = _train_and_eval_nn(X_train, y_train, X_test, y_test)
-        nn_rerun_time_s = time.time() - _t_nn0
-        test_r2 = float(nn_m.get("test_r2", float("nan")))
-        decision = (
-            "nn_fallback"
-            if nn_m.get("success") and np.isfinite(test_r2)
-            else "nn_unavailable"
-        )
-        route_execution_status = decision
+        # An explicit NN route must evaluate the supplied NN candidate (or
+        # train the ordinary NN fallback); augmenting it with the trusted
+        # formula would silently replace the candidate and its audit metadata.
+        if llm_trustworthy and decision != "nn":
+            try:
+                llm_train_preds = _execute_formula(llm_code, X_train, constants=constants)
+                llm_test_preds = _execute_formula(llm_code, X_test, constants=constants)
+                llm_test_evaluation_attempted = True
+                llm_test_preds_for_metric = llm_test_preds
+                if llm_train_preds is not None and llm_test_preds is not None:
+                    t0 = time.time()
+                    nn_m = _train_and_eval_nn(
+                        np.column_stack([X_train, llm_train_preds]), y_train,
+                        np.column_stack([X_test, llm_test_preds]), y_test,
+                        split_metadata=split_metadata,
+                    )
+                    nn_rerun_time_s += time.time() - t0
+                    if not _valid_nn_result(nn_m):
+                        nn_m = _raw_nn()
+                else:
+                    nn_m = _raw_nn()
+            except Exception:
+                nn_m = _raw_nn()
+        else:
+            nn_m = _raw_nn()
+        valid_nn = _valid_nn_result(nn_m)
+        selected_train_r2 = _metric(nn_m.get("train_r2")) if valid_nn else float("nan")
+        test_r2 = _metric(nn_m.get("test_r2")) if valid_nn else float("nan")
+        if bool(nn_m.get("abstained", False)):
+            decision = "nn_abstention_fallback"
+            # The NN quality gate selected a replacement predictor (Ridge or
+            # training mean), so expose abstention rather than labelling it NN.
+            train_r2_source = "nn_abstention_" + str(
+                nn_m.get("selected_model", "fallback")
+            )
+            route_execution_status = (
+                "nn_abstention_fallback_executed"
+                if valid_nn else "nn_abstention_fallback_failed"
+            )
+            query_blend_weights = {
+                # No LLM/NN blend is executed on abstention. The NN quality
+                # gate selected a separate replacement predictor instead.
+                "llm": [0.0] * len(X_test),
+                "nn": [0.0] * len(X_test),
+                "replacement": [1.0] * len(X_test),
+            }
+        else:
+            train_r2_source = "nn_route"
+            route_execution_status = (
+                "nn_executed" if valid_nn
+                else "nn_training_failed_or_metrics_undefined"
+            )
 
+    # Report the generated formula's held-out score separately from the
+    # selected route's test_r2. This is an audit metric only: it is computed
+    # after route selection and never feeds routing, blending, or fallback.
+    llm_test_r2 = float("nan")
+    if llm_test_preds_for_metric is not None:
+        llm_test_value = _compute_metrics(
+            y_test, llm_test_preds_for_metric
+        ).get("r2")
+        llm_test_ok = True
+    elif has_formula and not llm_test_evaluation_attempted:
+        # Fallback routes that did not otherwise execute the formula still
+        # receive one diagnostic evaluation; failed route evaluations are
+        # not retried, and existing predictions are never recomputed.
+        llm_test_value, llm_test_ok = _eval_formula_r2(
+            llm_code, X_test, y_test, constants=constants
+        )
+    else:
+        llm_test_value, llm_test_ok = float("nan"), False
+    if llm_test_ok and np.isfinite(llm_test_value):
+        llm_test_r2 = float(llm_test_value)
+
+    y_test_arr = np.asarray(y_test, dtype=float).reshape(-1)
+    # Use the canonical relative-degeneracy policy. An absolute range cutoff
+    # incorrectly classifies physically small but well-varying targets
+    # (e.g. portfolio quantities around 1e-19) as constant.
+    _, target_r2_status = _r2_checked(y_test_arr, y_test_arr)
+    if target_r2_status == "nonfinite_target":
+        test_r2_status = "invalid_target"
+    elif target_r2_status == "degenerate_target":
+        test_r2_status = "constant_target"
+    elif target_r2_status == "ok" and np.isfinite(test_r2):
+        test_r2_status = "defined"
+    else:
+        test_r2_status = "nonfinite_metric_or_prediction"
+    train_r2_status = "defined" if np.isfinite(selected_train_r2) else "nonfinite_metric"
+    success = bool(train_r2_status == "defined" and test_r2_status == "defined")
     return {
-        "train_r2": float(llm_train_r2) if llm_train_ok else float("nan"),
-        "test_r2": float(test_r2),
-        "decision": decision,
+        "train_r2": float(selected_train_r2), "test_r2": float(test_r2),
+        "train_r2_source": train_r2_source, "train_r2_status": train_r2_status,
+        "test_r2_status": test_r2_status,
+        "decision": decision, "llm_code": llm_code if has_formula else None,
+        "llm_train_r2": _metric(llm_train_r2),
+        "llm_test_r2": _metric(llm_test_r2),
+        "ensemble_train_r2": _metric(ensemble_train_r2),
+        "ensemble_test_r2": _metric(ensemble_test_r2),
+        "selected_predictor_train_r2": _metric(selected_train_r2),
+        "selected_predictor_test_r2": _metric(test_r2),
+        "selected_predictor_source": train_r2_source,
         "route_reason": route_reason,
         "route_execution_status": route_execution_status,
-        "structural_risk_flag": bool(structural_tokens),
+        "structural_risk_flag": structural_risk_flag,
         "structural_risk_tokens": structural_tokens,
-        "degradation_probe": degradation_probe,
+        "trust_gate_diagnostics": trust_gate_diagnostics,
+        "nn_prediction_validation": nn_prediction_validation,
+        # Keep the legacy name as an alias while making its NN provenance explicit.
+        "degradation_probe": nn_degradation_probe,
+        "nn_degradation_probe": nn_degradation_probe,
+        "llm_degradation_delta": llm_degradation_delta,
+        "llm_degradation_status": llm_degradation_status,
         "degradation_tau": degradation_tau,
         "ood_diagnostic": ood_diagnostic,
+        "ood_covariate_protocol": {
+            "density_fit_rows": "X_train", "query_rows": "X_test",
+            "query_labels_used": False, "access_mode": "query_time_covariate_access",
+        },
         "blend_weights": query_blend_weights,
-        "llm_code": llm_code if has_formula else None,
-        "llm_train_r2": float(llm_train_r2) if llm_train_ok else float("nan"),
+        "nn_abstained": bool(nn_m.get("abstained", False)) if "nn_m" in locals() else False,
+        "nn_selected_model": nn_m.get("selected_model") if "nn_m" in locals() else None,
+        "nn_edge_r2": nn_m.get("nn_edge_r2") if "nn_m" in locals() else None,
+        "ridge_edge_r2": nn_m.get("ridge_edge_r2") if "nn_m" in locals() else None,
+        "signed_ridge_edge_r2": nn_m.get("signed_ridge_edge_r2") if "nn_m" in locals() else None,
+        "signed_ridge_eligible": nn_m.get("signed_ridge_eligible") if "nn_m" in locals() else None,
+        "physical_bounds_applied": nn_m.get("physical_bounds_applied") if "nn_m" in locals() else None,
         "nn_rerun_time_s": round(nn_rerun_time_s, 3),
         "llm_called": bool(llm_result.get("llm_called", False)),
         "bypass_kind": llm_result.get("bypass_kind", "none"),
-        "success": bool(np.isfinite(test_r2)),
+        "llm_source": llm_result.get("llm_source", "unknown"),
+        "llm_timeout_s": llm_result.get("timeout_s"),
+        "llm_api_request_time_s": llm_result.get("api_request_time_s"),
+        "llm_input_tokens": llm_result.get("input_tokens"),
+        "llm_output_tokens": llm_result.get("output_tokens"),
+        "llm_temperature_requested": llm_result.get("temperature_requested"),
+        "llm_temperature_sent": llm_result.get("temperature_sent", False),
+        "success": success,
     }
 
 
@@ -849,36 +1511,54 @@ def _hybrid_predict_and_eval(
 # SECTION 6 — Data splitting
 # ─────────────────────────────────────────────────────────────────────────────
 
-# FIX-C3: PCA-directed 40/60 split — imported from the reference implementation
-# verified by Gate A of ci_runner_disclosure.yml.  Replaces _aggressive_split()
-# for every case in run_benchmark().
-from hypatiax.tools.utils.pca_split_utils import pca_directed_split
+def _pca_directed_split_40_60(
+    X: np.ndarray,
+    y: np.ndarray,
+    random_state: int | None = None,
+    feature_names: list[str] | None = None,
+    return_metadata: bool = False,
+):
+    """Return the v3c split tuple using the frozen PCA 40/60 outer protocol.
 
-def _aggressive_split(
-    X: np.ndarray, y: np.ndarray, config: dict
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    The PCA utility returns X_train, X_test, y_train, y_test; this adapter
+    preserves v3c's X_train, y_train, X_test, y_test contract and supplies
+    the training-only NN validation metadata expected by the v3c model code.
     """
-    Train on lower 40% of primary variable; test on upper 60%.
-    Falls back to index-based split when array is too small.
-    Backward-compatible wrapper around
-    pca_directed_split().
-    """
-
-    test_size = config.get("test_size", 0.6)
-
-    # pca_directed_split returns (X_tr, X_te, y_tr, y_te); this wrapper keeps
-    # the v3c contract (X_tr, y_tr, X_te, y_te) so any caller is order-safe.
-    X_tr, X_te, y_tr, y_te = pca_directed_split(
+    seed = int(SEED if random_state is None else random_state)
+    X_train, X_test, y_train, y_test, pca_metadata = pca_directed_split(
         X,
         y,
-        test_size=test_size,
-        random_state=42,
+        test_size=0.6,
+        random_state=seed,
+        feature_names=feature_names,
+        return_metadata=True,
     )
-    return X_tr, y_tr, X_te, y_te
+    result = (X_train, y_train, X_test, y_test)
+    if not return_metadata:
+        return result
+
+    metadata = {
+        **pca_metadata,
+        "requested_method": "pca_pc1_order",
+        "realized_method": "pca_pc1_order",
+        "random_state": seed,
+        "shuffle": False,
+        "test_fraction": 0.6,
+        "selection_rule": (
+            "stable ascending oriented PC1; lowest 40% train, highest 60% test"
+        ),
+        # This describes only the NN's inner validation split within X_train.
+        "validation_split_var_idx": 0,
+        "validation_split_type": "high",
+        "validation_split_realized_method": "primary_feature_percentile",
+        "train_size": int(len(X_train)),
+        "test_size": int(len(X_test)),
+    }
+    return (*result, metadata)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SECTION 7 — Test catalogue (74 cases, 0 intractable)
+# SECTION 7 — Test catalogue (74 cases, 1 intractable)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _get_test_cases() -> list[dict]:
@@ -975,6 +1655,170 @@ def _get_test_cases() -> list[dict]:
 # SECTION 8 — Checkpoint helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+_DIAGNOSTIC_FIELDS = (
+    "nn_selected_model", "nn_abstained", "nn_edge_r2", "ridge_edge_r2",
+)
+_ALLOWED_NN_MODELS = {"nn", "log_ridge", "signed_ridge", "training_mean"}
+
+
+def _is_intractable_case(test_case: dict) -> bool:
+    """Return the canonical intractability classification for a test case."""
+    name = str(test_case.get("name", test_case.get("equation_id", ""))).lower()
+    return bool(
+        test_case.get("extrapolation_intractable", False)
+        or "impermanent loss breakeven" in name
+    )
+
+
+def _normalize_saved_record(record: dict) -> dict:
+    """Backfill diagnostic keys in legacy checkpoints without changing values."""
+    if not isinstance(record, dict):
+        return record
+    if "impermanent loss breakeven" in str(record.get("equation_id", "")).lower():
+        record["extrapolation_intractable"] = True
+    results = record.setdefault("results", {})
+    for arm in ("neural_network", "hybrid"):
+        arm_result = results.setdefault(arm, {})
+        if not isinstance(arm_result, dict):
+            arm_result = {}
+            results[arm] = arm_result
+        for field in _DIAGNOSTIC_FIELDS:
+            arm_result.setdefault(field, None)
+    results["hybrid"].setdefault("blend_weights", None)
+    return record
+
+
+def _hybrid_component_timing_fields(nn_component_time_s, hybrid_component_time_s):
+    """Return the required per-component wall-clock diagnostics for a Hybrid arm.
+
+    The NN component is the standalone NN fit performed before Hybrid routing.
+    The Hybrid component is the subsequent LLM/routing/evaluation stage and
+    includes any NN rerun performed inside that stage.  The end-to-end Hybrid
+    time is their sum; the rerun diagnostic remains a subset, not an extra term.
+    """
+    return {
+        "nn_component_time_s": round(float(nn_component_time_s), 6),
+        "hybrid_component_time_s": round(float(hybrid_component_time_s), 6),
+    }
+
+
+def _validate_result_records(
+    records: list,
+    require_il_record: bool = False,
+    require_complete: bool = False,
+    expected_cases: list | None = None,
+) -> None:
+    """Fail closed on malformed, duplicate, unexpected, or incomplete results.
+
+    By default, validation uses the complete DeFi-74 catalogue. Callers that
+    intentionally run a named subset may pass that exact case list; completeness
+    is then enforced against the selected scope without weakening the full-run
+    contract.
+    """
+    if not isinstance(records, list) or not records:
+        raise ValueError("Benchmark results must be a non-empty list")
+
+    catalogue_cases = _get_test_cases()
+    catalogue_by_id = {tc["name"]: tc for tc in catalogue_cases}
+    scope_cases = catalogue_cases if expected_cases is None else expected_cases
+    expected_ids = [tc["name"] for tc in scope_cases]
+    expected_set = set(expected_ids)
+    is_full_catalogue = expected_set == set(catalogue_by_id)
+    observed_ids = []
+    il_records = []
+    errors = []
+
+    for index, record in enumerate(records):
+        if not isinstance(record, dict):
+            errors.append(f"record[{index}] must be an object")
+            continue
+        equation_id = str(record.get("equation_id", "")).strip()
+        if not equation_id:
+            errors.append(f"record[{index}] is missing equation_id")
+            continue
+        observed_ids.append(equation_id)
+        if equation_id not in expected_set:
+            errors.append(f"{equation_id}: unexpected case ID")
+
+        expected_case = catalogue_by_id.get(equation_id)
+        if expected_case is not None:
+            expected_intractable = _is_intractable_case(expected_case)
+            if record.get("extrapolation_intractable") is not expected_intractable:
+                errors.append(
+                    f"{equation_id}: extrapolation_intractable must be "
+                    f"{expected_intractable}"
+                )
+        if "impermanent loss breakeven" in equation_id.lower():
+            il_records.append(record)
+
+        result_arms = record.get("results", {})
+        if not isinstance(result_arms, dict):
+            errors.append(f"{equation_id}: results must be an object")
+            continue
+        for arm in ("neural_network", "hybrid"):
+            data = result_arms.get(arm)
+            if not isinstance(data, dict):
+                errors.append(f"{equation_id}: missing results.{arm}")
+                continue
+            if arm in ("neural_network", "hybrid"):
+                for field in _DIAGNOSTIC_FIELDS:
+                    if field not in data:
+                        errors.append(f"{equation_id} {arm}: missing {field}")
+                if arm == "hybrid":
+                    for field in ("nn_component_time_s", "hybrid_component_time_s",
+                                  "llm_api_request_time_s", "llm_input_tokens",
+                                  "llm_output_tokens"):
+                        if field not in data:
+                            errors.append(f"{equation_id} hybrid: missing {field}")
+            selected = data.get("nn_selected_model")
+            if selected is not None and selected not in _ALLOWED_NN_MODELS:
+                errors.append(f"{equation_id} {arm}: invalid nn_selected_model={selected!r}")
+            if (arm == "neural_network" and data.get("success")
+                    and selected is None):
+                errors.append(f"{equation_id}: successful NN has no selected model")
+
+        hybrid = result_arms.get("hybrid", {})
+        if isinstance(hybrid, dict) and hybrid.get("nn_abstained") is True:
+            weights = hybrid.get("blend_weights")
+            nn_weights = weights.get("nn") if isinstance(weights, dict) else None
+            try:
+                values = np.asarray(nn_weights, dtype=float).reshape(-1)
+                valid_zero_weights = (
+                    values.size > 0 and np.isfinite(values).all()
+                    and np.all(np.abs(values) <= 1e-12)
+                )
+            except (TypeError, ValueError):
+                valid_zero_weights = False
+            if not valid_zero_weights:
+                errors.append(
+                    f"{equation_id}: abstained hybrid must save all-zero NN blend weights"
+                )
+
+    duplicates = sorted({case_id for case_id in observed_ids if observed_ids.count(case_id) > 1})
+    if duplicates:
+        errors.append("duplicate case IDs: " + ", ".join(duplicates))
+
+    if require_complete:
+        missing = sorted(expected_set - set(observed_ids))
+        if missing:
+            scope_label = "DeFi-74" if is_full_catalogue else "filtered benchmark"
+            errors.append(
+                f"incomplete {scope_label} result: expected {len(expected_ids)} unique cases, "
+                f"found {len(set(observed_ids))}; missing: " + ", ".join(missing)
+            )
+        if len(records) != len(expected_ids):
+            scope_label = "DeFi-74" if is_full_catalogue else "filtered benchmark"
+            errors.append(
+                f"incomplete {scope_label} result: expected exactly {len(expected_ids)} records, "
+                f"found {len(records)}"
+            )
+
+    if require_il_record and not il_records:
+        errors.append("IL breakeven record is missing")
+    if errors:
+        raise ValueError("Invalid benchmark results:\n- " + "\n- ".join(errors))
+
+
 def _load_checkpoint() -> tuple[list, int]:
     if not CHECKPOINT_FILE.exists():
         return [], 0
@@ -986,13 +1830,14 @@ def _load_checkpoint() -> tuple[list, int]:
         seen = {}
         for item in data:
             seen[item.get("equation_id", id(item))] = item
-        data = list(seen.values())
+        data = [_normalize_saved_record(item) for item in seen.values()]
         return data, len(data)
     except Exception:
         return [], 0
 
 
 def _save_checkpoint(results: list):
+    _validate_result_records(results)
     def _default(obj):
         if isinstance(obj, (np.integer,)):         return int(obj)
         if isinstance(obj, (np.floating, float)):
@@ -1004,7 +1849,20 @@ def _save_checkpoint(results: list):
     CHECKPOINT_FILE.write_text(json.dumps(results, indent=2, default=_default))
 
 
-def _save_final(results: list):
+def _save_final(
+    results: list,
+    require_il_record: bool = True,
+    require_complete: bool | None = None,
+    expected_cases: list | None = None,
+):
+    if require_complete is None:
+        require_complete = require_il_record
+    _validate_result_records(
+        results,
+        require_il_record=require_il_record,
+        require_complete=require_complete,
+        expected_cases=expected_cases,
+    )
     def _default(obj):
         if isinstance(obj, (np.integer,)):         return int(obj)
         if isinstance(obj, (np.floating, float)):
@@ -1022,200 +1880,198 @@ def _save_final(results: list):
 # ─────────────────────────────────────────────────────────────────────────────
 
 _INTRACTABLE_NAMES = {
-    tc["name"] for tc in _get_test_cases() if tc.get("extrapolation_intractable")
+    tc["name"] for tc in _get_test_cases() if _is_intractable_case(tc)
 }
-_STANDARD_TOTAL = len(_get_test_cases()) - len(_INTRACTABLE_NAMES)  # = 66 + adjustments
+_STANDARD_TOTAL = len(_get_test_cases()) - len(_INTRACTABLE_NAMES)  # 73 standard cases
 
 
 def _generate_report(results: list):
-    CLIP_LO = -10.0
-    standard = [r for r in results if r["equation_id"] not in _INTRACTABLE_NAMES]
+    CLIP_LO    = -10.0
+    standard   = [r for r in results if r["equation_id"] not in _INTRACTABLE_NAMES]
     intractable = [r for r in results if r["equation_id"] in _INTRACTABLE_NAMES]
-    planned = max(int(_STANDARD_TOTAL), 0)
-    executed = len(standard)
-    executed_denom = max(executed, 1)
-
-    def _valid_score(value):
-        if value is None:
-            return False
-        try:
-            return bool(np.isfinite(float(value)))
-        except (TypeError, ValueError, OverflowError):
-            return False
 
     def _r2s(rlist, method):
         out = []
         for r in rlist:
-            value = r["results"].get(method, {}).get("test_r2")
-            if _valid_score(value):
-                out.append(float(value))
+            v = r["results"].get(method, {}).get("test_r2")
+            if v is not None and not (isinstance(v, float) and np.isnan(v)):
+                out.append(float(v))
         return out
 
     def _stats(scores, denom):
-        arr = np.asarray(scores, dtype=float)
+        arr     = np.array(scores, dtype=float)
         clipped = np.clip(arr, CLIP_LO, 1.0)
         return {
-            "n": len(arr),
-            "median": float(np.median(clipped)) if len(clipped) else float("nan"),
-            "mean_clip": float(np.mean(clipped)) if len(clipped) else float("nan"),
-            "pct_09": 100 * int(np.sum(arr > 0.9)) / denom,
-            "pct_099": 100 * int(np.sum(arr > 0.99)) / denom,
-            "catastrophic": int(np.sum(arr < CLIP_LO)),
+            "n":             len(arr),
+            "median":        float(np.median(clipped)) if len(clipped) else float("nan"),
+            "mean_clip":     float(np.mean(clipped))   if len(clipped) else float("nan"),
+            "pct_09":        100 * int(np.sum(arr > 0.9))  / denom,
+            "pct_099":       100 * int(np.sum(arr > 0.99)) / denom,
+            "catastrophic":  int(np.sum(arr < CLIP_LO)),
         }
 
-    def _positive_time(record, method):
-        value = record["results"].get(method, {}).get("time_s")
-        if not _valid_score(value):
-            return None
-        value = float(value)
-        return value if value > 0 else None
+    # Fixed denominator: 74 catalogue cases minus the single intractable case.
+    # Missing records must never shrink the denominator or inflate percentages.
+    denom = _STANDARD_TOTAL
 
-    def _paired_times(records, left_method, right_method, predicate=None):
-        pairs = []
-        for record in records:
-            if predicate is not None and not predicate(record):
-                continue
-            left = _positive_time(record, left_method)
-            right = _positive_time(record, right_method)
-            if left is not None and right is not None:
-                pairs.append((record["equation_id"], left, right))
-        return pairs
-
-    print("\\n" + "=" * 80)
+    print("\n" + "=" * 80)
     print("STATISTICAL REPORT — HypatiaX DeFi Benchmark v3.0")
     print("=" * 80)
     print(f"Total cases run : {len(results)}")
-    print(f"  Planned standard catalogue : {planned}")
-    print(f"  Executed standard cases    : {executed}")
-    print(f"  Intractable cases          : {len(intractable)} (excluded from standard aggregates)")
+    print(f"  Standard      : {len(standard)}  (used in aggregate, denominator = {denom})")
+    print(f"  Intractable   : {len(intractable)}  (reported separately, excluded from aggregate)")
     print()
-    print("Threshold percentages use executed standard cases as denominator.")
-    print("Unstarted planned cases are not silently counted as failures.")
-    print("Score coverage below is valid finite scores / planned standard cases.\\n")
+    print("NOTE: All percentages use FIXED denominator (standard cases only).")
+    print("      NaN / failure counts as 0 toward the denominator.\\n")
 
-    for method in ["pure_llm", "neural_network", "hybrid"]:
-        scores = _r2s(standard, method)
-        stats = _stats(scores, executed_denom)
-        coverage = 100 * len(scores) / planned if planned else float("nan")
-        label = {
-            "pure_llm": "Pure LLM      ",
-            "neural_network": "Neural Network",
-            "hybrid": "Hybrid        ",
-        }[method]
-        print(
-            f"  {label}: median={stats['median']:.4f}, "
-            f"mean(clip-{abs(CLIP_LO):.0f})={stats['mean_clip']:.4f}, "
-            f">0.9: {stats['pct_09']:.1f}%, "
-            f">0.99: {stats['pct_099']:.1f}% "
-            f"(valid={stats['n']}/{executed}, coverage vs planned={coverage:.1f}%, "
-            f"catastrophic R²<{CLIP_LO}: {stats['catastrophic']})"
-        )
+    method_labels = {
+        "neural_network": "Neural Network",
+        "hybrid": "Hybrid",
+    }
+    for method in ("neural_network", "hybrid"):
+        s = _stats(_r2s(standard, method), denom)
+        label = method_labels[method]
+        print(f"  {label}: median={s['median']:.4f}, "
+              f"mean(clip-{abs(CLIP_LO):.0f})={s['mean_clip']:.4f}, "
+              f">0.9: {s['pct_09']:.1f}%, "
+              f">0.99: {s['pct_099']:.1f}%  "
+              f"(catastrophic R²<{CLIP_LO}: {s['catastrophic']})")
 
     if intractable:
-        print(f"\\n── Intractable cases ({len(intractable)}) ─────────────────────────────────────")
-        for record in intractable:
-            hybrid_score = record["results"].get("hybrid", {}).get("test_r2")
-            display = (
-                "nan" if not _valid_score(hybrid_score)
-                else f"{float(hybrid_score):.4f}"
-            )
-            print(
-                f"  {record['equation_id'][:55]:<55}  "
-                f"hybrid test R² = {display}"
-            )
+        print(f"\n── Intractable cases ({len(intractable)}) ─────────────────────────────────────")
+        for r in intractable:
+            case_name = str(r.get("equation_id", r.get("test_case", "<unknown>")))
+            values = []
+            for method in ("neural_network", "hybrid"):
+                score = r["results"].get(method, {}).get("test_r2")
+                values.append(
+                    f"{method_labels[method]}="
+                    f"{'nan' if score is None or (isinstance(score, float) and np.isnan(score)) else f'{score:.4f}'}"
+                )
+            print(f"  {case_name[:42]:<42}  " + " | ".join(values))
 
-    print("\\n── By difficulty ─────────────────────────────────────────────────────────")
-    for difficulty in ["easy", "medium", "hard"]:
-        subset = [r for r in standard if r.get("difficulty") == difficulty]
+    # By-difficulty breakdown
+    print("\n── By difficulty ─────────────────────────────────────────────────────────")
+    for diff in ["easy", "medium", "hard"]:
+        subset = [r for r in standard if r.get("difficulty") == diff]
         if not subset:
             continue
-        for method in ["pure_llm", "hybrid"]:
-            scores = _r2s(subset, method)
-            stats = _stats(scores, max(len(subset), 1))
-            print(
-                f"  {difficulty:6s} | {method:14s}: "
-                f"median={stats['median']:.4f}, "
-                f">0.99: {stats['pct_099']:.1f}% "
-                f"(valid={len(scores)}/{len(subset)})"
-            )
+        for method in ("neural_network", "hybrid"):
+            s = _stats(_r2s(subset, method), max(len(subset), 1))
+            print(f"  {diff:6s} | {method:14s}: median={s['median']:.4f}, "
+                  f">0.99: {s['pct_099']:.1f}%  (n={len(subset)})")
 
-    print("\\n── Timing summary (per-case mean) ────────────────────────────────────────")
-    timed_out_cases = [
-        r["equation_id"] for r in results
-        if r["results"].get("neural_network", {}).get("timed_out", False)
-    ]
-    if timed_out_cases:
-        print(
-            f"  NN wall-clock limit hit ({_NN_MAX_TIME_S}s) in "
-            f"{len(timed_out_cases)} case(s): {', '.join(timed_out_cases)}"
-        )
 
-    for method in ["pure_llm", "neural_network", "hybrid"]:
-        times = [
-            value for record in results
-            if (value := _positive_time(record, method)) is not None
+    # ── Two-arm timing summary ─────────────────────────────────────────────
+    print("\n── Timing summary (per-case wall time) ──────────────────────────────────")
+    timing = {}
+    for method in ("neural_network", "hybrid"):
+        values = [
+            r.get("results", {}).get(method, {}).get("time_s")
+            for r in results
         ]
-        if times:
-            label = {
-                "pure_llm": "Pure LLM      ",
-                "neural_network": "Neural Network",
-                "hybrid": "Hybrid        ",
-            }[method]
+        values = [float(v) for v in values if v is not None and np.isfinite(v) and v > 0]
+        if values:
+            timing[method] = values
             print(
-                f"  {label}: mean={np.mean(times):.1f}s, "
-                f"median={np.median(times):.1f}s (n={len(times)})"
+                f"  {method_labels[method]:14s}: total={sum(values):.3f}s, "
+                f"mean={np.mean(values):.3f}s, median={np.median(values):.3f}s "
+                f"(n={len(values)})"
             )
 
-    # Pair each NN and hybrid timing using the same equation_id/result record.
-    paired = _paired_times(results, "neural_network", "hybrid")
-    if paired:
-        nn_times = np.asarray([item[1] for item in paired], dtype=float)
-        hybrid_times = np.asarray([item[2] for item in paired], dtype=float)
-        ratios = nn_times / hybrid_times
-        speedup_mean = float(np.mean(ratios))
-        speedup_median = float(np.median(ratios))
-        reduction_mean = float(np.mean(1 - hybrid_times / nn_times) * 100)
-        reduction_median = float(np.median(1 - hybrid_times / nn_times) * 100)
-        verdict = (
-            f"Hybrid {speedup_mean:.2f}× faster than NN (mean paired speedup)"
-            if speedup_mean > 1
-            else f"Hybrid {1 / speedup_mean:.2f}× slower than NN (mean paired speedup)"
-        )
-        print(f"  Hybrid vs NN: {verdict}")
-        print(f"  Median paired speedup: {speedup_median:.2f}×")
+    hybrid_nn_parts = [
+        r.get("results", {}).get("hybrid", {}).get("nn_component_time_s")
+        for r in results
+    ]
+    hybrid_llm_parts = [
+        r.get("results", {}).get("hybrid", {}).get("hybrid_component_time_s")
+        for r in results
+    ]
+    hybrid_nn_parts = [float(v) for v in hybrid_nn_parts
+                       if v is not None and np.isfinite(v) and v >= 0]
+    hybrid_llm_parts = [float(v) for v in hybrid_llm_parts
+                        if v is not None and np.isfinite(v) and v >= 0]
+    if hybrid_nn_parts and hybrid_llm_parts:
         print(
-            f"  Paired cases: {len(paired)}; mean reduction={reduction_mean:.1f}%, "
-            f"median reduction={reduction_median:.1f}%"
+            f"  Hybrid end-to-end components: NN={sum(hybrid_nn_parts):.3f}s, "
+            f"LLM/routing/evaluation={sum(hybrid_llm_parts):.3f}s"
         )
-        print("  (Paper claims 73% reduction = 3.7×)")
-    else:
-        print("  Hybrid vs NN paired speedup: unavailable (no complete positive-time pairs)")
 
-    # Compare only LLM-routed hybrid cases, paired to NN on the same equation_id.
-    def _llm_routed(record):
-        decision = record["results"].get("hybrid", {}).get("decision", "")
-        return decision not in ("nn", "nn_fallback", "fail")
+    # Provider request latency is measured independently from parsing,
+    # formula evaluation, and NN/hybrid orchestration.
+    for method, field in (("hybrid", "llm_api_request_time_s"),):
+        api_times = [
+            r.get("results", {}).get(method, {}).get(field)
+            for r in results
+        ]
+        api_times = [float(v) for v in api_times
+                     if v is not None and np.isfinite(v) and v >= 0]
+        if api_times:
+            print(
+                f"  {method_labels[method]} provider request: "
+                f"total={sum(api_times):.3f}s, mean={np.mean(api_times):.3f}s, "
+                f"median={np.median(api_times):.3f}s (n={len(api_times)})"
+            )
 
-    llm_pairs = _paired_times(
-        results, "neural_network", "hybrid", predicate=_llm_routed
-    )
-    if llm_pairs:
-        nn_times = np.asarray([item[1] for item in llm_pairs], dtype=float)
-        hybrid_times = np.asarray([item[2] for item in llm_pairs], dtype=float)
-        ratios = nn_times / hybrid_times
+    hybrid_token_rows = [r.get("results", {}).get("hybrid", {}) for r in results]
+    hybrid_in = [int(x["llm_input_tokens"]) for x in hybrid_token_rows
+                 if x.get("llm_input_tokens") is not None]
+    hybrid_out = [int(x["llm_output_tokens"]) for x in hybrid_token_rows
+                  if x.get("llm_output_tokens") is not None]
+    if hybrid_in or hybrid_out:
         print(
-            f"  LLM-routed paired comparison: n={len(llm_pairs)}, "
-            f"mean paired speedup={np.mean(ratios):.2f}×, "
-            f"median paired speedup={np.median(ratios):.2f}×"
+            f"  Hybrid LLM token usage: input={sum(hybrid_in)} "
+            f"(n={len(hybrid_in)}), output={sum(hybrid_out)} (n={len(hybrid_out)})"
         )
-    else:
-        print("  LLM-routed paired comparison: unavailable (no complete positive-time pairs)")
 
-    print("\\n" + "=" * 80)
+    print("\n" + "=" * 80)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 10 — Main runner
+# Explicit canonical descriptors for catalogue names that are prefixes of
+# related protocol variants. Keep these exact so the base and variant equations
+# remain distinct experimental units.
+_DEFI_CANONICAL_PROTOCOL_DESCRIPTIONS = {
+    "Constant product formula":
+        "Constant product formula: reserve Y given reserve X and invariant k",
+    "Spot price from AMM":
+        "Spot price from AMM ratio (token A / token B)",
+    "Funding rate cost":
+        "Funding rate cost for long position over funding periods",
+    "Concentrated liquidity position width":
+        "Concentrated liquidity position width from upper and lower price bounds",
+}
+
+
+def _match_defi_protocol_case(case_name, protocol_cases):
+    """Resolve one catalogue case without prefix collisions with variant cases.
+
+    Known ambiguous base names use their canonical protocol description.
+    Other cases retain the historical substring lookup, but ambiguity and
+    missing matches fail loudly rather than silently selecting a variant.
+    """
+    canonical = _DEFI_CANONICAL_PROTOCOL_DESCRIPTIONS.get(case_name)
+    if canonical is not None:
+        matches = [case for case in protocol_cases if str(case[0]).strip().casefold() == canonical.casefold()]
+        if len(matches) != 1:
+            raise ValueError(
+                f"Expected exactly one canonical protocol match for {case_name!r} "
+                f"({canonical!r}); found {len(matches)}"
+            )
+        return matches[0]
+
+    needle = str(case_name).strip().casefold()
+    matches = [case for case in protocol_cases if needle in str(case[0]).casefold()]
+    if len(matches) != 1:
+        candidates = [str(case[0]) for case in matches]
+        raise ValueError(
+            f"Expected exactly one protocol match for {case_name!r}; "
+            f"found {len(matches)}: {candidates}"
+        )
+    return matches[0]
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Cases where Fix 5 is known to have been broken — use these for quick verification
@@ -1225,6 +2081,21 @@ _FIX5_VERIFY_CASES = {
     "Capital efficiency",
     "Concentrated liquidity position width (v2)",
 }
+
+
+def _hybrid_metric_provenance_record(hy_m):
+    """Return the distinct formula, ensemble, and selected-route scores for a case record."""
+    return {
+        "llm_train_r2": hy_m.get("llm_train_r2"),
+        "llm_test_r2": hy_m.get("llm_test_r2"),
+        "ensemble_train_r2": hy_m.get("ensemble_train_r2"),
+        "ensemble_test_r2": hy_m.get("ensemble_test_r2"),
+        "selected_predictor_train_r2": hy_m.get("selected_predictor_train_r2"),
+        "selected_predictor_test_r2": hy_m.get("selected_predictor_test_r2"),
+        "selected_predictor_source": hy_m.get("selected_predictor_source"),
+        "trust_gate_diagnostics": hy_m.get("trust_gate_diagnostics"),
+        "nn_prediction_validation": hy_m.get("nn_prediction_validation"),
+    }
 
 
 def run_benchmark(resume: bool = False, verify_fix5: bool = False,
@@ -1299,7 +2170,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
     all_results      = list(existing)
 
     print("=" * 80)
-    print("HypatiaX DeFi Extrapolation Benchmark v3.0")
+    print("HypatiaX DeFi Benchmark — v3c-aligned PCA 40/60")
     print("=" * 80)
     print(f"Cases: {total} | Resuming from: {n_done + 1}" if resume else
           f"Cases: {total} | Fresh run")
@@ -1309,12 +2180,18 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
     print("=" * 80)
 
     for i, tc in enumerate(test_cases, 1):
-        # Skip already-done cases when resuming
-        if resume and any(r.get("equation_id") == tc["name"] for r in all_results):
+        # Normalize a saved record before skipping it on resume.
+        existing = next(
+            (r for r in all_results if r.get("equation_id") == tc["name"]),
+            None,
+        ) if resume else None
+        if existing is not None:
+            _normalize_saved_record(existing)
+            existing["extrapolation_intractable"] = _is_intractable_case(tc)
             print(f"[{i:02d}/{total}] ⏭  {tc['name']} — already done")
             continue
 
-        is_intractable = tc.get("extrapolation_intractable", False)
+        is_intractable = _is_intractable_case(tc)
         print(f"\n[{i:02d}/{total}] {tc['name']}  "
               f"({tc['difficulty'].upper()}"
               f"{' — INTRACTABLE' if is_intractable else ''})")
@@ -1324,91 +2201,102 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
             protocol_cases = protocol.load_test_data(
                 tc["domain"], num_samples=tc["num_samples"]
             )
-            match = next(
-                ((d, X, y, v, m) for d, X, y, v, m in protocol_cases
-                 if tc["name"].lower() in d.lower()),
-                None,
+            desc, X_full, y_full, var_names, metadata = _match_defi_protocol_case(
+                tc["name"], protocol_cases
             )
-            if not match:
-                print(f"  ⚠️  No protocol match for '{tc['name']}' — skipping")
-                continue
-
-            desc, X_full, y_full, var_names, metadata = match
+            _is_il_breakeven = "impermanent loss breakeven" in tc["name"].lower()
             metadata.update({
-                "extrapolation_test": True,
-                "difficulty":         tc["difficulty"],
-                "formula_type":       tc["formula_type"],
+                "extrapolation_test": (
+                    False if _is_il_breakeven
+                    else bool(metadata.get("extrapolation_test", True))
+                ),
+                "extrapolation_intractable": is_intractable,
+                "difficulty": tc["difficulty"],
+                "formula_type": tc["formula_type"],
             })
+            assert not _is_il_breakeven or metadata["extrapolation_intractable"], (
+                f"IL breakeven classification failed: {tc['name']}"
+            )
             tc.setdefault("description", desc)
 
-            # FIX-C3: PCA-directed 40/60 split replaces _aggressive_split.
-            # Matches the Feynman benchmark protocol (run_comparative_suite_benchmark_pca.py).
-            X_tr, X_te, y_tr, y_te = pca_directed_split(
-                X_full, y_full, test_size=0.6, random_state=42
+            X_tr, y_tr, X_te, y_te, split_details = _pca_directed_split_40_60(
+                X_full, y_full, random_state=SEED,
+                feature_names=var_names, return_metadata=True
             )
-            print(f"  Split (PCA 40/60) → train={len(X_tr)}, test={len(X_te)}")
+            validation_var_idx = split_details["validation_split_var_idx"]
+            split_details["validation_split_feature_name"] = (
+                var_names[validation_var_idx]
+                if 0 <= validation_var_idx < len(var_names) else None
+            )
+            print(f"  Split → train={len(X_tr)}, test={len(X_te)}")
 
             case_results = {}
 
-            # ── Pure LLM ────────────────────────────────────────────────────
-            try:
-                _t0_llm = time.time()
-                from hypatiax.core.base_pure_llm.baseline_pure_llm_defi_discovery import (
-                    PureLLMBaseline,
-                )
-                llm_base  = PureLLMBaseline()
-                llm_res   = llm_base.generate_formula(desc, tc["domain"],
-                                                      var_names, metadata)
-                llm_tr_m  = llm_base.test_formula_accuracy(llm_res, X_tr, y_tr,
-                                                           var_names, verbose=False)
-                llm_te_m  = llm_base.test_formula_accuracy(llm_res, X_te, y_te,
-                                                           var_names, verbose=False)
-                case_results["pure_llm"] = {
-                    "train_r2": float(llm_tr_m["r2"]) if llm_tr_m.get("success") else float("nan"),
-                    "test_r2":  float(llm_te_m["r2"]) if llm_te_m.get("success") else float("nan"),
-                    "success":  llm_te_m.get("success", False),
-                    "llm_called":  llm_res.get("llm_called"),     # B2
-                    "bypass_kind": llm_res.get("bypass_kind"),    # B2
-                    "time_s":   round(time.time() - _t0_llm, 3),
-                }
-            except Exception as e:
-                case_results["pure_llm"] = {
-                    "train_r2": None, "test_r2": None,
-                    "llm_called": False, "bypass_kind": "none",
-                    "success": False, "time_s": 0.0, "error": str(e), "reason": "fit_or_metric_failed",
-                }
+            # The comparison contains Neural Network and Hybrid only.
+            # Hybrid retains its internal LLM-generated formula component;
+            # no standalone Pure LLM baseline is evaluated or reported.
 
             # ── Neural Network ───────────────────────────────────────────────
+            nn_m = {
+                "train_r2": float("nan"), "test_r2": float("nan"),
+                "success": False, "timed_out": False,
+                "y_pred_train": None, "y_pred_test": None,
+                "failure_reason": "standalone_nn_fit_raised",
+            }
+            _nn_wall = 0.0
             try:
-                _t0_nn = time.time()
-                nn_m = _train_and_eval_nn(X_tr, y_tr, X_te, y_te)
+                _t0_nn = time.perf_counter()
+                nn_m = _train_and_eval_nn(
+                    X_tr, y_tr, X_te, y_te, split_metadata=split_details
+                )
+                _nn_wall = time.perf_counter() - _t0_nn
                 case_results["neural_network"] = {
-                    "train_r2":    nn_m["train_r2"],
-                    "test_r2":     nn_m["test_r2"],
-                    "success":     bool(_math.isfinite(nn_m["train_r2"]) and _math.isfinite(nn_m["test_r2"])),  # C4
+                    "train_r2":    nn_m["train_r2"] if np.isfinite(nn_m["train_r2"]) else None,
+                    "test_r2":     nn_m["test_r2"] if np.isfinite(nn_m["test_r2"]) else None,
+                    "success":     bool(nn_m.get("success", False)),
                     "timed_out":   nn_m.get("timed_out", False),
-                    "time_s":      round(time.time() - _t0_nn, 3),
-                    "y_pred_train": nn_m["y_pred_train"].tolist(),
-                    "y_pred_test":  nn_m["y_pred_test"].tolist(),
+                    "epochs_completed": nn_m.get("epochs_completed"),
+                    "best_epoch": nn_m.get("best_epoch"),
+                    "validation_loss": nn_m.get("validation_loss"),
+                    "training_time_s": nn_m.get("training_time_s"),
+                    "nn_edge_r2": nn_m.get("nn_edge_r2"),
+                    "ridge_edge_r2": nn_m.get("ridge_edge_r2"),
+                    "ridge_eligible": nn_m.get("ridge_eligible"),
+                    "signed_ridge_edge_r2": nn_m.get("signed_ridge_edge_r2"),
+                    "signed_ridge_eligible": nn_m.get("signed_ridge_eligible"),
+                    "nn_abstained": nn_m.get("abstained", False),
+                    "nn_selected_model": nn_m.get("selected_model", "nn"),
+                    "failure_reason": nn_m.get("failure_reason"),
+                    "time_s":      round(_nn_wall, 6),
+                    "y_pred_train": nn_m["y_pred_train"].tolist() if nn_m.get("y_pred_train") is not None else None,
+                    "y_pred_test":  nn_m["y_pred_test"].tolist() if nn_m.get("y_pred_test") is not None else None,
                 }
             except Exception as e:
                 case_results["neural_network"] = {
                     "train_r2": None, "test_r2": None,
                     "success": False, "time_s": 0.0, "error": str(e), "reason": "fit_or_metric_failed",
+                    "nn_edge_r2": None, "ridge_edge_r2": None,
+                    "ridge_eligible": None, "nn_abstained": None,
+                    "nn_selected_model": None,
                 }
 
             # ── Hybrid (all Fixes applied) ────────────────────────────────────
+            hybrid_llm_state = {}
             try:
-                _t0_hyb = time.time()
+                _t0_hyb = time.perf_counter()
                 hy_m = _hybrid_predict_and_eval(
-                    desc, tc["domain"], X_tr, y_tr, X_te, y_te, var_names, metadata
+                    desc, tc["domain"], X_tr, y_tr, X_te, y_te, var_names, metadata,
+                    llm_attempt_state=hybrid_llm_state,
+                    nn_result=nn_m,
+                    split_metadata=split_details,
                 )
-                _hyb_wall = round(time.time() - _t0_hyb, 3)
+                _hyb_wall = time.perf_counter() - _t0_hyb
 
-                # _hyb_wall already includes any NN rerun performed inside
-                # _hybrid_predict_and_eval. Keep nn_rerun_time_s as a subset
-                # diagnostic; adding it again would double-count wall time.
-                hyb_time = _hyb_wall
+                # The end-to-end Hybrid arm includes the initial NN fit plus
+                # the hybrid LLM/routing/evaluation stage. _hyb_wall already
+                # includes any NN rerun performed inside the latter stage.
+                # nn_rerun_time_s is a subset diagnostic and is not added again.
+                hyb_time = _nn_wall + _hyb_wall
 
                 _train_r2 = hy_m["train_r2"]
                 _test_r2  = hy_m["test_r2"]
@@ -1420,35 +2308,100 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "decision":        hy_m["decision"],
                     "route_reason":    hy_m.get("route_reason"),
                     "route_execution_status": hy_m.get("route_execution_status"),
+                    "train_r2_source": hy_m.get("train_r2_source"),
+                    "train_r2_status": hy_m.get("train_r2_status"),
+                    "test_r2_status": hy_m.get("test_r2_status"),
                     "structural_risk_flag": hy_m.get("structural_risk_flag"),
                     "structural_risk_tokens": hy_m.get("structural_risk_tokens"),
+                    "trust_gate_diagnostics": hy_m.get("trust_gate_diagnostics"),
+                    "nn_prediction_validation": hy_m.get("nn_prediction_validation"),
                     "degradation_probe": hy_m.get("degradation_probe"),
                     "degradation_tau": hy_m.get("degradation_tau"),
                     "ood_diagnostic": hy_m.get("ood_diagnostic"),
+                    "ood_covariate_protocol": hy_m.get("ood_covariate_protocol"),
                     "blend_weights": hy_m.get("blend_weights"),
+                    "nn_abstained": hy_m.get("nn_abstained"),
+                    "nn_selected_model": hy_m.get("nn_selected_model"),
+                    "nn_edge_r2": hy_m.get("nn_edge_r2"),
+                    "ridge_edge_r2": hy_m.get("ridge_edge_r2"),
+                    "signed_ridge_edge_r2": hy_m.get("signed_ridge_edge_r2"),
+                    "signed_ridge_eligible": hy_m.get("signed_ridge_eligible"),
+                    "physical_bounds_applied": hy_m.get("physical_bounds_applied"),
                     "llm_called":      hy_m.get("llm_called"),      # B2
                     "bypass_kind":     hy_m.get("bypass_kind"),     # B2
+                    "llm_source":      hy_m.get("llm_source"),
+                    "llm_timeout_s":   hy_m.get("llm_timeout_s"),
+                    "llm_api_request_time_s": hy_m.get("llm_api_request_time_s"),
+                    "llm_input_tokens": hy_m.get("llm_input_tokens"),
+                    "llm_output_tokens": hy_m.get("llm_output_tokens"),
+                    "llm_temperature_requested": hy_m.get("llm_temperature_requested"),
+                    "llm_temperature_sent": hy_m.get("llm_temperature_sent"),
+                    # Retain the exact generated Python formula for audit and
+                    # independent rescoring on the identical protocol split.
+                    "formula":         hy_m.get("llm_code"),
+                    **_hybrid_metric_provenance_record(hy_m),
                     "success":         bool(hy_m.get("success", not (_nan(_train_r2) or _nan(_test_r2)))),
-                    "time_s":          round(hyb_time, 3),
+                    "time_s":          round(hyb_time, 6),
+                    **_hybrid_component_timing_fields(_nn_wall, _hyb_wall),
                     "nn_rerun_time_s": hy_m.get("nn_rerun_time_s", 0.0),
                 }
             except Exception as e:
+                _hyb_exception_wall = (
+                    time.perf_counter() - _t0_hyb if "_t0_hyb" in locals() else 0.0
+                )
                 case_results["hybrid"] = {
                     "train_r2": None, "test_r2": None,
-                    "llm_called": False, "bypass_kind": "none",
-                    "success": False, "time_s": 0.0, "error": str(e), "reason": "fit_or_metric_failed",
+                    "llm_called": bool(hybrid_llm_state.get("llm_called", False)),
+                    "bypass_kind": hybrid_llm_state.get("bypass_kind", "none"),
+                    "llm_source": hybrid_llm_state.get("llm_source", "unknown"),
+                    "llm_timeout_s": hybrid_llm_state.get("llm_timeout_s"),
+                    "llm_api_request_time_s": hybrid_llm_state.get("llm_api_request_time_s"),
+                    "llm_input_tokens": hybrid_llm_state.get("llm_input_tokens"),
+                    "llm_output_tokens": hybrid_llm_state.get("llm_output_tokens"),
+                    "llm_temperature_requested": hybrid_llm_state.get("llm_temperature_requested"),
+                    "llm_temperature_sent": hybrid_llm_state.get("llm_temperature_sent", False),
+                    "formula": hybrid_llm_state.get("llm_code"),
+                    "trust_gate_diagnostics": hybrid_llm_state.get("trust_gate_diagnostics", {
+                        "schema_version": 1, "passed": False,
+                        "formula_present": None, "training_evaluation_ok": None,
+                        "training_r2": None, "training_r2_finite": None,
+                        "minimum_training_r2": 0.5, "pathology_reasons": [],
+                        "rejection_reasons": ["hybrid_evaluation_exception"],
+                    }),
+                    "nn_prediction_validation": {
+                        "schema_version": 1, "status": "not_available_after_exception",
+                        "reported_success": None, "metrics_recomputed": False,
+                    },
+                    "success": False,
+                    "time_s": round(_nn_wall + _hyb_exception_wall, 6),
+                    **_hybrid_component_timing_fields(_nn_wall, _hyb_exception_wall),
+                    "error": str(e), "reason": "fit_or_metric_failed",
+                    "blend_weights": None, "nn_abstained": None,
+                    "nn_selected_model": None, "nn_edge_r2": None,
+                    "ridge_edge_r2": None,
                 }
 
             # ── Augment with extrapolation gap and stability score ────────────
+            # Failed arms deliberately store None for unavailable metrics.  Do
+            # not pass None (or other non-numeric values) to np.isnan: doing so
+            # raises TypeError outside the arm-level handlers and drops the
+            # entire equation from the saved benchmark denominator.
+            def _finite_metric(value):
+                try:
+                    number = float(value)
+                except (TypeError, ValueError, OverflowError):
+                    return None
+                return number if _math.isfinite(number) else None
+
             for method, res in case_results.items():
-                tr_ = res.get("train_r2", float("nan"))
-                te_ = res.get("test_r2",  float("nan"))
+                tr_ = _finite_metric(res.get("train_r2"))
+                te_ = _finite_metric(res.get("test_r2"))
                 res["extrapolation_gap"] = (
-                    float(tr_ - te_) if not (np.isnan(tr_) or np.isnan(te_)) else float("nan")
+                    float(tr_ - te_) if tr_ is not None and te_ is not None else float("nan")
                 )
                 res["stability_score"] = (
                     float(te_ / tr_)
-                    if (not np.isnan(tr_) and not np.isnan(te_) and abs(tr_) > 1e-6)
+                    if tr_ is not None and te_ is not None and abs(tr_) > 1e-6
                     else float("nan")
                 )
 
@@ -1460,14 +2413,51 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 dec = f" [{res.get('decision', '')}]" if method == "hybrid" else ""
                 print(f"  {method:15s}: train={_fmt(res.get('train_r2'))}, "
                       f"test={_fmt(res.get('test_r2'))}{dec}")
+                if method == "neural_network":
+                    if res.get("failure_reason"):
+                        print(f"    NN failure: {res['failure_reason']}")
+                    if res.get("validation_split_fallback_reason"):
+                        print(f"    NN validation fallback: {res['validation_split_fallback_reason']}")
+                    if res.get("test_r2_status") not in (None, "ok"):
+                        print(f"    NN test metric status: {res['test_r2_status']}")
 
             record = {
                 "equation_id":            tc["name"],
-                "seed":                   SEED,
                 "difficulty":           tc["difficulty"],
                 "formula_type":         tc["formula_type"],
-                "extrapolation_intractable": is_intractable,
+                "extrapolation_intractable": metadata["extrapolation_intractable"],
                 "results":              case_results,
+                "split_protocol": {
+                    "name": "pca_40_60_pc1",
+                    **split_details,
+                    # Keep the canonical sizes explicit for source-level
+                    # protocol/rescoring contracts; values match split_details.
+                    "train_size": int(len(X_tr)),
+                    "test_size": int(len(X_te)),
+                },
+                # Self-contained audit payload: permits independent formula
+                # evaluation against the exact arrays used for this record.
+                "formula_context": {
+                    "variable_names": list(var_names),
+                    "constants": metadata.get("constants") or {},
+                    "llm_model": LLM_MODEL,
+                },
+                "llm_comparison_protocol": {
+                    "model": LLM_MODEL,
+                    "temperature": 0.25,
+                    "timeout_s": float(os.environ.get("LLM_METHOD_TIMEOUT", "120")),
+                    "max_retries": 0,
+                    "hybrid_max_tokens": 1000,
+                    "split_shared": True,
+                    "hybrid_time_scope": "NN fit + hybrid LLM generation/routing/evaluation",
+                },
+                "audit_data": {
+                    "X_train": X_tr.tolist(),
+                    "y_train": np.asarray(y_tr).reshape(-1).tolist(),
+                    "X_test": X_te.tolist(),
+                    "y_test": np.asarray(y_te).reshape(-1).tolist(),
+                },
+                "seed":                 SEED,   # [FIX-SEED-HONOURED] proves which seed produced the record
             }
             all_results.append(record)
             _save_checkpoint(all_results)
@@ -1479,28 +2469,38 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
 
     # Final report + save
     _generate_report(all_results)
-    _save_final(all_results)
+    selected_requires_il = any(
+        "impermanent loss breakeven" in tc["name"].lower()
+        for tc in test_cases
+    )
+    require_complete = (
+        not verify_fix5 and os.environ.get("ONE_EQUATION") != "1"
+    )
+    _save_final(
+        all_results,
+        require_il_record=selected_requires_il,
+        require_complete=require_complete,
+        expected_cases=test_cases,
+    )
 
-    # FIX-C3: write split_protocol_disclosure.json so Gate B of
-    # ci_runner_disclosure.yml can verify protocol parity with the
-    # Feynman benchmark (run_comparative_suite_benchmark_pca.py).
-    import datetime as _dt
+    # Explicit machine-readable disclosure distinguishes this PCA protocol
+    # from v3c's random 80/20 split and retains per-case split audit metadata.
     _disclosure = {
-        "split_protocol":   "pca_40_60",
-        "seed":             SEED,
-        "script":           Path(__file__).name,
-        "test_size":        0.6,
-        "train_size":       0.4,
-        "random_split_used": False,       # FIX Bug 1: was missing — Gate B key-presence check failed
-        "split_function":   "pca_directed_split",
-        "split_level":      "outer_loop",
-        "force_fresh":      True,
-        "description":      "PC1-directed sort; train on lowest 40%, test on highest 60%",
-        "timestamp_utc":    _dt.datetime.now(_dt.timezone.utc).isoformat(),
+        "split_protocol": "pca_40_60_pc1",
+        "split_method": "PCA(n_components=1) on raw, unstandardized features",
+        "train_fraction": 0.4,
+        "test_fraction": 0.6,
+        "split_is_transductive": True,
+        "feature_scaling": "none",
+        "case_count": len(all_results),
+        "per_case": {
+            str(record.get("equation_id")): record.get("split_protocol", {})
+            for record in all_results
+        },
     }
-    _disc_path = RESULTS_DIR / "split_protocol_disclosure.json"
-    _disc_path.write_text(json.dumps(_disclosure, indent=2))
-    print(f"📋 split_protocol_disclosure.json written → {_disc_path}")
+    _disclosure_path = RESULTS_DIR / "split_protocol_disclosure.json"
+    _disclosure_path.write_text(json.dumps(_disclosure, indent=2, default=_default))
+    print(f"📋 PCA split disclosure written → {_disclosure_path}")
 
     # Remove checkpoint on clean completion (not on verify-fix5 partial run)
     if not verify_fix5 and CHECKPOINT_FILE.exists():
@@ -1520,6 +2520,10 @@ def report_only():
     else:
         src = FINAL_OUTPUT
     results = json.loads(src.read_text())
+    if src == FINAL_OUTPUT:
+        _validate_result_records(
+            results, require_il_record=True, require_complete=True
+        )
     _generate_report(results)
 
 
@@ -1546,12 +2550,6 @@ Examples:
     )
     parser.add_argument("--resume",      action="store_true",
                         help="Resume from checkpoint")
-    parser.add_argument("--force-fresh", action="store_true", dest="force_fresh",
-                        help=(
-                            "Delete any existing checkpoint and results files before "
-                            "running, guaranteeing fresh results regardless of how "
-                            "the script is invoked. Overrides --resume."
-                        ))
     parser.add_argument("--verify-fix5", action="store_true",
                         help="Run only the 4 cases targeted by Fix 5 to verify the fix")
     parser.add_argument("--report-only", action="store_true",
@@ -1580,26 +2578,6 @@ Examples:
     if args.report_only:
         report_only()
     else:
-        # --force-fresh overrides --resume: purge stale files before calling run_benchmark
-        if getattr(args, "force_fresh", False):
-            import glob as _glob
-            for _stale in [CHECKPOINT_FILE, FINAL_OUTPUT]:
-                if _stale.exists():
-                    _stale.unlink()
-                    print(f"  [--force-fresh] Removed stale file: {_stale}")
-            # Also purge any shard/seed-tagged variants in the same directory
-            for _pat in ["hypatiax_defi_benchmark_pca_checkpoint*.json",
-                         "hypatiax_defi_benchmark_pca_results*.json"]:
-                for _f in CHECKPOINT_FILE.parent.glob(_pat):
-                    # [MULTI-SEED] only purge files belonging to THIS seed
-                    if _SEED_TAG == "" and "_seed" in _f.name:
-                        continue
-                    if _SEED_TAG and _SEED_TAG not in _f.name:
-                        continue
-                    _f.unlink()
-                    print(f"  [--force-fresh] Removed stale file: {_f}")
-            args.resume = False
-            print("  [--force-fresh] Checkpoint cleared — running fresh.")
         run_benchmark(
             resume=args.resume,
             verify_fix5=args.verify_fix5,
