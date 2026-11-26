@@ -1224,7 +1224,7 @@ jobs:
           import pysr
           from juliacall import Main as jl
 
-          jl.seval("using PythonCall; println(\"PythonCall bridge OK; Julia project: \", Base.active_project())")
+          jl.seval('using PythonCall; println("PythonCall bridge OK; Julia project: ", Base.active_project())')
           X = np.random.default_rng(42).normal(size=(20, 1))
           y = X[:, 0] * 2.0 + 1.0
           model = pysr.PySRRegressor(
