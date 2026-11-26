@@ -11,8 +11,7 @@
 ---
 
 **Purpose:** Resolve the contradiction between:
-- The DeFi benchmark table (HypatiaX R²=1.000 on Portfolio Variance)
-- The seed-sweep JSON (HypatiaX far-R²=−882.9 at the default seed 42)
+- The DeFi benchmark table and seed-sweep JSON contain results that must be reconciled from their recorded provenance.
 
 **7-Section Protocol:**
 
@@ -21,8 +20,8 @@
 | §0 | Environment, paths, configuration |
 | §1 | Load all source data: seed sweep JSON + v3c3/v3c2 results JSONs |
 | §2 | Seed sweep analysis: comparison table + visualisation |
-| §3 | Rerun strategy — run Portfolio Variance at seed 42, or full 74-case benchmark |
-| §4 | Trace R²=1.000 origin — deep scan all JSONs, cross-reference seed sweep |
+| §3 | Rerun strategy — run Portfolio Variance at the configured benchmark seed, or full benchmark |
+| §4 | Trace high-R² results — deep scan JSONs and cross-reference the seed sweep |
 | §5 | Validate results — inject fresh run, diff v3c3 vs v3c2, R² distribution |
 | §6 | Compute paper numbers and export all outputs (LaTeX, JSON, audit) |
 
@@ -1070,12 +1069,12 @@ if paper_nums:
     Np=paper_nums['pysr_N']; Xp=paper_nums['pysr_X']; Yp=paper_nums['pysr_Y_pct']
     wh=paper_nums['hypatia_worst_far_r2']; wp=paper_nums['pysr_worst_far_r2']
     bs=paper_nums['hypatia_best_seed']; ws=paper_nums['hypatia_worst_seed']
-    bd=paper_nums['benchmark_default_seed']
+    bd=paper_nums['benchmark_seed']
 
     _pysr_sentence = (f'PySR-only success: {Xp}/{Np} runs ({Yp:.1f}\\%).'
         if 'pysr_N' in paper_nums else 'PySR-only comparison was unavailable in supplied result files.')
     para6_lines = [
-        r'\\paragraph{Portfolio Variance: observed seed-level results.}',
+        r'\paragraph{Portfolio Variance: observed seed-level results.}',
         f'Across {N} valid HypatiaX observations, {X} exceeded the far-R2 threshold of 0.99 ({Y:.1f}\\%).',
         f'The observed best far-R2 was {paper_nums["hypatia_best_far_r2"]:.6g} (seed {bs});',
         f'the worst was {wh:.6g} (seed {ws}).',
