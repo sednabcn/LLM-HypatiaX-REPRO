@@ -83,7 +83,7 @@ on:
         default: false
 
       seeds:
-        description: "Comma-separated seed list (e.g. 42,99,123,777,2024) - overrides per-experiment default; exp1-provenance requires exactly 42,99,123,777,2024"
+        description: "Comma-separated seed list (e.g. 42,99,123,777,2024) - overrides per-experiment default; exp1-provenance and exp1_ablation_seeds require exactly 42,99,123,777,2024 in that order"
         required: false
         default: ""
 
