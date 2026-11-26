@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-HypatiaX DeFi Benchmark — v3c-aligned PCA-directed 40/60 variant.
+HypatiaX DeFi Benchmark - v3c-aligned PCA-directed 40/60 variant.
 
 This runner tracks the current v3c benchmark implementation: NN + Hybrid
 arms, formula validation and trust gates, training-only validation, NN/Ridge
