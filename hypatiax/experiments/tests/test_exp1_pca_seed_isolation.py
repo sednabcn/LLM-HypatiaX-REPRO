@@ -114,7 +114,7 @@ def test_exp1b_pca_dispatch_does_not_depend_on_exp1_pca_job():
          and lines[i].rstrip().endswith(":")),
         len(lines),
     )
-    exp1b_job = "\\n".join(lines[job_start:job_end])
+    exp1b_job = "\n".join(lines[job_start:job_end])
     needs_line = next(line.strip() for line in exp1b_job.splitlines() if line.strip().startswith("needs:"))
     assert "pca_runner" in needs_line
     assert "credential_preflight" in needs_line
