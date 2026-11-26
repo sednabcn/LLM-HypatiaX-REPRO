@@ -757,16 +757,25 @@ _exp1_ablation_step() {
   local logf="${abl_dir}/exp1_ablation_run${sfx}.log"
   mkdir -p "${abl_dir}"
 
+  local checkpoint_override="${EXP1_ABLATION_CHECKPOINT:-}"
+  if [[ -z "${checkpoint_override}" && -n "${SHARD_INDEX:-}" ]]; then
+    checkpoint_override="${abl_dir}/exp1_ablation_checkpoint_shard${SHARD_INDEX}.json"
+  fi
+
   if [[ "${CLEAR_CHECKPOINT:-0}" == "1" ]]; then
     local backup_dir="${abl_dir}/checkpoint_backups/$(date -u +%Y%m%dT%H%M%SZ)"
     mkdir -p "${backup_dir}"
-    shopt -s nullglob
-    local _f
-    for _f in "${abl_dir}"/exp1_ablation_checkpoint*.json; do
-      mv "${_f}" "${backup_dir}"/
-    done
-    shopt -u nullglob
-    log "exp1_ablation: checkpoint files moved to ${backup_dir}"
+    if [[ -n "${checkpoint_override}" ]]; then
+      [[ -f "${checkpoint_override}" ]] && mv "${checkpoint_override}" "${backup_dir}/"
+    else
+      shopt -s nullglob
+      local _f
+      for _f in "${abl_dir}"/exp1_ablation_checkpoint*.json; do
+        mv "${_f}" "${backup_dir}"/
+      done
+      shopt -u nullglob
+    fi
+    log "exp1_ablation: selected checkpoint moved to ${backup_dir}"
   fi
 
   export HYPATIAX_NOLLM_ARM="${HYPATIAX_NOLLM_ARM:-1}"
@@ -781,10 +790,6 @@ _exp1_ablation_step() {
   fi
 
   log "exp1_ablation: NOLLM_ARM=${HYPATIAX_NOLLM_ARM} STRICT=${HYPATIAX_STRICT} shard=${SHARD_INDEX:-all} domain='${DOMAIN_FILTER:-<all>}'"
-  local checkpoint_override="${EXP1_ABLATION_CHECKPOINT:-}"
-  if [[ -z "${checkpoint_override}" && -n "${SHARD_INDEX:-}" ]]; then
-    checkpoint_override="${abl_dir}/exp1_ablation_checkpoint_shard${SHARD_INDEX}.json"
-  fi
   if [[ -n "${checkpoint_override}" && -f "${checkpoint_override}" ]]; then
     log "exp1_ablation: resuming shard-local checkpoint ${checkpoint_override}"
   elif [[ -z "${checkpoint_override}" && -f "${abl_dir}/exp1_ablation_checkpoint.json" ]]; then
