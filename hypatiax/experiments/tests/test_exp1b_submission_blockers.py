@@ -38,7 +38,7 @@ def test_exp1b_sweep_only_does_not_run_the_seed42_single_case_twice():
     assert nodes
     assert any(
         any(isinstance(call, ast.Call) for call in ast.walk(node))
-        and "skipping the separate seed-42 single-case rerun" in ast.get_source_segment(source, node)
+        and "skipping the separate configured-seed single-case rerun" in ast.get_source_segment(source, node)
         for node in nodes
     )
 
