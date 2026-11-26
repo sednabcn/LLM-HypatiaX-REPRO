@@ -404,6 +404,7 @@ jobs:
           done
 
           echo "All five seed runs dispatched: ${RUN_IDS[*]}"
+          FAILED_RUNS=()
           for RUN_ID in "${RUN_IDS[@]}"; do
             echo "Waiting for exp1_ablation run ${RUN_ID}"
             DEADLINE=$(( $(date +%s) + 21600 ))
@@ -416,18 +417,31 @@ jobs:
               if [[ "${STATUS}" == "completed" ]]; then
                 if [[ "${CONCLUSION}" != "success" ]]; then
                   echo "::error::exp1_ablation seed run ${RUN_ID} completed with conclusion ${CONCLUSION}."
-                  exit 1
+                  FAILED_RUNS+=("${RUN_ID}:${CONCLUSION}")
                 fi
                 break
               fi
               if [[ $(date +%s) -ge ${DEADLINE} ]]; then
                 echo "::error::Timed out waiting for exp1_ablation seed run ${RUN_ID}."
-                exit 1
+                FAILED_RUNS+=("${RUN_ID}:timeout")
+                break
               fi
               sleep "${SLEEP}"
               (( SLEEP < 120 )) && SLEEP=$(( SLEEP + 10 )) || true
             done
           done
+
+          {
+            echo "## exp1_ablation five-seed replication"
+            for INDEX in "${!SEEDS[@]}"; do
+              echo "- Seed ${SEEDS[${INDEX}]}: workflow run ${RUN_IDS[${INDEX}]}"
+            done
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          if [[ ${#FAILED_RUNS[@]} -gt 0 ]]; then
+            printf '::error::One or more exp1_ablation seed runs failed: %s\\n' "${FAILED_RUNS[*]}"
+            exit 1
+          fi
           echo "::notice::All five exp1_ablation seed runs completed successfully."
   pca_runner:
     name: "PCA gate - ${{ github.event.inputs.experiment }}"
