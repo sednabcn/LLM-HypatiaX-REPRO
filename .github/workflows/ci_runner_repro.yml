@@ -54,7 +54,7 @@ on:
         default: ""
 
       aggregate_run_id:
-        description: "Aggregate-only recovery: with experiment=exp1_ablation, download and validate the five existing worker artifacts from this prior run ID without launching model workers."
+        description: "Recovery only: exp1_ablation downloads and validates five archived domain shards; Core-15 four-way also supports aggregate recovery. No model workers are launched."
         required: false
         default: ""
 
