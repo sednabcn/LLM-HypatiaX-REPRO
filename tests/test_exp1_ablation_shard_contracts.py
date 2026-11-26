@@ -27,9 +27,15 @@ def test_current_five_shards_cover_core15_exactly_once():
 
 def test_shard_gate_ignores_unassigned_legacy_checkpoint_rows():
     checkpoint = {
-        "0": {"name": "Arrhenius", "pysr_only": _completed(),
-              "hypatia": _completed(llm_called=True),
-              "hypatia_nollm": _completed()},
+        **{
+            str(i): {
+                "name": ("Arrhenius", "Henderson-Hasselbalch", "Beer-Lambert")[i],
+                "pysr_only": _completed(),
+                "hypatia": _completed(llm_called=True),
+                "hypatia_nollm": _completed(),
+            }
+            for i in range(3)
+        },
         # Legacy/master entries are not owned by the chemistry worker.
         "3": {"name": "Allometric Scaling"},
         "9": {"name": "Impermanent Loss"},
