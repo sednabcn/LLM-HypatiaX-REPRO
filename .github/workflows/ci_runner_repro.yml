@@ -1133,11 +1133,15 @@ jobs:
             rm -rf .venv
             python -m venv .venv
             echo "Python environment cache miss or invalid cache; created a clean environment."
-          elif [[ "${NEEDS_JULIA}" == "true" ]] && ! .venv/bin/python -c "import pysr"; then
+          elif [[ "${NEEDS_JULIA}" == "true" ]] && {
+            ! .venv/bin/python -c "import importlib.util, sys; sys.exit(importlib.util.find_spec('pysr') is None)" \
+            || ! grep -q '^\[\[deps\.PythonCall\]\]' .venv/julia_env/Manifest.toml 2>/dev/null \
+            || ! grep -q '^\[\[deps\.SymbolicRegression\]\]' .venv/julia_env/Manifest.toml 2>/dev/null
+          }; then
             echo "valid=false" >> "$GITHUB_OUTPUT"
             rm -rf .venv
             python -m venv .venv
-            echo "Cached environment lacks required PySR/Julia support; created a clean environment."
+            echo "Cached environment lacks a complete PySR/PythonCall Julia manifest; created a clean environment."
           else
             echo "valid=true" >> "$GITHUB_OUTPUT"
             echo "Reusing cached Python 3.12 environment."
@@ -1247,8 +1251,8 @@ jobs:
           if result.returncode != 0:
               print("Julia/PythonCall/PySR bootstrap failed:")
               print(result.stderr[-6000:] if result.stderr else "(no stderr)")
-              if os.environ.get("EXPERIMENT") == "exp1_ablation":
-                  print("ERROR: Exp1 requires a working Julia/PythonCall/PySR bridge; refusing to start shards.")
+              if os.environ.get("EXPERIMENT") in ("exp1_ablation", "exp1_pca", "exp1_pca_seeds"):
+                  print("ERROR: This benchmark requires a working Julia/PythonCall/PySR bridge; refusing to start shards.")
                   print("Python:", sys.executable)
                   print("JULIA_DEPOT_PATH:", os.environ.get("JULIA_DEPOT_PATH", "<default>"))
                   print("JULIA_PROJECT:", os.environ.get("JULIA_PROJECT", "<default>"))
@@ -1755,7 +1759,7 @@ jobs:
                 --output-dir "${_SCRATCH}" \
                 --force-fresh 2>&1 | tee /tmp/run_all_step.log || _PCA_RC=$?
 
-            _DEST_PCA="${RESULTS_DIR}/${RESULT_SUBDIR}"
+            _DEST_PCA="${RESULTS_DIR}/${RESULT_SUBDIR}/_worker_shards/shard${SHARD_INDEX}"
             mkdir -p "${_DEST_PCA}"
             _re="seed${SHARD_SEEDS}([^0-9]|\$)"
             _COPIED=0
@@ -3429,12 +3433,12 @@ jobs:
         uses: actions/upload-artifact@v4.3.6
         with:
           name: results-${{ github.event.inputs.experiment }}-shard${{ matrix.shard }}
-          path: ${{ (needs.plan.outputs.exp_id == 'exp1_four_way_matched' || needs.plan.outputs.exp_id == 'exp2_protocol30_random_8020' || needs.plan.outputs.exp_id == 'exp2_protocol30_pca_4060') && format('{0}/{1}/shard{2}/', env.OUT_BASE, needs.plan.outputs.result_subdir, matrix.shard) || format('{0}/{1}/', env.OUT_BASE, needs.plan.outputs.result_subdir) }}
+          path: ${{ needs.plan.outputs.exp_id == 'exp1_pca_seeds' && format('{0}/{1}/_worker_shards/shard{2}/', env.OUT_BASE, needs.plan.outputs.result_subdir, matrix.shard) || ((needs.plan.outputs.exp_id == 'exp1_four_way_matched' || needs.plan.outputs.exp_id == 'exp2_protocol30_random_8020' || needs.plan.outputs.exp_id == 'exp2_protocol30_pca_4060') && format('{0}/{1}/shard{2}/', env.OUT_BASE, needs.plan.outputs.result_subdir, matrix.shard) || format('{0}/{1}/', env.OUT_BASE, needs.plan.outputs.result_subdir)) }}
           if-no-files-found: error
           retention-days: ${{ github.event.inputs.experiment == 'exp1-provenance' && 90 || 30 }}
 
       - name: Commit and push shard results to repo
-        if: ${{ success() && github.event.inputs.fresh_mode != 'true' && github.event.inputs.four_way_smoke != 'true' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_random_8020' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_pca_4060' }}
+        if: ${{ success() && github.event.inputs.fresh_mode != 'true' && github.event.inputs.four_way_smoke != 'true' && needs.plan.outputs.exp_id != 'exp1_pca_seeds' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_random_8020' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_pca_4060' }}
         env:
           EXP:           ${{ needs.plan.outputs.exp_id }}
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
@@ -3639,7 +3643,7 @@ jobs:
           done
 
       - name: Verify results committed to repo
-        if: ${{ success() && github.event.inputs.fresh_mode != 'true' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_random_8020' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_pca_4060' }}
+        if: ${{ success() && github.event.inputs.fresh_mode != 'true' && needs.plan.outputs.exp_id != 'exp1_pca_seeds' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_random_8020' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_pca_4060' }}
         env:
           EXP:           ${{ needs.plan.outputs.exp_id }}
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
@@ -3682,6 +3686,81 @@ jobs:
 
 
 
+
+
+  exp1_pca_seed_aggregate:
+    name: "Aggregate - exp1_pca (validate five isolated seed workers)"
+    needs: [plan, worker]
+    if: ${{ always() && github.event.inputs.dry_run != 'true' && needs.plan.outputs.exp_id == 'exp1_pca_seeds' && needs.worker.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      OUT_BASE: ${{ github.workspace }}/hypatiax/data/results
+      RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          fetch-depth: 1
+
+      - name: Download all five isolated PCA seed artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: results-exp1_pca-shard*
+          path: ${{ github.workspace }}/pca_seed_artifacts
+          merge-multiple: false
+
+      - name: Validate all five seed results and promote canonical files
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/aggregate_exp1_pca_seeds.py \
+            --artifacts-dir "${{ github.workspace }}/pca_seed_artifacts" \
+            --output-dir "${OUT_BASE}/${RESULT_SUBDIR}" \
+            --run-id "${{ github.run_id }}" \
+            --commit "${{ github.sha }}"
+
+      - name: Upload validated PCA five-seed aggregate
+        if: always()
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: results-exp1_pca-merged
+          path: |
+            ${{ env.OUT_BASE }}/${{ env.RESULT_SUBDIR }}/hypatiax_defi_benchmark_pca_results_seed*.json
+            ${{ env.OUT_BASE }}/${{ env.RESULT_SUBDIR }}/pca_seed_aggregate_manifest.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Commit and push validated five-seed PCA results
+        if: success()
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
+          git add -f "${TARGET}"/hypatiax_defi_benchmark_pca_results_seed*.json
+          git add -f "${TARGET}/pca_seed_aggregate_manifest.json"
+          if git diff --cached --quiet; then
+            echo "Validated PCA seed aggregate is already committed."
+            exit 0
+          fi
+          git commit -m "ci: validated exp1_pca five-seed results - run ${{ github.run_id }}"
+          PUSHED=false
+          for attempt in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase --autostash origin "${{ github.ref_name }}" && \
+               git push origin HEAD:"${{ github.ref_name }}"; then
+              PUSHED=true
+              break
+            fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((5 * attempt))
+          done
+          if [[ "${PUSHED}" != "true" ]]; then
+            echo "::error::Failed to push validated exp1_pca seed aggregate after 5 attempts."
+            exit 1
+          fi
 
   protocol30_aggregate:
     name: "Aggregate - manuscript Protocol-30 (five shards, registry identity gate)"
