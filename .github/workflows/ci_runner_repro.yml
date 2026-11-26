@@ -1835,6 +1835,18 @@ jobs:
               echo "::error::exp1_pca_seeds seed ${SHARD_SEEDS}: ${SCRIPT_PATH} exited ${_PCA_RC} (any partial results were copied above)."
               exit "${_PCA_RC}"
             fi
+          elif [[ "${EXP}" == "exp1_ablation_seeds" ]]; then
+            # One matrix worker owns one seed and runs all five Core-15 domains.
+            _SEED_OUT="${RESULT_SUBDIR}/seed${SHARD_SEEDS}"
+            TASK_IDS="${TASK_IDS}" SHARD_IDS="${_RUN_SHARD_IDS}" \
+            SHARD="0" SHARD_INDEX="0" SHARD_ID="1" N_SHARDS="1" \
+            RESULTS_DIR="${RESULTS_DIR}" OUT_BASE="${RESULTS_DIR}" \
+            REPO_ROOT="${{ github.workspace }}" \
+            SHARD_SEEDS="${SHARD_SEEDS}" PYSR_SEED="${SHARD_SEEDS}" \
+            EXPERIMENT_SEED="${SHARD_SEEDS}" DOMAIN_FILTER="${TASK_IDS}" \
+            ABLATION_SUBDIR="${_SEED_OUT}" EXP1_ABLATION_SEED_IN_DIR="1" \
+            NUMERICAL_ONLY="true" \
+              bash run_all.sh --step exp1_ablation_seeds 2>&1 | tee /tmp/run_all_step.log
           else
             TASK_IDS="${TASK_IDS}" \
             SHARD_IDS="${_RUN_SHARD_IDS}" \
@@ -1865,6 +1877,37 @@ jobs:
             fi
           fi
 
+      - name: Verify exp1_ablation_seeds output and seed isolation
+        if: ${{ needs.plan.outputs.exp_id == 'exp1_ablation_seeds' && steps.resolve_ids.outputs.has_work == 'true' && github.event.inputs.dry_run != 'true' }}
+        env:
+          SHARD_IDS: ${{ matrix.ids }}
+          RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          ids = json.loads(os.environ["SHARD_IDS"])
+          seeds = sorted({t.rsplit("_seed", 1)[1] for t in ids if "_seed" in t})
+          domains = {t.rsplit("_seed", 1)[0] for t in ids if "_seed" in t}
+          if len(seeds) != 1 or len(domains) != 5:
+              raise SystemExit(f"expected one seed and all five domains, got seeds={seeds}, domains={sorted(domains)}")
+          seed = seeds[0]
+          out = Path(os.environ["OUT_BASE"]) / os.environ["RESULT_SUBDIR"] / f"seed{seed}"
+          result = out / "exp1_ablation_results.json"
+          if not result.is_file() or result.stat().st_size == 0:
+              raise SystemExit(f"missing completed seed result: {result}")
+          data = json.loads(result.read_text())
+          if not isinstance(data, dict) or len(data) != 15:
+              raise SystemExit(f"seed {seed}: expected 15 Core-15 equations, found {len(data) if isinstance(data, dict) else type(data).__name__}")
+          arms = ("pysr_only", "hypatia", "hypatia_nollm")
+          missing = {k: [a for a in arms if not isinstance(v, dict) or not isinstance(v.get(a), dict) or v[a].get("completed") is not True]
+                     for k, v in data.items()}
+          missing = {k: v for k, v in missing.items() if v}
+          if missing:
+              raise SystemExit(f"seed {seed}: incomplete equation arms: {missing}")
+          print(f"Verified exp1_ablation_seeds seed={seed}: 15 equations x 3 complete arms at {result}")
+          PY
       - name: Verify Exp1 LLM-sensitivity shard output and arm isolation
         if: ${{ needs.plan.outputs.exp_id == 'exp1_llm_sens' && steps.resolve_ids.outputs.has_work == 'true' && github.event.inputs.dry_run != 'true' }}
         env:
