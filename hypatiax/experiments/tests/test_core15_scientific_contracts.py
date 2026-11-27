@@ -131,3 +131,12 @@ def test_logistic_candidate_must_be_increasing_and_concave_on_training_domain():
     logistic = _validate(problem, "0.3*N*(1-N/1000)")
     assert not convex.eligible
     assert logistic.eligible
+
+
+def test_ideal_gas_contract_accepts_declared_physical_constants():
+    problem = _problem(
+        "Ideal Gas Law", ["n", "T", "V"],
+        [(0.1, 5.0), (200.0, 500.0), (0.01, 1.0)],
+    )
+    record = _validate(problem, "n * T * k_B * N_A / V")
+    assert record.eligible
