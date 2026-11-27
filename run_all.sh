@@ -1234,12 +1234,21 @@ seen = set()   # one record per (equation_id, seed)
 for fp in sorted(PCA_DIR.glob('*.json')) if PCA_DIR.exists() else []:
     if any(x in fp.name for x in ('checkpoint', 'disclosure', 'summary', 'baseline')):
         continue
+    if not fp.is_file() or fp.stat().st_size == 0:
+        raise SystemExit(f'FAIL: required isolated PCA seed result missing/empty: {fp}')
     try:
         data = json.loads(fp.read_text())
-    except Exception:
-        continue
+    except Exception as exc:
+        raise SystemExit(f'FAIL: invalid JSON in {fp}: {exc}')
+    expected_seed = int(fp.stem.rsplit('seed', 1)[1])
+    if not isinstance(data, list) or len(data) != 74:
+        raise SystemExit(f'FAIL: {fp.name} must contain 74 case records')
+    if {row.get('seed') for row in data if isinstance(row, dict)} != {expected_seed}:
+        raise SystemExit(f'FAIL: seed provenance mismatch in {fp.name}')
+    if len({row.get('equation_id') for row in data if isinstance(row, dict)}) != 74:
+        raise SystemExit(f'FAIL: {fp.name} does not contain 74 unique equations')
     source_files.append(fp.name)
-    cases = data if isinstance(data, list) else data.get('results', [data])
+    cases = data
     for case in cases:
         if not isinstance(case, dict):
             continue
@@ -1304,6 +1313,8 @@ summary = {
     'source_files':   source_files[:20],
     'timestamp':      datetime.datetime.now(datetime.timezone.utc).isoformat(),
 }
+if source_files != [f'hypatiax_defi_benchmark_pca_results_seed{s}.json' for s in (42, 99, 123, 777, 2024)]:
+    raise SystemExit('FAIL: PCA summary did not consume the complete canonical five-seed set')
 SUMMARY.write_text(json.dumps(summary, indent=2))
 rate_str = f'{n_pass}/{n_total}' if n_total > 0 else '?/?'
 print(f'  [exp1_pca] DeFi PCA solve rate (seed {canon}): {rate_str} → exp1_pca_summary.json')
@@ -1379,75 +1390,64 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
   _PCA15_DIR='${RESULTS_DIR}/comparison_results/noise-noiseless/15_pca'
   mkdir -p \"\${_PCA15_DIR}\"
 
-  _SHARD_TASKS='${SHARD_IDS:-${TASK_IDS:-}}'
-  _SHARD_SEEDS=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | sed -nE 's/^portfolio_seed([0-9]+)$/\\1/p' | sed 's/^portfolio_seed//' | paste -sd, -)
-  if [[ -z \"\${_SHARD_SEEDS}\" ]]; then
-    echo '  [exp1b_pca] No portfolio_seedNN task IDs found in SHARD_IDS/TASK_IDS — running full default seed list (local/standalone run).'
-    _SHARD_SEEDS='42,99,123,777,2024'
-  else
-    echo \"  [exp1b_pca] SHARD_INDEX=\${SHARD_INDEX:-0} -> seeds for this shard: \${_SHARD_SEEDS}\"
-  fi
+  # Fixed five-seed protocol: execute each seed in a separate fresh process.
+  # Do not inherit generic task/shard seed filters or rely on the benchmark's
+  # unused DEFI_SEEDS list loop.
+  _PCA_SEEDS=(42 99 123 777 2024)
+  _PCA_SCRATCH_ROOT="\${RUNNER_TEMP:-/tmp}/exp1b_pca_seed_workers"
+  rm -rf "\${_PCA_SCRATCH_ROOT}"
+  mkdir -p "\${_PCA_SCRATCH_ROOT}"
+  : > '\${RESULTS_DIR}/exp1b_pca_run.log'
 
-  echo '[exp1b_pca] Running hypatiax_defi_benchmark_pca.py (portfolio seed sweep, PCA 40/60 split)'
-  DEFI_SEEDS=\"\${_SHARD_SEEDS}\" \\
-    python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_pca.py' \\
-      --output-dir \"\${_PCA15_DIR}\" \\
-      --force-fresh \\
-      2>&1 | tee '${RESULTS_DIR}/exp1b_pca_run.log'
+  for _SEED in "\${_PCA_SEEDS[@]}"; do
+    _SEED_SCRATCH="\${_PCA_SCRATCH_ROOT}/seed\${_SEED}"
+    mkdir -p "\${_SEED_SCRATCH}"
+    echo "[exp1b_pca] Running all 74 PCA cases for seed \${_SEED}"
+    DEFI_SEEDS="\${_SEED}" \
+    PYSR_SEED="\${_SEED}" \
+    EXPERIMENT_SEED="\${_SEED}" \
+    NN_SEED="\${_SEED}" \
+      python3 '\${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_pca.py' \
+        --output-dir "\${_SEED_SCRATCH}" \
+        --force-fresh \
+        2>&1 | tee -a '\${RESULTS_DIR}/exp1b_pca_run.log'
 
-  # FIX-exp1b_pca-PORTFOLIO-VARIANCE: exp1b_pca previously never called any
-  # portfolio-variance script at all, so portfolio_variance*.json could never
-  # be produced under 15_pca/ no matter what the benchmark step did. There is
-  # no PCA-specific portfolio-variance script in the repo (only
-  # portfolio_variance_v3c2.py exists) — reuse it here against the PCA
-  # benchmark JSON. The audit script normally resolves v3c3 from the standard
-  # non-PCA results tree, so pass the PCA benchmark file explicitly;
-  # HYPATIAX_RESULTS_DIR independently selects the analysis output directory.
-  # Select this shard's own results file deterministically. The benchmark writes
-  # hypatiax_defi_benchmark_pca_results.json for seed 42 (or a comma-list run) and
-  # hypatiax_defi_benchmark_pca_results_seed<N>.json for any other single seed.
-  # (Previously: newest file matching *results*.json, i.e. an arbitrary seed.)
-  case \"\${_SHARD_SEEDS}\" in
-    ''|*[!0-9]*|42) _BENCH_JSON_PCA=\"\${_PCA15_DIR}/hypatiax_defi_benchmark_pca_results.json\" ;;
-    *) _BENCH_JSON_PCA=\"\${_PCA15_DIR}/hypatiax_defi_benchmark_pca_results_seed\${_SHARD_SEEDS}.json\" ;;
-  esac
-  if [[ ! -f \"\${_BENCH_JSON_PCA}\" ]]; then
-    echo '::error::portfolio_variance_v3c2.py skipped — benchmark JSON not found:' \"\${_BENCH_JSON_PCA}\"
-    exit 1
-  else
-    echo '[exp1b_pca] Running portfolio_variance_v3c2.py against:' \"\${_BENCH_JSON_PCA}\"
-    echo -n '[exp1b_pca] benchmark JSON top-level type and length: '
-    python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(type(d).__name__, len(d))' \"\${_BENCH_JSON_PCA}\" || true
-    echo '[exp1b_pca] NOTE: the PCA benchmark has no Portfolio Variance case and no PySR arm; this audit step is an offline smoke test, not a PCA validation.'
-    # Strategy A is deliberately NOT enabled here: portfolio_variance_v3c2.py has no PCA split
-    # (it uses the standard DeFi protocol split), so a sweep run here would be labelled PCA but
-    # would not be one. Offline analysis only.
-    RERUN_STRATEGY=skip PV_SWEEP_ONLY= \\
-    HYPATIAX_RESULTS_DIR=\"\${_PCA15_DIR}\" \\
-    HYPATIAX_V3C3_RESULTS=\"\${_BENCH_JSON_PCA}\" \\
-      python3 '${EXPERIMENTS_DIR}/portfolio_variance_v3c2.py' \\
-        2>&1 | tee -a '${RESULTS_DIR}/exp1b_pca_run.log' \\
-      || { echo '::error::exp1b_pca portfolio analysis failed'; exit 1; }
-  fi
+    if [[ "\${_SEED}" == "42" ]]; then
+      _SEED_SOURCE="\${_SEED_SCRATCH}/hypatiax_defi_benchmark_pca_results.json"
+    else
+      _SEED_SOURCE="\${_SEED_SCRATCH}/hypatiax_defi_benchmark_pca_results_seed\${_SEED}.json"
+    fi
+    _SEED_DEST="\${_PCA15_DIR}/hypatiax_defi_benchmark_pca_results_seed\${_SEED}.json"
+    if [[ ! -s "\${_SEED_SOURCE}" ]]; then
+      echo "::error::exp1b_pca seed \${_SEED} did not produce its isolated result file: \${_SEED_SOURCE}"
+      exit 1
+    fi
 
-  _SHARD=\${SHARD_INDEX:-0}
-  _SEED_TAG=\$(echo \"\${_SHARD_SEEDS:-42}\" | tr ',' '_')
-  # Only collect from this run's results tree; never move source-tree artifacts.
-  for _search_root in '${RESULTS_DIR}'; do
-    find \"\${_search_root}\" -maxdepth 1 \\
-    \\( \\
-        -name 'defi_pca_v4_*.json' \\
-        -o -name '*portfolio*variance*pca*.json' \\
-        -o -name '*portfolio*variance*.json' \\
-    \\) | while IFS= read -r src; do
-        [[ \"\$src\" == \"\${_PCA15_DIR}\"* ]] && continue
-        fname=\$(basename \"\$src\")
-        stem=\"\${fname%.*}\"
-        ext=\"\${fname##*.}\"
-        dst=\"\${_PCA15_DIR}/\${stem}_shard\${_SHARD}_seed\${_SEED_TAG}.\${ext}\"
-        if [ -f \"\$src\" ]; then mv -v \"\$src\" \"\$dst\"; fi
-    done
+    python3 - "\${_SEED_SOURCE}" "\${_SEED}" <<'PYEOF_VALIDATE_SEED'
+import json, sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+expected_seed = int(sys.argv[2])
+rows = json.loads(path.read_text(encoding="utf-8"))
+if not isinstance(rows, list) or len(rows) != 74:
+    raise SystemExit(f"FAIL: seed {expected_seed} expected 74 case records; got {len(rows) if isinstance(rows, list) else type(rows).__name__}")
+seeds = {row.get("seed") for row in rows if isinstance(row, dict)}
+equations = [row.get("equation_id") for row in rows if isinstance(row, dict)]
+if seeds != {expected_seed}:
+    raise SystemExit(f"FAIL: seed {expected_seed} output contains seed values {sorted(str(x) for x in seeds)}")
+if len(equations) != 74 or len(set(equations)) != 74 or any(not x for x in equations):
+    raise SystemExit(f"FAIL: seed {expected_seed} output does not contain 74 unique equation IDs")
+print(f"PASS: seed {expected_seed}: 74 unique equations, seed provenance verified")
+PYEOF_VALIDATE_SEED
+
+    cp "\${_SEED_SOURCE}" "\${_SEED_DEST}"
+    echo "[exp1b_pca] Promoted seed \${_SEED} -> \${_SEED_DEST}"
   done
+
+  # No portfolio_variance_v3c2.py call here: it uses the non-PCA split and can
+  # discover historical /15 seed-sweep files. The PCA summary below consumes
+  # only the five isolated outputs produced by this invocation.
 
   python3 - <<'PYEOF_DISC_1B'
 import json, pathlib, datetime
@@ -1487,7 +1487,7 @@ source_files = []
 per_seed = defaultdict(lambda: {'n_pass': 0, 'n_total': 0})
 seen_case_seed = set()  # dedup: keep one record per (equation_id, seed) across shard files
 
-for fp in sorted(PCA15_DIR.glob('*.json')) if PCA15_DIR.exists() else []:
+for fp in [PCA15_DIR / f'hypatiax_defi_benchmark_pca_results_seed{s}.json' for s in (42, 99, 123, 777, 2024)] if PCA15_DIR.exists() else []:
     if any(x in fp.name for x in ('checkpoint', 'disclosure', 'summary', 'baseline')):
         continue
     try:
@@ -1528,7 +1528,7 @@ for fp in sorted(PCA15_DIR.glob('*.json')) if PCA15_DIR.exists() else []:
             n_pass += 1
             per_seed[seed]['n_pass'] += 1
 
-seeds_observed = sorted([s for s in per_seed if s is not None])
+seeds_observed = [42, 99, 123, 777, 2024]
 per_seed_out = {
     str(s): {
         'n_pass':     v['n_pass'],
