@@ -5271,188 +5271,155 @@ jobs:
 
 
   random_run_exp1_4060:
-    name: "C5c-3 · Run exp1_4060_seeds (DeFi all-74 random 40/60 seed sweep)"
-    # Selected directly by its dispatch input; independent of the PCA experiment jobs.
+    name: "C5c-3 · Run exp1_4060_seeds (seed \${{ matrix.seed }}, all 74 equations)"
     needs: [credential_preflight]
-    if: ${{ always() && github.event.inputs.experiment == 'exp1_4060_seeds' && needs.credential_preflight.result == 'success' }}
+    if: \${{ always() && github.event.inputs.experiment == 'exp1_4060_seeds' && needs.credential_preflight.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 340
-    outputs:
-      already_done: ${{ steps.check_random.outputs.already_done }}
-
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        seed: [42, 99, 123, 777, 2024]
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
         with:
-          token: ${{ secrets.PAT_TOKEN }}
+          token: \${{ secrets.PAT_TOKEN }}
           fetch-depth: 1
-
-      - name: Check if exp1_4060_seeds results already exist
+      - name: Check this seed's result
         id: check_random
         env:
-          RESULTS_DIR: ${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
-          EXP: ${{ github.event.inputs.experiment }}
-          FORCE_RERUN: ${{ github.event.inputs.force_rerun || 'false' }}
+          RESULTS_DIR: \${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
+          SEED: \${{ matrix.seed }}
+          FORCE_RERUN: \${{ github.event.inputs.force_rerun || 'false' }}
         run: |
-          if [[ "$EXP" != "exp1_4060_seeds" ]]; then
+          set -euo pipefail
+          SUFFIX=""
+          [[ "$SEED" == "42" ]] || SUFFIX="_seed\${SEED}"
+          RESULT="\${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi_random_4060/hypatiax_defi_benchmark_v3c_4060_results\${SUFFIX}.json"
+          if [[ "$FORCE_RERUN" != "true" && -s "$RESULT" ]]; then
             echo "already_done=true" >> "$GITHUB_OUTPUT"
-            echo "[skip] Not exp1_4060_seeds — skipping this job."
-            exit 0
-          fi
-          if [[ "$FORCE_RERUN" == "true" ]]; then
-            echo "already_done=false" >> "$GITHUB_OUTPUT"
-            echo "[run] force_rerun=true — bypassing existing-results guard; the runner recreates isolated scratch outputs for all five seeds."
-            exit 0
-          fi
-          RANDOM4060_DIR="${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi_random_4060"
-          REQUIRED=(
-            "${RANDOM4060_DIR}/hypatiax_defi_benchmark_v3c_4060_results.json"
-            "${RANDOM4060_DIR}/hypatiax_defi_benchmark_v3c_4060_results_seed99.json"
-            "${RANDOM4060_DIR}/hypatiax_defi_benchmark_v3c_4060_results_seed123.json"
-            "${RANDOM4060_DIR}/hypatiax_defi_benchmark_v3c_4060_results_seed777.json"
-            "${RANDOM4060_DIR}/hypatiax_defi_benchmark_v3c_4060_results_seed2024.json"
-            "${RANDOM4060_DIR}/split_protocol_disclosure.json"
-            "${RANDOM4060_DIR}/exp1_4060_seeds_summary.json"
-          )
-          MISSING=()
-          for FILE in "${REQUIRED[@]}"; do
-            if [[ ! -s "${FILE}" ]]; then MISSING+=("${FILE}"); fi
-          done
-          if [[ ${#MISSING[@]} -eq 0 ]]; then
-            echo "already_done=true" >> "$GITHUB_OUTPUT"
-            echo "[skip] Complete five-seed exp1_4060_seeds outputs verified in ${RANDOM4060_DIR}."
           else
             echo "already_done=false" >> "$GITHUB_OUTPUT"
-            echo "[run] exp1_4060_seeds outputs incomplete; missing/empty files:"
-            printf '  - %s\\n' "${MISSING[@]}"
           fi
-
       - name: Set up Python
         if: steps.check_random.outputs.already_done != 'true'
         uses: actions/setup-python@v5.3.0
         with:
-          python-version: ${{ env.PYTHON_VERSION || '3.12' }}
+          python-version: \${{ env.PYTHON_VERSION || '3.12' }}
           cache: pip
           cache-dependency-path: .github/workflows/ci_runner_repro.yml
-
       - name: Set up Julia 1.11
         if: steps.check_random.outputs.already_done != 'true'
         uses: julia-actions/setup-julia@v2.6.1
         with:
           version: "1.11"
-
       - name: Cache Julia depot
         if: steps.check_random.outputs.already_done != 'true'
         uses: actions/cache@v4
         with:
           path: ~/.julia
-          key: julia-depot-${{ runner.os }}-${{ hashFiles('**/Project.toml', '**/Manifest.toml', '.github/workflows/ci_runner_repro.yml') }}
+          key: julia-depot-\${{ runner.os }}-\${{ hashFiles('**/Project.toml', '**/Manifest.toml', '.github/workflows/ci_runner_repro.yml') }}
           restore-keys: |
-            julia-depot-${{ runner.os }}-
-
+            julia-depot-\${{ runner.os }}-
       - name: Install dependencies
         if: steps.check_random.outputs.already_done != 'true'
         run: |
           pip install --upgrade pip
           if [[ -f requirements.txt ]]; then pip install -r requirements.txt; fi
-          pip install numpy scipy scikit-learn pysr juliacall pint \
-              anthropic torch --index-url https://download.pytorch.org/whl/cpu \
-              python-dotenv psutil
-
+          pip install numpy scipy scikit-learn pysr juliacall pint anthropic torch --index-url https://download.pytorch.org/whl/cpu python-dotenv psutil
       - name: Install Julia / SymbolicRegression
         if: steps.check_random.outputs.already_done != 'true'
-        run: |
-          python3 -c "import pysr; pysr.install()"
-
+        run: python3 -c "import pysr; pysr.install()"
       - name: Precompile Julia / SymbolicRegression
         if: steps.check_random.outputs.already_done != 'true'
         run: |
           python3 - <<'PYEOF'
           import subprocess, sys
-
-          warmup = """
-          import numpy as np
-          import pysr
-          X = np.random.randn(20, 1)
-          y = X[:, 0] * 2.0 + 1.0
-          model = pysr.PySRRegressor(
-              niterations=5,
-              populations=1,
-              verbosity=0,
-              progress=False,
-              tempdir="/tmp/pysr_warmup",
-          )
-          model.fit(X, y)
-          print("Julia/PySR precompile warmup OK")
+          warmup = """import numpy as np, pysr
+          X=np.random.randn(20,1); y=2*X[:,0]+1
+          pysr.PySRRegressor(niterations=5,populations=1,verbosity=0,progress=False,tempdir="/tmp/pysr_warmup").fit(X,y)
           """
-          result = subprocess.run(
-              [sys.executable, "-c", warmup],
-              timeout=300,
-              capture_output=True,
-              text=True,
-          )
+          result=subprocess.run([sys.executable,"-c",warmup],timeout=300,capture_output=True,text=True)
           print(result.stdout or "")
-          if result.returncode != 0:
-              print("WARNING: Julia precompile warmup failed (HypatiaX/HDS may be N/A):")
-              print(result.stderr[-3000:] if result.stderr else "(no stderr)")
+          if result.returncode: print((result.stderr or "")[-3000:])
           PYEOF
-
-      - name: Run exp1_4060_seeds via run_all.sh
+      - name: Run and validate this seed (all 74 equations)
         if: steps.check_random.outputs.already_done != 'true'
         env:
-          RESULTS_DIR:       ${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
-          FEYNMAN_SAMPLES:   ${{ github.event.inputs.n_samples || '200' }}
-          DRY_RUN:           ${{ github.event.inputs.dry_run || 'false' }}
-          JOB_DEADLINE:      "19800"
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          OPENAI_API_KEY:    ${{ secrets.OPENAI_API_KEY }}
-        run: |
-          set -euo pipefail
-          if [[ "${DRY_RUN}" == "true" ]]; then
-            echo "[dry-run] Would execute: bash run_all.sh --step exp1_4060_seeds"
-            exit 0
-          fi
-          bash run_all.sh --step exp1_4060_seeds
-
-      - name: Commit and push results
-        if: |
-          success() &&
-          github.event.inputs.dry_run != 'true' &&
-          steps.check_random.outputs.already_done != 'true'
+          REPO_ROOT: \${{ github.workspace }}
+          RESULTS_DIR: \${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
+          EXPERIMENTS_DIR: \${{ github.workspace }}/hypatiax/experiments/benchmarks
+          RUNNER_TEMP: \${{ runner.temp }}
+          SEED: \${{ matrix.seed }}
+          ANTHROPIC_API_KEY: \${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: \${{ secrets.OPENAI_API_KEY }}
+        run: bash scripts/ci/run_exp1_4060_seeds.sh "$SEED"
+      - name: Commit and push this seed's result
+        if: success() && github.event.inputs.dry_run != 'true' && steps.check_random.outputs.already_done != 'true'
         env:
-          RESULTS_DIR: ${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
+          RESULTS_DIR: \${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
+          SEED: \${{ matrix.seed }}
         run: |
           set -euo pipefail
-          git config user.name  "github-actions[bot]"
+          git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          RANDOM4060_DIR="${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi_random_4060"
-          git add "${RANDOM4060_DIR}"/ 2>/dev/null || true
-          if git diff --cached --quiet; then
-            echo "Nothing new to commit."
-          else
-            git commit -m "ci: exp1_4060_seeds results (DeFi all-74 random 40/60 seed sweep) [skip ci]"
-            PUSHED=false
-            for i in 1 2 3; do
-              git rebase --abort 2>/dev/null || true
-              git stash --include-untracked --quiet || true
-              if git pull --rebase -X ours origin "${{ github.ref_name }}" && \
-                 git push origin HEAD:"${{ github.ref_name }}"; then
-                git stash pop --quiet 2>/dev/null || true
-                PUSHED=true
-                break
-              fi
-              git rebase --abort 2>/dev/null || true
+          DIR="\${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi_random_4060"
+          SUFFIX=""
+          [[ "$SEED" == "42" ]] || SUFFIX="_seed\${SEED}"
+          git add "$DIR/hypatiax_defi_benchmark_v3c_4060_results\${SUFFIX}.json"
+          git add "$DIR/exp1_4060_seed\${SEED}_run.log" 2>/dev/null || true
+          git commit -m "ci: exp1_4060_seeds result for seed $SEED [skip ci]"
+          PUSHED=false
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            git stash --include-untracked --quiet || true
+            if git pull --rebase -X ours origin "\${{ github.ref_name }}" && git push origin HEAD:"\${{ github.ref_name }}"; then
               git stash pop --quiet 2>/dev/null || true
-              sleep 5
-            done
-            if [[ "${PUSHED}" == "true" ]]; then
-              echo "Results committed and pushed."
-            else
-              echo "::error::Failed to push exp1_4060_seeds results after 3 attempts."
-              exit 1
+              PUSHED=true; break
             fi
-          fi
+            git rebase --abort 2>/dev/null || true
+            git stash pop --quiet 2>/dev/null || true
+            sleep $((i * 5))
+          done
+          [[ "$PUSHED" == "true" ]] || { echo "::error::Could not push seed $SEED"; exit 1; }
 
+  aggregate_exp1_4060_seeds:
+    name: "Aggregate five exp1_4060_seeds workers"
+    needs: [random_run_exp1_4060]
+    if: \${{ always() && github.event.inputs.experiment == 'exp1_4060_seeds' && needs.random_run_exp1_4060.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout latest committed seed outputs
+        uses: actions/checkout@v4.2.2
+        with:
+          token: \${{ secrets.PAT_TOKEN }}
+          ref: \${{ github.ref_name }}
+          fetch-depth: 1
+      - name: Set up Python
+        uses: actions/setup-python@v5.3.0
+        with:
+          python-version: \${{ env.PYTHON_VERSION || '3.12' }}
+      - name: Validate coverage and write aggregate metadata
+        env:
+          RESULTS_DIR: \${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/exp1_4060_seed_outputs.py finalize --directory "$RESULTS_DIR/comparison_results/noise-noiseless/noiseless/defi_random_4060"
+      - name: Commit aggregate summary and split disclosure
+        if: github.event.inputs.dry_run != 'true'
+        env:
+          RESULTS_DIR: \${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          DIR="$RESULTS_DIR/comparison_results/noise-noiseless/noiseless/defi_random_4060"
+          git add "$DIR/exp1_4060_seeds_summary.json" "$DIR/split_protocol_disclosure.json"
+          git commit -m "ci: aggregate exp1_4060_seeds five-seed results [skip ci]"
+          git push origin HEAD:"\${{ github.ref_name }}"
 
 
   gate_a_split_protocol_test:
