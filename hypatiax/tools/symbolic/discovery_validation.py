@@ -336,6 +336,23 @@ class CandidateValidator:
                 ("pass", "candidate avoids all forbidden function families", evidence)
             )
 
+        if kind == "variable_in_denominator":
+            variable = params.get("variable")
+            if variable not in problem.variable_names:
+                return "unknown", "variable_in_denominator requires a declared variable", {}
+            denominator = sp.denom(sp.together(expression))
+            present = str(variable) in {str(symbol) for symbol in denominator.free_symbols}
+            evidence = {
+                "variable": variable,
+                "denominator": sp.sstr(denominator),
+                "variable_present_in_denominator": present,
+            }
+            return (
+                ("pass", f"candidate denominator depends on {variable}", evidence)
+                if present else
+                ("fail", f"candidate denominator does not depend on {variable}", evidence)
+            )
+
         if kind == "no_variable_exponents":
             offenders = [
                 sp.sstr(node) for node in sp.preorder_traversal(expression)
@@ -426,7 +443,7 @@ class CandidateValidator:
 
         if kind not in {
             "positive_output", "nonnegative_output", "finite_output",
-            "finite_output_screen", "even_in", "odd_in", "reciprocal_even_in",
+            "finite_output_screen", "positive_output_screen", "even_in", "odd_in", "reciprocal_even_in", "monotone_concave_in",
         }:
             return "unknown", f"unsupported declared constraint kind: {kind}", {}
 
@@ -461,6 +478,59 @@ class CandidateValidator:
             [symbols[name] for name in problem.variable_names],
             expression, modules=[{"sign": lambda value: (value > 0) - (value < 0)}, "math"],
         )
+
+        if kind == "monotone_concave_in":
+            variable = params.get("variable")
+            if variable not in problem.variable_names:
+                return "unknown", "monotone_concave_in requires a declared variable", {}
+            index = problem.variable_names.index(variable)
+            low, high = bounds[variable]
+            other_midpoints = [(lo + hi) / 2.0 for lo, hi in bounds.values()]
+            samples = [low + (high - low) * i / 8.0 for i in range(9)]
+            values = []
+            for value in samples:
+                point = list(other_midpoints)
+                point[index] = value
+                try:
+                    values.append(float(fn(*point)))
+                except Exception:
+                    values.append(float("nan"))
+            finite_values = all(math.isfinite(value) for value in values)
+            scale = max(1.0, *(abs(value) for value in values if math.isfinite(value)))
+            differences = [right - left for left, right in zip(values, values[1:])]
+            second_differences = [
+                right - 2.0 * middle + left
+                for left, middle, right in zip(values, values[1:], values[2:])
+            ]
+            monotone = finite_values and all(
+                difference >= -self.tolerance * scale for difference in differences
+            )
+            concave = finite_values and all(
+                difference <= self.tolerance * scale for difference in second_differences
+            )
+            passed = monotone and concave
+            violations = (
+                sum(difference < -self.tolerance * scale for difference in differences)
+                + sum(difference > self.tolerance * scale for difference in second_differences)
+                + (0 if finite_values else sum(not math.isfinite(value) for value in values))
+            )
+            evidence = {
+                "variable": variable,
+                "sample_count": len(values),
+                "finite": finite_values,
+                "monotone_non_decreasing": monotone,
+                "concave_down": concave,
+                "first_differences": differences,
+                "second_differences": second_differences,
+                "violation_count": int(violations),
+                "sampling": "deterministic_9_point_training_domain_screen",
+                "proof_scope": "finite_sample_shape_screening_only",
+            }
+            return (
+                ("pass", "candidate passed sampled monotone-concave shape screen", evidence)
+                if passed else
+                ("fail", "candidate violates sampled monotone-concave shape requirements", evidence)
+            )
 
         if kind == "reciprocal_even_in":
             variable = params.get("variable")
@@ -516,6 +586,12 @@ class CandidateValidator:
         finite = all(math.isfinite(value) for value in values)
         if kind in {"finite_output", "finite_output_screen"}:
             violations = sum(not math.isfinite(value) for value in values)
+            passed = violations == 0
+        elif kind == "positive_output_screen":
+            violations = sum(
+                (not math.isfinite(value)) or value <= self.tolerance
+                for value in values
+            )
             passed = violations == 0
         elif not finite:
             violations = sum(
@@ -576,7 +652,7 @@ class CandidateValidator:
         }
         if not passed:
             return "fail", f"declared {kind} constraint failed on deterministic domain samples", evidence
-        if kind in {"finite_output_screen", "positive_output", "nonnegative_output"}:
+        if kind in {"finite_output_screen", "positive_output_screen", "positive_output", "nonnegative_output"}:
             return "pass", f"candidate passed the sampled {kind} screen", evidence
         return (
             "unknown",
