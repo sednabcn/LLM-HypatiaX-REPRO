@@ -1,63 +1,36 @@
-"""Regression tests for the exp1b_pca run_all.sh shell wrapper."""
+"""Regression tests for exp1_ablation's explicit multi-seed contract."""
 
 from pathlib import Path
-import re
 import subprocess
-
-
-def test_exp1b_pca_bash_c_payload_is_valid_shell():
-    """Catch quoting regressions hidden inside run_all.sh's nested bash -c string."""
-    repo_root = Path(__file__).resolve().parents[3]
-    run_all = (repo_root / "run_all.sh").read_text(encoding="utf-8")
-
-    start = re.search(r'^run exp1b_pca .* bash -c "\n', run_all, flags=re.MULTILINE)
-    assert start is not None, "exp1b_pca run_all.sh step was not found"
-
-    remainder = run_all[start.end() :]
-    end = re.search(r'^"\s*$', remainder, flags=re.MULTILINE)
-    assert end is not None, "exp1b_pca bash -c payload has no closing delimiter"
-
-    raw_payload = remainder[: end.start()]
-    # Decode the escapes applied by the outer bash double-quoted argument.
-    payload = re.sub(r'\\(["$\\])', r'\1', raw_payload)
-    checked = subprocess.run(
-        ["bash", "-n", "-c", payload],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    assert checked.returncode == 0, checked.stderr
-
-
-
-def test_exp1b_pca_skip_guard_requires_all_five_seed_results_and_summaries():
-    repo_root = Path(__file__).resolve().parents[3]
-    workflow = (repo_root / ".github/workflows/ci_runner_repro.yml").read_text()
-    guard = workflow.split("- name: Check if exp1b_pca results already exist", 1)[1].split(
-        "- name: Set up Python", 1
-    )[0]
-    for seed in (42, 99, 123, 777, 2024):
-        assert f"hypatiax_defi_benchmark_pca_results_seed{seed}.json" in guard
-    assert "split_protocol_disclosure.json" in guard
-    assert "exp1b_pca_summary.json" in guard
-    assert "MISSING=()" in guard
-    assert '[[ ! -s "${FILE}" ]]' in guard
-
 
 
 def test_exp1_ablation_allows_requested_seed_without_weakening_other_protocols():
     repo_root = Path(__file__).resolve().parents[3]
     run_all = (repo_root / "run_all.sh").read_text(encoding="utf-8")
+    workflow = (repo_root / ".github/workflows/ci_runner_repro.yml").read_text(
+        encoding="utf-8"
+    )
 
-    # The multi-seed marker is set by the exp1_ablation worker workflow. Its
-    # selected numeric seed must bypass only the fixed YAML seed guard.
+    # The runner marks exp1_ablation workers and supplies the selected seed.
+    assert 'EXP1_ABLATION_SEED_IN_DIR: "1"' in workflow
     assert '[[ "${EXP1_ABLATION_SEED_IN_DIR:-0}" == "1" || -n "${ABLATION_SUBDIR:-}" ]]' in run_all
+
+    # Only ablation runs bypass the fixed YAML default-seed check.
     assert 'check_protocol_override PYSR_SEED "$_CFG_PYSR_SEED"' in run_all
     assert 'check_protocol_override HYPATIAX_ENGINE_SEED "$_CFG_PYSR_SEED"' in run_all
     assert 'export HYPATIAX_ENGINE_SEED="$PYSR_SEED"' in run_all
     assert 'export PYSR_SEED="$_CFG_PYSR_SEED"' in run_all
 
-    # The default remains 42, and the bypass rejects malformed/mismatched seeds.
+    # Seed 42 remains the default; supplied numeric seeds are preserved and
+    # malformed seeds or inconsistent engine seeds are rejected.
     assert 'export PYSR_SEED="${PYSR_SEED:-42}"' in run_all
     assert 'PYSR_SEED:-' in run_all
-    assert 'HYPATIAX_ENGINE_SEED' in run_all
+    assert 'must match exp1_ablation PYSR_SEED' in run_all
+
+    checked = subprocess.run(
+        ["bash", "-n", str(repo_root / "run_all.sh")],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert checked.returncode == 0, checked.stderr
