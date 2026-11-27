@@ -700,7 +700,7 @@ class CandidateValidator:
         }
         if not passed:
             return "fail", f"declared {kind} constraint failed on deterministic domain samples", evidence
-        if kind in {"finite_output_screen", "positive_output_screen", "nonpositive_output_screen", "positive_output", "nonnegative_output"}:
+        if kind in {"finite_output_screen", "positive_output_screen", "nonpositive_output_screen"}:
             return "pass", f"candidate passed the sampled {kind} screen", evidence
         return (
             "unknown",
