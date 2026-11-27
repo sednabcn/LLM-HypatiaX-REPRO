@@ -1,7 +1,7 @@
 equation,domain,extrap_r2_near,extrap_r2_far,instability_index
-Arrhenius,Chemistry,-6.896468424487712,,
-Henderson-Hasselbalch,Chemistry,0.9998579704388263,0.9998579704388263,0.0
-Rate Law,Chemistry,0.9999562879383543,0.9941339450532585,0.005822342885095866
+Arrhenius,Chemistry,,,
+Henderson-Hasselbalch,Chemistry,,,
+Rate Law,Chemistry,0.9999602422507061,0.9943448050872847,0.005615437163421388
 Allometric Scaling,Biology,,,
 Michaelis-Menten,Biology,,,
 Logistic Growth,Biology,,,
