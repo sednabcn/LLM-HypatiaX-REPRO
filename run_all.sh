@@ -1486,6 +1486,7 @@ for fp in [PCA15_DIR / f'hypatiax_defi_benchmark_pca_results_seed{s}.json' for s
     except Exception as exc:
         raise SystemExit(f'FAIL: invalid JSON in {fp}: {exc}')
     expected_seed = int(fp.stem.rsplit('seed', 1)[1])
+    per_seed[expected_seed]  # retain zero-finite-score seeds in the audit table
     if not isinstance(data, list) or len(data) != 74:
         raise SystemExit(f'FAIL: {fp.name} must contain 74 case records')
     if {row.get('seed') for row in data if isinstance(row, dict)} != {expected_seed}:
