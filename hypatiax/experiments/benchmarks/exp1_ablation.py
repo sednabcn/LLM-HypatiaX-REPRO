@@ -67,6 +67,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 
 from hypatiax.experiments.benchmarks.exp1_ablation_contracts import (
+    audit_core15_expression,
     build_core15_discovery_problem,
     formula_pathology_reasons,
 )
@@ -953,6 +954,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
         )
         from hypatiax.core.llm_meta import llm_meta
         _llm_m = llm_meta(res)   # real LLM time/expression/confidence from the engine
+        _scientific_audit = audit_core15_expression(eq, best_expr_raw, eq_seed)
         return {
             "condition":             condition,
             "completed":             True,
@@ -1019,6 +1021,12 @@ def run_condition(eq, condition, seed=42, niterations=None,
             # v3c-derived pathology labels are audit-only; they do not gate or
             # alter the formula, predictions, metrics, or ablation accounting.
             "formula_pathology_reasons": formula_pathology_reasons(best_expr_raw),
+            # Scientific validity is separate from pipeline completion and
+            # predictive metrics; the audit uses declared inputs/ranges only.
+            "scientific_validation": _scientific_audit,
+            "scientific_status": (
+                "pass" if _scientific_audit.get("eligible") else "failed"
+            ),
         }
 
     # =========================================================================
@@ -1099,6 +1107,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
     )
     if not _primary_eval_ok and _evaluation_error is None:
         _evaluation_error = "non_finite_or_missing_primary_metric"
+    _scientific_audit = audit_core15_expression(eq, best_expr, eq_seed)
     return {
         "condition":             "pysr_only",
         "completed":             True,
@@ -1130,6 +1139,10 @@ def run_condition(eq, condition, seed=42, niterations=None,
         "total_time_s":          total_time,
         "best_expression":       best_expr,
         "formula_pathology_reasons": formula_pathology_reasons(best_expr),
+        "scientific_validation": _scientific_audit,
+        "scientific_status": (
+            "pass" if _scientific_audit.get("eligible") else "failed"
+        ),
         "complexity":            complexity,
         "llm_expression":        None,
         "llm_confidence":        None,
