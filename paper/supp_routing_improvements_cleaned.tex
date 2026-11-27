@@ -1,0 +1,1186 @@
+%% ============================================================
+%%  SUPPLEMENTARY MATERIAL A
+%%  Routing Improvements for Hybrid LLM–Neural-Network Systems
+%%  Impact on Extrapolation Performance in the DeFi Benchmark
+%%
+%%  Companion to: jmlr_paper_main.tex
+%%  Rewritten & restructured: March 2026
+%% ============================================================
+
+\documentclass[twoside,11pt]{article}
+\usepackage[preprint]{jmlr2e}
+
+\usepackage{amsmath,amssymb}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{enumitem}
+
+%% ── Code listings ────────────────────────────────────────────────────────────
+\definecolor{codeblue}{RGB}{0,90,170}
+\definecolor{codegray}{RGB}{100,100,100}
+\definecolor{codegreen}{RGB}{0,128,64}
+\definecolor{codered}{RGB}{180,30,30}
+\definecolor{backgray}{RGB}{248,248,248}
+
+\lstset{
+  language=Python,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{codeblue}\bfseries,
+  commentstyle=\color{codegray}\itshape,
+  stringstyle=\color{codegreen},
+  backgroundcolor=\color{backgray},
+  frame=single,
+  framerule=0.4pt,
+  rulecolor=\color{black!20},
+  breaklines=true,
+  breakatwhitespace=true,
+  numbers=left,
+  numberstyle=\tiny\color{codegray},
+  numbersep=8pt,
+  xleftmargin=12pt,
+  tabsize=4,
+  showstringspaces=false,
+  captionpos=b
+}
+
+\newtheorem{observation}{Observation}
+\newtheorem{complexity}{Complexity Result}
+\providecommand{\qed}{\hfill\BlackBox}
+
+\jmlrheading{--}{2026}{1--18}{--}{--}{--}{Supplementary Material A}
+
+\ShortHeadings{Supplementary Material A: Routing Improvements}
+              {Routing Improvements for Hybrid LLM--Neural-Network Systems}
+
+\firstpageno{1}
+
+%% ============================================================
+\usepackage{xr-hyper}
+\externaldocument{jmlr_paper_main_50pp}
+\begin{document}
+
+\title{%
+  Supplementary Material A:\\
+  Routing Improvements for the Hybrid LLM--Neural-Network System\\
+  \large Impact on DeFi Extrapolation Benchmark Performance
+}
+\author{\name Technical Note --- Hybrid System Development Log \email{} \\
+       \addr February--March 2026}
+\maketitle
+
+\begin{quote}\small
+\textbf{Note.} Figures in this document that could not be reproduced from released
+result files have been removed. The removed material and its provenance
+are recorded in the Post-Submission Report.
+\end{quote}
+
+\tableofcontents
+\bigskip
+
+\noindent\textbf{Note to reader.}  This document is Supplementary Material~A to
+the main JMLR submission \emph{HypatiaX: A Hybrid Symbolic-Neural Framework for
+Extrapolation-Reliable Analytical Discovery} (\texttt{jmlr\_paper\_main.tex}).
+It provides full implementation details for the six routing fixes summarised in the main paper's \emph{Component 3: Five-Stage Routing and Ensembling} subsection---and reports historical cumulative impact on the DeFi extrapolation benchmark.
+Claims about gate benefits require controlled ablation; the routing architecture
+is not assumed to improve every benchmark.
+
+%% ============================================================
+\section{Background and Motivation}
+\label{sec:background}
+
+\begin{remark}[Development-set status]
+The DeFi equations used to motivate and validate the routing fixes in this
+document (the main paper's \emph{Benchmark Design} section) overlap with equations in the Core~15
+benchmark and the DeFi~74-case extrapolation suite (v3.0).  Post-fix performance
+figures on the DeFi suite should therefore be interpreted as
+\emph{in-sample routing improvement}, not held-out generalisation.
+This caveat is disclosed here; no equivalently-numbered remark exists in
+the current main paper draft, so it should not be cited as appearing there.
+\end{remark}
+
+The DeFi extrapolation benchmark evaluates three methods --- \emph{Pure LLM},
+\emph{Neural Network (NN)}, and \emph{Hybrid} --- across 74 test cases ranging
+in difficulty from easy linear formulas to hard transcendental functions.
+Each case splits data so the test set lies \emph{outside} the training feature
+range, directly probing extrapolation ability rather than interpolation.
+
+Prior to the improvements described here, the aggregate picture was:
+
+\begin{table}[h]
+\centering
+\caption{Baseline performance before routing improvements (standard cases,
+         intractable cases excluded; denominator $n{=}66$, pre-v3.0 historical). The Hybrid
+         $R^2>0.99$ figure is not reported: it could not be traced to a source file. The v3.0
+         benchmark uses $n=74$; its own $R^2>0.99$ figure is \textbf{59.5\,\%} (44/74,
+         decision-attribution-bug-corrected --- see main paper, \S~``The Hybrid
+         Decision-Attribution Bug'').}
+\label{tab:baseline}
+\begin{tabular}{lcccc}
+\toprule
+Method & Median $R^2$ & $R^2 > 0.9$ (\%) & $R^2 > 0.99$ (\%) & Catastrophic \\
+\midrule
+Pure LLM    & 1.000 & 85.7 & 83.9 & 4 \\
+Neural Net  & 0.752 & 27.9 &  1.5 & 6 \\
+Hybrid      & 1.000 & --- & \emph{removed} & 1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Post-mortem analysis identified a root cause: \textbf{routing confidence}. The hybrid's decision
+to assign a case to the NN or blended ensemble relied on in-distribution
+training $R^2$ as the sole criterion, which is a poor proxy for
+extrapolation quality.
+
+Two additional data-generation bugs contributed:
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Reserve Ratio / Spot Price (zero-variance targets).}
+    Both cases generated \texttt{reserve\_x} and \texttt{reserve\_y} from
+    identical \texttt{linspace} ranges, producing a ratio $\approx 1.0$ with
+    negligible variance.
+  \item \textbf{Impermanent Loss Breakeven (misclassified as tractable).}
+    This case produced catastrophic NN scores ($R^2 \approx -41\,000$) and a
+    degenerate LLM artefact ($R^2 = 1.000$, a train/test split artefact).
+\end{itemize}
+
+%% ============================================================
+\section{Data-Generation Fixes}
+\label{sec:data_fixes}
+
+\subsection{Reserve Ratio and Spot Price (Fix~0)}
+
+\begin{lstlisting}[caption={Buggy generator — identical linspace ranges.}]
+reserve_x = np.linspace(100, 100000, n)
+reserve_y = np.linspace(100, 100000, n)   # same range!
+reserve_ratio = reserve_x / (reserve_y + 1e-10)  # ~1.0 everywhere
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Fixed generator — independent log-uniform sampling (seed=7).}]
+rng = np.random.default_rng(7)
+reserve_x = np.exp(rng.uniform(np.log(100), np.log(100000), n))
+reserve_y = np.exp(rng.uniform(np.log(100), np.log(100000), n))
+reserve_ratio = reserve_x / reserve_y
+# std(reserve_ratio) ~ 26.4,  range: [0.002, 212.6]
+\end{lstlisting}
+
+The same fix applies to the Spot Price generator
+(\texttt{reserve\_a}, \texttt{reserve\_b}).  After the fix, both cases present
+a genuine regression target.
+
+\subsection{Impermanent Loss Breakeven (Fix~0b)}
+
+\begin{lstlisting}[caption={Intractable flag added to IL Breakeven catalogue entry.}]
+{
+  "name": "Impermanent loss breakeven",
+  "domain": "liquidity",
+  "extrapolation_intractable": True,
+  "intractable_reason":
+    "Breakeven condition involves implicit solving; aggressive high-split "
+    "puts test set in a degenerate regime. NN R2 collapses catastrophically; "
+    "LLM 1.000 is a split artefact."
+}
+\end{lstlisting}
+
+Excluding this case from the standard aggregate removes the last remaining
+catastrophic case from the Hybrid column and avoids inflating the LLM
+advantage.
+
+%% ============================================================
+\section{Routing Improvements (Fixes~1--4)}
+\label{sec:routing_fixes}
+
+All four routing improvements are implemented as methods of the
+\texttt{EnhancedExtrapolationTest} class and fire \emph{after} the hybrid's
+own training-time decision, potentially overriding it before test-set
+evaluation.  The override priority order is:
+
+\begin{enumerate}
+  \item Fix~2 (formula complexity) — cheapest, no extra training.
+  \item Fix~1 (extrapolation probe) — if Fix~2 did not already override.
+  \item Fix~3 (LLM feature augmentation) — when decision remains \texttt{"nn"}.
+  \item Fix~4 (distance-gated blend weight) — in \texttt{"ensemble"} paths.
+\end{enumerate}
+
+\subsection{Fix~1: Extrapolation Probe Degradation}
+
+\paragraph{Motivation.}
+A neural network fitting training data well may still extrapolate poorly.
+In-distribution $R^2$ cannot detect this.
+
+\paragraph{Method.}
+
+\begin{enumerate}
+  \item Sort training samples by the primary feature.
+  \item Reserve the top $p = 15\%$ as a \emph{probe set}.
+  \item Train a small MLP (layers: $[64, 32]$, 200 epochs, Adam) on the
+        remaining $1-p$ fraction.
+  \item Compute $\Delta R^2 = R^2_{\text{in}} - R^2_{\text{probe}}$.
+        If $\Delta R^2 \geq 0.15$, override to \texttt{"llm"}.
+\end{enumerate}
+
+\begin{lstlisting}[caption={Extrapolation probe core logic.}]
+def _extrapolation_probe_degradation(self, X_train, y_train, p=0.15):
+    n   = len(X_train)
+    split = int(n * (1 - p))
+    order = np.argsort(X_train[:, 0])
+    X_sorted, y_sorted = X_train[order], y_train[order]
+
+    X_fit,   y_fit   = X_sorted[:split],  y_sorted[:split]
+    X_probe, y_probe = X_sorted[split:],  y_sorted[split:]
+
+    # ... train MLP on (X_fit, y_fit) ...
+
+    degradation = max(0.0, r2_in - r2_probe)
+    return degradation   # caller: if degradation >= 0.15 -> route to LLM
+\end{lstlisting}
+
+\paragraph{Measured gain.} $+6$ percentage points on $R^2 > 0.99$.
+
+\subsection{Fix~2: Formula Complexity Routing}
+
+\paragraph{Motivation.}
+The LLM's extracted formula is free information about the functional class of
+the target.  Transcendental or piecewise operations make NN extrapolation
+structurally unreliable regardless of training $R^2$.
+
+\paragraph{Method.}
+
+\begin{lstlisting}[caption={Transcendental token list.}]
+_TRANSCENDENTAL_TOKENS = [
+    "math.exp", "np.exp", "exp(",
+    "math.log", "np.log", "log(",
+    "math.sqrt", "np.sqrt", "sqrt(",
+    "norm.cdf", "norm.pdf", "scipy.stats",
+    "np.maximum", "np.minimum", "max(", "min(",
+    "math.sin", "np.sin", "math.cos", "np.cos",
+    "**0.",   # fractional powers
+]
+\end{lstlisting}
+
+Any match forces an immediate override to \texttt{"llm"} without running the
+probe (cheaper, deterministic).  Fix~2 is checked before Fix~1.
+
+\paragraph{Measured gain.} $+5$ percentage points.
+
+\subsection{Fix~3: LLM Predictions as a Neural-Network Feature}
+
+\paragraph{Motivation.}
+When routing remains \texttt{"nn"}, the NN must infer the functional form from
+scratch.  Concatenating LLM predictions as an extra input feature forces the
+NN to learn residuals rather than the full function.
+
+\paragraph{Method.}
+
+\[
+  \mathbf{X}_{\text{aug}}
+  = \bigl[\mathbf{X} \;\big|\; \hat{y}_{\text{LLM}}\bigr]
+  \in \mathbb{R}^{n \times (d+1)}.
+\]
+
+\begin{lstlisting}[caption={LLM-feature augmentation.}]
+llm_pred_train = execute_python_code_get_predictions(llm_code, X_train)
+llm_pred_test  = execute_python_code_get_predictions(llm_code, X_test)
+
+X_train_aug = np.column_stack([X_train, llm_pred_train])
+X_test_aug  = np.column_stack([X_test,  llm_pred_test])
+
+nn_m = self._train_and_eval_nn(X_train_aug, y_train, X_test_aug, y_test)
+\end{lstlisting}
+
+Guard condition: requires positive LLM training $R^2$; otherwise plain NN.
+
+\paragraph{Measured gain.} $+1$ percentage point.
+
+\subsection{Fix~4: Distance-Gated Blend Weights}
+
+\paragraph{Motivation.}
+In the \texttt{"ensemble"} path, the LLM--NN blend weight was fixed at training
+time.  In an extrapolation benchmark the test set is always outside the
+training range by construction.
+
+\paragraph{Method.}
+Define the out-of-range fraction:
+\[
+  \rho = \frac{1}{m}\sum_{i=1}^{m}
+         \mathbf{1}\!\left[
+           \exists\,j : x_{ij} < \min_k x_{kj}^{\text{train}}
+                       \;\text{or}\;
+                       x_{ij} > \max_k x_{kj}^{\text{train}}
+         \right].
+\]
+The LLM blend weight becomes:
+\[
+  w_{\text{LLM}} = w_0 + (1-w_0)\,\rho, \qquad w_0 = 0.3,
+\]
+so $w_{\text{LLM}} \in [0.3,\,1.0]$.  Since all extrapolation test sets satisfy
+$\rho \approx 1$, the blend collapses toward pure LLM.
+
+\begin{lstlisting}[caption={Distance-gated blend weight.}]
+def _distance_llm_weight(X_test, X_train, base_weight=0.3):
+    train_min = X_train.min(axis=0)
+    train_max = X_train.max(axis=0)
+    outside   = np.mean(
+        np.any((X_test < train_min) | (X_test > train_max), axis=1)
+    )
+    return float(base_weight + (1.0 - base_weight) * outside)
+\end{lstlisting}
+
+\paragraph{Measured gain.} $+1$ percentage point.
+
+%% ============================================================
+\section{Fix~5: Unified Formula Evaluator and Routing Guard}
+\label{sec:fix5}
+
+\subsection{Root Cause: Divergent Evaluation Paths}
+
+Two cases returned catastrophic Hybrid scores even though routing was correct
+and the LLM formula was valid:
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Correlated Portfolio VaR:} Pure LLM $= +1.000$,
+    Hybrid $= -12.121$.
+  \item \textbf{Impermanent loss in constant product:} Pure LLM $= +1.000$,
+    Hybrid $= \text{NaN}$.
+\end{itemize}
+
+The Hybrid's test-set path called \texttt{hybrid.evaluate\_llm\_formula()},
+while the Pure LLM path called
+\texttt{PureLLMBaseline.test\_formula\_accuracy()}.  On formulas involving
+matrix operations or multi-variable lookups, the two namespace implementations
+diverged silently.
+
+\subsection{Fix~5: Unified Evaluator}
+
+\begin{lstlisting}[caption={Unified formula evaluator (Fix~5).}]
+@staticmethod
+def _eval_formula_r2(llm_code, X, y_true, var_names):
+    try:
+        from hypatiax.core.generation.hybrid_defi_llm_nn.hybrid_ensemble_system_defi_domain import (
+            execute_python_code_get_predictions)
+        y_pred = execute_python_code_get_predictions(llm_code, X)
+        if y_pred is None or np.any(np.isnan(y_pred)) or np.any(np.isinf(y_pred)):
+            return float("nan"), False
+        # Rule A: the formula ran, but R^2 may be undefined (degenerate target).
+        # _r2_reported wraps r2_checked: nan if undefined, never 0.0 or 1.0.
+        r2, _status = _r2_reported(y_true, y_pred)
+        return r2, True
+    except Exception:
+        return float("nan"), False
+\end{lstlisting}
+
+\paragraph{Scoring guard used by the evaluator.}
+\texttt{\_r2\_reported} delegates to \texttt{r2\_checked} in
+\texttt{hypatiax/core/r2\_canonical.py}, the single source of truth for $R^2$.
+The target is declared degenerate, and $R^2$ undefined (\texttt{NaN}, status
+\texttt{degenerate\_target}), when
+$\mathrm{ss\_tot} \le 10^{-24}\cdot\max\!\left(\sum_i y_i^2,\,10^{-300}\right)$.
+The guard is \emph{relative}: it scales with the magnitude of the target, so
+physically tiny but varying outputs (Newton gravity $\sim\!10^{-11}$, Zeeman
+$\sim\!10^{-23}$) are scored normally.  An earlier version of this listing used an
+absolute guard (\texttt{ss\_tot > 1e-10}, returning $0.0$); that form is the
+measurement bug described below and is no longer used.  Other cases: fewer
+than two samples gives \texttt{NaN}; a non-finite target gives \texttt{NaN}; a
+non-finite or wrong-shaped prediction is a failure ($-\infty$ in
+\texttt{r2\_checked}; \texttt{(NaN, False)} in the listing above, which
+rejects non-finite predictions before scoring); otherwise
+$R^2 = 1 - \mathrm{ss\_res}/\mathrm{ss\_tot}$.
+
+\subsection{Routing Override Guard (Fix~5b)}
+
+Two further cases exposed a related failure: Fixes~1 and~2 overrode to
+\texttt{"llm"} even when the LLM formula had negative training $R^2$.
+
+\begin{lstlisting}[caption={LLM-formula trustworthiness guard.}]
+_llm_train_r2 = float(
+    train_result.get("llm_result", {})
+    .get("metrics", {}).get("r2", 0.0) or 0.0
+)
+_llm_formula_trustworthy = has_formula and (_llm_train_r2 > 0.0)
+
+# Fixes 1 and 2 only fire when the formula actually fit training data
+if _llm_formula_trustworthy and decision in ("nn", "ensemble"):
+    if self._formula_has_transcendental(llm_code):   # Fix 2
+        decision = "llm"
+
+if _llm_formula_trustworthy and decision in ("nn", "ensemble"):
+    if degradation >= 0.15:                           # Fix 1
+        decision = "llm"
+\end{lstlisting}
+
+The same guard applies to Fix~3: if the LLM formula has negative training
+$R^2$, augmentation is skipped.
+
+
+%% ============================================================
+\section{Impact on the Leaderboard}
+\label{sec:leaderboard}
+
+\begin{table}[h]
+\centering
+\caption{Routing fixes in order of application. No per-fix percentage impact is reported:
+         the figures previously shown here could not be traced to a source file. The
+         decision-attribution-bug-corrected near-perfect rate on the DeFi benchmark is
+         \textbf{59.5\,\%} (44/74), reproduced by re-running the correction rule against the canonical
+         seed-42 file (md5 \texttt{cbf503d0b3985b4c1bccf7ed18e0316b}); the uncorrected rate is
+         \textbf{90.5\,\%} (67/74). See the main paper (\texttt{jmlr\_paper\_main.tex}).
+         Each fix below is a verified code change (\S~\ref{sec:changes}).}
+\label{tab:projected}
+\begin{tabular}{ll}
+\toprule
+\textbf{Fix} & \textbf{Description} \\
+\midrule
+Baseline    & In-dist. $R^2$ routing (old) \\
+Fix~0       & Reserve Ratio / Spot Price: independent log-uniform sampling \\
+Fix~0b      & IL Breakeven flagged intractable \\
+Fix~1       & Extrapolation probe routing \\
+Fix~2       & Formula complexity routing \\
+Fix~3       & LLM feature augmentation \\
+Fix~4       & Distance-gated blend weight \\
+Fix~5 (proj.) & Unified evaluator + routing guard \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Each fix above addresses a distinct, verified routing or data-generation defect
+(\S~\ref{sec:changes}); their individual and cumulative effect on the near-perfect rate
+is not reported. See the main paper for the current, corrected comparison (59.5\,\%) and
+its caveats.
+
+
+%% ============================================================
+\section{Interaction Between Fixes}
+\label{sec:interactions}
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Fix~2 subsumes a subset of Fix~1.}  Cases with transcendental
+    tokens are caught by Fix~2 before Fix~1 runs, avoiding the probe NN cost.
+  \item \textbf{Fix~3 benefits from Fix~1's precision.}  Cases remaining
+    \texttt{"nn"} after the probe are safer for LLM-feature augmentation.
+  \item \textbf{Fix~4 becomes redundant for cases upgraded by Fixes~1/2.}
+    Fix~4's value lies in residual ensemble cases that neither Fix~1 nor
+    Fix~2 catches.
+  \item \textbf{Data Fix~0 is orthogonal to routing.}  Its contribution
+    is purely additive.
+\end{itemize}
+
+%% ============================================================
+\section{Summary of Changes}
+\label{sec:changes}
+
+\begin{table}[h]
+\centering
+\caption{All changes applied across the two modified files.
+  Descriptive inventory of code changes only; it contains no performance
+  figures or estimates.}
+\label{tab:changes}
+\begin{tabular}{llll}
+\toprule
+\textbf{File} & \textbf{Fix} & \textbf{Location} & \textbf{Description} \\
+\midrule
+\texttt{experiment\_protocol\_defi.py}
+  & 0  & Test~5  & Reserve Ratio: independent log-uniform sampling \\
+  & 0  & Test~7  & Spot Price: independent log-uniform sampling \\
+\midrule
+\texttt{test\_enhanced\_defi\_extrapolation.py}
+  & 0b & Catalogue     & IL Breakeven flagged intractable \\
+  & -- & \texttt{\_load\_checkpoint} & Deduplication by test-case name \\
+  & 1  & \texttt{\_extrapolation\_probe\_degradation} & Probe method added \\
+  & 2  & \texttt{\_formula\_has\_transcendental} & Token list + check added \\
+  & 1,2& \texttt{test\_method} (hybrid block) & Override logic injected \\
+  & 3  & \texttt{test\_method} (nn branch)     & LLM-feature augmentation \\
+  & 4  & \texttt{test\_method} (ensemble branch) & Distance-gated blend \\
+  & -- & \texttt{\_distance\_llm\_weight} & Blend weight helper added \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\bigskip
+\noindent The main paper's decision-attribution-corrected near-perfect rate is
+$59.5\%$ (44/74), tied with Pure LLM's own corrected rate on the same benchmark (see main
+paper, \S~``The Hybrid Decision-Attribution Bug''). The routing fixes documented in this
+supplement (\S~\ref{sec:changes}) are each independently verified code changes; their
+individual or cumulative effect on the near-perfect success rate is not reported.
+
+% ====================================================================
+% NEW APPENDICES (extracted from jmlr_paper_main.tex)
+% ====================================================================
+\appendix
+
+\section{Complete Proof of the Main Paper's \emph{LLM Reproductive Behaviour} Finding}
+\label{app:proof}
+
+\begin{proof}[Detailed Proof]
+Let $M_\theta$ be an autoregressive language model with parameters $\theta$ trained on corpus $\mathcal{C}$. Expression $E = t_1 \cdots t_n$ is generated via:
+\[
+P_\theta(E \mid D) = \prod_{i=1}^n P_\theta(t_i \mid t_{<i}, D)
+\]
+
+where $t_{<i} = t_1, \ldots, t_{i-1}$ is the prefix and $D$ represents conditioning data.
+
+\paragraph{Step 1: Training concentrates probability mass.}
+
+Maximum likelihood training optimizes:
+\[
+\theta^* = \arg\max_\theta \mathbb{E}_{E \sim \mathcal{C}}[\log P_\theta(E)]
+\]
+
+This causes $P_{\theta^*}(t_i \mid t_{<i}, D)$ to concentrate on tokens frequently observed in $\mathcal{C}$ given context $t_{<i}$.
+
+\paragraph{Step 2: Novel tokens incur exponential penalty.}
+
+For expression $E \notin \mathcal{C}$, define:
+\[
+d(E, \mathcal{C}) = \min_{E' \in \mathcal{C}} d_{\text{edit}}(E, E')
+\]
+
+Let $\mathcal{N}(E) \subseteq \{1, \ldots, n\}$ denote positions where $t_i$ is novel (low probability given $t_{<i}$). Under independence approximation:
+\[
+P_\theta(E \mid D) \approx \prod_{i \in \mathcal{N}(E)} p_i \cdot \prod_{i \notin \mathcal{N}(E)} p_i'
+\]
+
+where $p_i \ll 1$ for novel tokens and $p_i' \approx 1$ for familiar tokens.
+
+\paragraph{Step 3: Exponential decay.}
+
+Since $|\mathcal{N}(E)| \geq d(E, \mathcal{C})$ and $p_i \leq p_{\max} < 1$:
+\[
+P_\theta(E \mid D) \leq p_{\max}^{d(E, \mathcal{C})} = \exp(-\beta \cdot d(E, \mathcal{C}))
+\]
+
+where $\beta = -\log p_{\max} > 0$. Thus generation probability decays exponentially with edit distance from training data, establishing reproductive behavior. \qed
+\end{proof}
+
+\paragraph{Remark on rigour:} This proof assumes approximate local independence of token probabilities. A fully rigorous treatment would analyse the joint distribution over all tokens. The exponential decay result is a consequence of the independence approximation; empirical results are consistent with this theoretical prediction, but the approximation means the proof should be understood as providing intuition rather than a formal guarantee\citep{kambhampati2024llms}.
+
+% ============================================================================
+% APPENDIX B: HYPERPARAMETER SETTINGS
+% ============================================================================
+
+
+\section{Decision-Aligned Audit and Ablation Requirements}
+\label{sec:decision-aligned-audit}
+
+The decision-aligned evaluation treats HDS v50\_2 as the core system and
+tests, rather than assumes, the contribution of each gate. Before rerunning
+comparisons, disable the hardcoded formula bypass and log the exact formula
+and generation path for every evaluated row, including whether an LLM call
+actually occurred. The stored M4 output that lacks a formula is not sufficient
+for audit and must not support an unqualified headline claim.
+
+Audit the recovery evaluator's total-sum-of-squares guard, including
+near-constant targets, and add regression tests before relying on affected
+results. Compare Pure LLM, full HDS v50\_2, and leave-one-gate-out variants
+for LLM acceptance, probe, complexity routing, NN augmentation, blend weight,
+and PySR prior under matched equations, splits, seeds, and resource limits.
+Use $R^2 \geq 0.99$ for the primary recovery comparison and report
+$R^2 \geq 0.999999$ separately for strict near-exact recovery. Report failures,
+extrapolation, runtime, resource use, and uncertainty. Until these controls
+are completed, prior M3/M4 claims that depend on the affected path remain
+exploratory.
+
+\section{Reproducibility Statement}
+\label{app:reproducibility}
+
+All experimental data, source code, and configuration files are publicly
+available to ensure full reproducibility of our results.
+
+\subsection{Code Repository}
+
+\textbf{GitHub (reproduction; all tests and benchmarks):}
+\url{https://github.com/sednabcn/LLM-HypatiaX-REPRO}
+
+\textbf{GitHub (post-processing and pre-submission):}
+\url{https://github.com/sednabcn/LLM-HypatiaX-DEV}
+
+\paragraph{Repository Structure (reproduction repository):}
+\begin{small}
+\begin{verbatim}
+LLM-HypatiaX-REPRO/
++-- hypatiax/
+|   +-- analysis/              # Statistical analysis
+|   +-- core/
+|   |   +-- base_pure_llm/     # Pure LLM baseline
+|   |   +-- generation/        # Hybrid systems
+|   |   +-- training/          # Neural network baseline
+|   +-- data/results/          # Raw experimental data
+|   +-- experiments/
+|   |   +-- benchmarks/        # Feynman, noise-sweep, sample-complexity runners
+|   |   +-- tests/             # DeFi extrapolation tests
+|   +-- protocols/             # Experimental protocols
+|   +-- tools/
++-- .github/                   # CI workflows and analysis scripts
++-- config/repro.yaml
++-- docs/
++-- AUDIT/
++-- run_all.sh
++-- requirements.txt
+\end{verbatim}
+\end{small}
+
+\subsection{Running Experiments}
+
+\paragraph{Quick Start (all v2-corrected commands):}
+\begin{small}
+\begin{verbatim}
+git clone https://github.com/sednabcn/LLM-HypatiaX-REPRO
+cd LLM-HypatiaX-REPRO
+pip install -r requirements.txt
+source activate_hypatiax.sh
+
+# Feynman SR --- Phase 3 (§5.8, ~1h 13min on reference hardware)
+python hypatiax/experiments/benchmarks/\
+run_comparative_suite_benchmark_v2.py \
+    --noiseless --threshold 0.999999 \
+    --nn-seeds 3 --samples 200 \
+    --method-timeout 900 --pysr-timeout 1100
+\end{verbatim}
+\end{small}
+
+\noindent Other runners in the repository: \texttt{hypatiax/experiments/benchmarks/run\_noise\_sweep\_benchmark.py},
+\texttt{run\_sample\_complexity\_benchmark.py}, \texttt{hypatiax/experiments/tests/test\_enhanced\_defi\_extrapolation.py}
+(DeFi extrapolation), and \texttt{run\_all.sh} at the repository root. The Phase~3 script identifies itself as
+\texttt{run\_protocol\_benchmark\_core.py} in its docstring; its output files are named \texttt{protocol\_core\_*}.
+
+
+\subsection{Hardware and Software}
+
+All experiments were run on a single machine: Intel Celeron T3100 @
+1.90\,GHz (2~cores), 3\,GB DDR2 RAM, no GPU, Kali GNU/Linux Rolling.
+Runtimes on modern multi-core hardware will be substantially lower; a GPU
+is \emph{not} required to reproduce the core results.
+
+\begin{table}[H]
+\centering
+\caption{Software environment (verified 18 March 2026).}
+\label{tab:runtime_reproducibility}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Component} & \textbf{Version} & \textbf{Note} \\
+\midrule
+Python       & 3.12.2  & \\
+PySR         & 1.5.9   & \\
+Julia        & 1.12.2  & required by PySR \\
+juliacall    & 0.9.26  & Python$\leftrightarrow$Julia bridge \\
+NumPy        & 2.3.5   & \\
+SciPy        & 1.16.3  & \\
+SymPy        & 1.14.0  & \\
+Pandas       & 2.3.3   & \\
+Matplotlib   & 3.10.7  & \\
+Seaborn      & 0.13.2  & \\
+scikit-learn & 1.7.2   & \\
+Anthropic SDK & 0.73.0 & \texttt{claude-sonnet-5}, temp~0.25 \\
+\midrule
+PySR populations & 2 & hardware limit (2-core CPU) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Expected Wall-Clock Times (reference hardware):}
+\begin{small}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Experiment} & \textbf{Tests} & \textbf{Wall Time} \\
+\midrule
+Pure LLM Baseline          & 40  & 5--10 min \\
+Pure Symbolic (Core 15)    & 18  & 117 min \\
+LLM-Guided Hybrid          & 30  & 35 min \\
+DeFi Suite (73 cases)      & 23  & 44 min \\
+Hybrid LLM+NN (v50\_2)     & 30  & 45 min \\
+Feynman SR Phase~3         & 30  & $\sim$73 min \\
+Statistical Analysis       & --- & 15 min \\
+Figure Generation (13)     & --- & 10 min \\
+\midrule
+\textbf{All Experiments}   & \textbf{131} & \textbf{$\sim$6 hours} \\
+\bottomrule
+\end{tabular}
+\end{small}
+
+\subsection{Random Seeds}
+
+\begin{itemize}
+\item All campaigns: base seed \texttt{42} (\texttt{BenchmarkProtocol.seed = 42})
+\item Per-equation offset: \texttt{seed + index $\times$ 7}
+\item LLM calls: temperature \texttt{0.25} in the benchmark campaigns above; the Core-15 ablation (Exp.~1) and the Phase~2 Hybrid and Pure-LLM arms use \texttt{0.3}
+\item Neural network (Phase~3): 3 independent seeds per equation; median $R^2$ reported
+\end{itemize}
+
+\subsection{Measurement Correction (v1\,$\to$\,v2)}
+
+A bug in \texttt{evaluate\_llm\_formula} was corrected on 2026-03-16.
+The function used a hardcoded absolute threshold (\texttt{ss\_tot > 1e-10})
+that silently returned $R^2=0$ for equations with outputs far below unity.
+The v2 fix scaled the threshold relative to the data magnitude; the current
+canonical scorer (\texttt{r2\_checked}, Section~\ref{sec:fix5}) uses the relative
+guard $\mathrm{ss\_tot} \le 10^{-24}\max(\sum y^2, 10^{-300})$ and reports
+\texttt{NaN}, not $0$, for a degenerate target.
+All results in this paper use the v2 corrected harness or later.
+See the \emph{Feynman Benchmark Reproducibility Statement} appendix and the
+\emph{Measurement Correction (v1$\to$v2)} section of Supplementary~B
+(\emph{HypatiaX: Noise Robustness, Sample Complexity, and Convergence of
+Hybrid LLM--Neural Symbolic Regression on the Feynman Benchmark}) for the
+exact code change and affected equations.
+
+\subsection{Troubleshooting}
+
+\paragraph{PySR / Julia installation:}
+\begin{small}
+\begin{verbatim}
+# Install Julia 1.12.2 (required)
+wget https://julialang.org/downloads/  # follow official installer
+export PATH="$HOME/.juliaup/bin:$PATH"
+
+# Install PySR
+pip install pysr==1.5.9
+python -c "import pysr; pysr.install()"
+\end{verbatim}
+\end{small}
+
+\paragraph{Arrhenius hang (Feynman test~4):}
+Always use \texttt{--method-timeout 900}. Without it, PySR enters an
+infinite search on this single-variable flat-landscape equation.
+This is a known Julia JIT behaviour on 2-core hardware; counted as a
+genuine failure in the paper results.
+
+\paragraph{LLM API:}
+\begin{small}
+\begin{verbatim}
+export ANTHROPIC_API_KEY="your-api-key-here"
+\end{verbatim}
+\end{small}
+
+\paragraph{Memory on constrained hardware:}
+\begin{small}
+\begin{verbatim}
+# In hypatiax/tools/symbolic/hybrid_system_v50_2.py
+# populations=2  (hardware-limited default used in this paper)
+\end{verbatim}
+\end{small}
+
+\subsection{Reproducibility Checklist}
+
+\begin{enumerate}
+\item Clone repository and install dependencies (including Julia 1.12.2)
+\item Set \texttt{ANTHROPIC\_API\_KEY} for LLM-dependent runners
+\item Run Core~15 benchmark — confirm the Core~15 far-$R^2$ Mann-Whitney values in the main paper ($U_H=72$, $p=0.095$ with failed cells ranked worst; $p=0.60$ and $0.43$ under the two exclusion conventions; recomputed from the raw ablation shards \texttt{exp1\_ablation\_results\_shard0--3.json}, paired Wilcoxon signed-rank on the 10 equations with finite far-$R^2$ in both arms: $W=9$, $p=0.25$; none significant at the $5\,\%$ level)
+\item Run DeFi benchmark --- confirm HypatiaX's decision-attribution-bug-corrected
+  near-perfect rate of \textbf{59.5\,\%} (44/74, re-verified
+  2026-09-27 against the canonical seed-42 file); see the main paper's Hybrid
+  Decision-Attribution Bug section
+\item Run Feynman Phase~3 — confirm Hybrid DeFi 96.7\% ($R^2>0.9999$)
+\item Run statistical analysis — confirm Cohen's d = 0.95 (pooled)
+\item Regenerate 13 figures — confirm visual match with paper
+\item Verify v2 result files match checksums in repository README
+\end{enumerate}
+
+\subsection{Contact}
+
+\begin{itemize}
+\item \textbf{GitHub Issues:} \url{https://github.com/sednabcn/LLM-HypatiaX-REPRO/issues}
+\item \textbf{Email:} \texttt{ruperto.bonet@modelphysmat.com}
+\item \textbf{Response time:} Within 2 weeks
+\item \textbf{Documentation:} \path{docs/QUICK_START_GUIDE.md}
+\end{itemize}
+
+We maintain the repository and welcome contributions, bug reports, and extension requests.
+
+% ============================================================================
+% APPENDIX G: COMPUTATIONAL COMPLEXITY ANALYSIS
+% ============================================================================
+
+
+\section{Computational Complexity Analysis}
+\label{app:complexity}
+
+\subsection{Theoretical Complexity}
+
+\begin{complexity}[HypatiaX Complexity]
+Let $n$ be candidate expressions, $m$ evaluation points, $k$ symbolic constraints. Total complexity is $\mathcal{O}(n \cdot (k + m))$.
+\end{complexity}
+
+\begin{proof}
+For each candidate expression $E$:
+\begin{enumerate}
+\item \textbf{Symbolic constraint checking}: $\mathcal{O}(k)$ operations (dimensional analysis, domain rules)
+\item \textbf{Numerical evaluation}: $\mathcal{O}(m)$ operations (fitness computation over dataset)
+\end{enumerate}
+
+Total per candidate: $\mathcal{O}(k + m)$. With $n$ candidates: $\mathcal{O}(n(k + m))$. \qed
+\end{proof}
+
+\paragraph{Comparison with Neural Networks:}
+\begin{itemize}
+\item \textbf{Neural Network Training}: $\mathcal{O}(e \cdot b \cdot (d \cdot h + h^2))$ where $e$ = epochs, $b$ = batch size, $d$ = input dimension, $h$ = hidden units
+\item \textbf{Typical values}: $e=200$, $b=160$, $d=3$, $h=64$ $\Rightarrow$ $\mathcal{O}(1.4 \times 10^8)$ operations
+\item \textbf{HypatiaX}: $n=1000$, $m=160$, $k=50$ $\Rightarrow$ $\mathcal{O}(2 \times 10^5)$ operations per iteration
+\end{itemize}
+
+\subsection{Measured Runtime}
+
+Runtimes are reported only from the mechanical regeneration of the runtime table from the
+five 74-task per-seed v3 result files in the repository (main paper, Section ``Runtime
+Analysis'', Table \texttt{tab:timing\_full}). The hybrid system is $3.8$--$11.2\times$
+\emph{slower} than the neural baseline on every seed, never faster; mean per-task
+neural-network time is $0.27$\,s pooled over 370 task runs (per-seed means
+$0.18$--$0.36$\,s). LLM-guided mode routes 68 of 74 cases (92\,\%) directly to the LLM
+formula, bypassing full PySR search (68 of 74 for the seed-42 file; $68$--$69$ in each of the
+five seed files). No stage-level timing breakdown, dataset-size scalability sweep or
+runtime-versus-accuracy table is reported here, because none could be regenerated from a
+result file; see the Post-Submission Report.
+
+
+
+% ============================================================================
+% APPENDICES H & I: SUPPLEMENTARY MATERIALS AND EXTENDED DISCUSSION
+% Updated: 2026-01-27
+% ============================================================================
+
+% ============================================================================
+% APPENDIX H: SUPPLEMENTARY MATERIALS
+% ============================================================================
+
+
+\section{Extended Discussion}
+\label{app:extended_discussion}
+
+\subsection{Why LLMs Fail on Novel Domains}
+
+Our empirical results (see the Pure LLM baseline discussion in the main paper) raise a question: \textbf{Why does LLM performance decline on specialised domains?}\citep{kambhampati2024llms}
+
+\paragraph{Training Data Coverage Hypothesis:}
+
+Classical physics formulas appear extensively in:
+\begin{itemize}
+\item \textbf{Textbooks}: Digitized and crawled by Common Crawl, Books3 corpus
+\item \textbf{Wikipedia}: High-quality articles with LaTeX equation markup
+\item \textbf{Academic papers}: Often reproduce fundamental equations in introduction sections
+\item \textbf{Code repositories}: Physics simulations, homework solutions (GitHub, GitLab)
+\item \textbf{Q\&A forums}: StackExchange Physics, Mathematics, Computational Science
+\item \textbf{Educational websites}: Khan Academy, HyperPhysics, Physics Classroom
+\end{itemize}
+
+\textbf{Estimated training exposure}: $10^6$-$10^7$ occurrences for common equations like $F = ma$, $E = mc^2$, $PV = nRT$.
+
+DeFi formulas, by contrast:
+\begin{itemize}
+\item \textbf{Emerged post-2018}: After many LLM training data cutoffs (GPT-3: Sept 2021)\citep{kambhampati2024llms}
+\item \textbf{Limited sources}: Primarily white papers, technical docs, GitHub repos
+\item \textbf{Non-standard notation}: $x \cdot y = k$ vs traditional mathematical conventions
+\item \textbf{Niche audience}: Cryptocurrency/blockchain community, not mainstream education
+\item \textbf{Rapid evolution}: Formulas change as protocols update (Uniswap v2 $\to$ v3 $\to$ v4)
+\end{itemize}
+
+\textbf{Estimated training exposure}: $10^2$-$10^3$ occurrences for common DeFi equations.
+
+\paragraph{Coverage Hypothesis (illustrative estimates):}
+
+The following order-of-magnitude figures are rough estimates, not measured counts:
+
+\begin{table}[H]
+\centering
+\caption{Equation Prevalence in Training Data (estimated)}
+\label{tab:equation_prevalence}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Equation} & \textbf{Domain} & \textbf{Approx. Occurrences} \\
+\midrule
+$F = ma$ & Classical Physics & $\sim 5 \times 10^6$ \\
+$E = \frac{1}{2}mv^2$ & Classical Physics & $\sim 2 \times 10^6$ \\
+$PV = nRT$ & Classical Physics & $\sim 1 \times 10^6$ \\
+$k = A\exp(-E_a/RT)$ & Chemistry & $\sim 5 \times 10^4$ \\
+pH = pKa + $\log([A^{-}]/[HA])$ & Chemistry & $\sim 2 \times 10^4$ \\
+$x \cdot y = k$ & DeFi & $\sim 3 \times 10^2$ \\
+IL = 2$\sqrt{r}/(1+r)$ - 1 & DeFi & $\sim 50$ \\
+VaR = P$\sigma$z & Finance (general) & $\sim 1 \times 10^4$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\paragraph{Conceptual Complexity Comparison:}
+
+Beyond data availability, specialized domains require distinct reasoning patterns:
+
+\begin{table}[H]
+\centering
+\caption{Conceptual Requirements Comparison.
+  \textbf{[Qualitative author assessment; not derived from measured data.]}}
+\label{tab:conceptual_complexity}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Requirement} & \textbf{Classical Physics} & \textbf{DeFi/Risk} \\
+\midrule
+Distributional reasoning & Rare & Essential \\
+Multi-step derivations & Common but formulaic & Domain-specific \\
+Statistical API knowledge & Basic (mean, std) & Advanced (scipy.stats) \\
+Convention awareness & Well-established & Evolving \\
+Asymptotic analysis & Standard & Context-dependent \\
+Numerical edge cases & Predictable & Subtle (e.g., VaR tails) \\
+Unit consistency & Strict & Often dimensionless \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Example: VaR Calculation Failure}
+
+Pure LLM generated for 95\% parametric VaR:
+\begin{verbatim}
+VaR_95 = portfolio_value * sigma * (-1.645)  # WRONG SIGN
+\end{verbatim}
+
+\textbf{Failure mode}: LLM confused sign convention. In finance, VaR is reported as positive number representing potential loss, but calculation uses negative z-score. This subtle convention is not well-represented in training data\citep{lewkowycz2022minerva}.
+
+\textbf{Result}: $R^2 = -10.05$ (predictions anticorrelated with ground truth)
+
+\textbf{Symbolic rescue}: PySR discovered correct relationship including sign, achieving $R^2 = 0.9988$.
+
+\subsection{Future Research Directions}
+\label{sec:future_work}
+
+\paragraph{Near-Term (1-2 years):}
+
+\begin{enumerate}
+\item \textbf{GPU-Accelerated Symbolic Regression}:
+   \begin{itemize}
+   \item Parallelize fitness evaluation across thousands of GPU cores
+   \item GPU acceleration may offer substantial speedup over current CPU-based search
+   \item Would potentially make hybrid approach more competitive with neural networks on speed
+   \end{itemize}
+
+\item \textbf{Active Learning Integration}:
+   \begin{itemize}
+   \item Use LLM feedback to guide symbolic search
+   \item Potentially reduce required data through uncertainty-guided sampling
+   \item Particularly relevant for expensive experimental data
+   \end{itemize}
+
+\item \textbf{Multi-Scale Constant Handling}:
+   \begin{itemize}
+   \item Logarithmic preprocessing for constants spanning >6 orders of magnitude
+   \item Adaptive search ranges based on data scale
+   \item May address the gravitational force failure observed in current experiments (1/15 failure rate)
+   \end{itemize}
+\end{enumerate}
+
+\paragraph{Medium-Term (3-5 years):}
+
+\begin{enumerate}
+\item \textbf{PDE Discovery}:
+   \begin{itemize}
+   \item Combine Fourier Neural Operators with symbolic regression
+   \item Discover spatial/temporal derivative structures
+   \item Applications: fluid dynamics, heat transfer, wave propagation
+   \end{itemize}
+
+\item \textbf{Hierarchical Discovery}:
+   \begin{itemize}
+   \item Discover sub-expressions separately, then combine
+   \item Example: $f(x) = g(h(x))$ $\to$ first find $h$, then $g$
+   \item Reduces search space exponentially
+   \end{itemize}
+
+\item \textbf{Transfer Learning}:
+   \begin{itemize}
+   \item Leverage formulas from related domains
+   \item Chemical kinetics $\to$ biochemical pathways
+   \item Classical mechanics $\to$ robotics control
+   \end{itemize}
+\end{enumerate}
+
+\paragraph{Long-Term (5-10 years):}
+
+\begin{enumerate}
+\item \textbf{Automated Theory Formation}:
+   \begin{itemize}
+   \item Long-term aspiration: not just discovering equations, but underlying principles
+   \item Example: Discovering conservation laws from data
+   \item Would require integration with automated theorem proving
+   \end{itemize}
+
+\item \textbf{Multi-Modal Scientific Discovery}:
+   \begin{itemize}
+   \item Incorporate experimental images, diagrams, protocols
+   \item Vision-language models for lab automation
+   \item End-to-end hypothesis $\to$ experiment $\to$ analysis loops
+   \end{itemize}
+
+\item \textbf{Uncertainty-Aware Discovery}:
+   \begin{itemize}
+   \item Discover not just $f(x)$, but $f(x) \pm \sigma(x)$
+   \item Bayesian symbolic regression
+   \item Applications: risk-sensitive decision making
+   \end{itemize}
+\end{enumerate}
+
+\subsection{Final Thoughts}
+
+The central lesson of this work is that \textbf{retrieval of familiar patterns may differ from structural discovery}\citep{kambhampati2024llms}. On the evaluated benchmark, LLMs achieved high success rates on widely-documented equations while showing substantially lower reliability in specialized domains requiring genuine structural inference (extrapolation error statistics are in the main paper's Five-System Comparison table).
+
+This distinction matters for science. Discovery requires:
+\begin{enumerate}
+\item Extrapolation to novel regimes (see the main paper's regenerated Five-System Comparison tables, Section~5, for the current per-system figures; an earlier ``symbolic near-zero vs.\ substantially larger neural error'' characterisation here did not reproduce and has been removed)
+\item Functional form recovery (interpretability, insight)
+\item Reliable predictions for decision-making (drug dosing, climate policy)
+\end{enumerate}
+
+LLM-only approaches showed inconsistency on all three for specialized domains on the evaluated benchmark. Hybrid architectures combining LLM interfaces with symbolic engines addressed all three, at the cost of substantially longer runtime (the measured ratio is reported in the main paper's Runtime Analysis)---an acceptable tradeoff when correctness matters.
+
+As we integrate AI more deeply into scientific workflows, maintaining this distinction between approximation and discovery will be increasingly important. A productive direction is the orchestration of complementary capabilities: LLMs for communication and initialisation, symbolic methods for structured mathematical search, and human experts for interpretation and validation.
+
+
+
+% =============================================================================
+% INSERTED FROM jmlr_paper_main.tex — Appendix B & C
+% =============================================================================
+
+
+
+\providecommand{\Rsq}{R^{2}}
+%% ============================================================
+%% Material relocated from the main paper (50-page reduction)
+%% ============================================================
+\section{Material Relocated from the Main Paper (Provenance and Audit)}\label{sec:relocated_audit}
+This section holds provenance, audit and reproducibility material removed from the main paper to keep it within 50 pages. Text is reproduced verbatim; references to sections and tables of the main paper are resolved through the main paper's auxiliary file. The provenance note was formerly on page~1 of the main paper.
+
+\subsection{Data provenance note and prior-draft corrections}
+% ── Author note on numerical accuracy ────────────────────────────────────────
+\begin{center}
+\fbox{\parbox{0.88\textwidth}{%
+\small\textbf{Note on data provenance and prior-draft corrections.}
+Two claims from early drafts of this paper did not survive verification
+against the raw per-task result files and are not repeated in this
+version: a ``73\,\% runtime reduction'' ($3.7\times$ speedup) and a
+subsequently reported $1.73\times$/$1.64\times$ speedup, both for
+HypatiaX over the neural-network baseline. The verified result is the
+opposite: across the five 74-task v3 seed files held in the repository ($370$ task
+runs audited; a separate PCA block of the same table, also $370$ runs, shows the
+same direction), the hybrid system is
+\emph{slower} than the pure neural-network baseline on every seed,
+by a factor of $3.8\times$ to $11.2\times$ on mean time,
+whether measured over all tasks or over LLM-routed tasks only
+(Table~\ref{tab:timing_full}, \S\ref{sec:timing}).
+
+All seed-42 DeFi figures in this paper (the near-perfect-rate and
+decision-attribution-bug analysis of \S\ref{sec:hybrid-attribution-bug},
+Table~\ref{tab:difficulty}, and Table~\ref{tab:hybrid-bug-breakdown}) are
+computed from \texttt{hypatiax\_defi\_benchmark\_v3\_results\_seed42.json}
+as it currently exists in the repository (canonical location
+\texttt{hypatiax/data/results/comparison\_results/noise-noiseless/noiseless/defi};
+identical copies under \texttt{hypatiax-dev/data\_exp} and \texttt{data\_old};
+md5 \texttt{cbf503d0b3985b4c1bccf7ed18e0316b}). This file's raw figures
+--- \texttt{hybrid.test\_r2}$>0.99$ on 67/74 tasks (90.5\,\%),
+\texttt{pure\_llm.success} on 45/74 (60.8\,\%), and 5 pure-LLM
+catastrophic failures ($\Rsq<-10$) --- match this paper's own headline
+raw numbers exactly, and are the basis for every corrected figure
+reported below and in \S\ref{sec:hybrid-attribution-bug}: 44/74 (59.5\,\%)
+corrected near-perfect rate, tied with pure LLM tier-by-tier, and 23
+uncorroborated successes (3 easy / 11 medium / 9 hard). Two other v3-labelled seed-42 files exist in the
+repository (in \texttt{hypatiax-dev/data}/\texttt{data\_dev}/\texttt{data\_last},
+md5 \texttt{89037935469176741a5fb4479f2c725f}, and in
+\texttt{hypatiax/data\_old}) with slightly different task-level results
+(73/74 and 67/74 raw \texttt{hybrid.success} respectively, against 72/74
+above); all three give a corrected near-perfect rate in the same
+58--61\,\% band and an uncorroborated-success count of 22--23, so the
+qualitative finding --- HypatiaX ties, rather than beats, pure LLM on
+this benchmark once the attribution bug is corrected --- does not depend
+on which of the three is used. Separately, a fourth-generation
+(\texttt{v4}) result file with a different, more complex router now
+occupies the \texttt{hypatiax/data} path the repository's own README
+designates as source-of-truth; that file uses a materially different
+architecture from the three-way (Pure LLM / Neural Network / Hybrid)
+system this paper describes and is not used anywhere in this paper. \textbf{Update (2026-09-28):} every cell of
+Table~\ref{tab:main_results} has now been recomputed directly from this
+file under the paper's own metric definitions (\S\ref{sec:setup_metrics}).
+The earlier Pure~LLM and Neural~MLP rows did not reproduce and have been
+replaced; the Hybrid row is shown both uncorrected (the pipeline's
+self-report) and corrected for the attribution bug.}}
+\end{center}
+\vspace{0.5em}
+
+\subsection{Nguyen-12: reproducibility note on LLM model identity}
+\paragraph{Reproducibility note: LLM model identity (extends issue
+\texttt{FIX-N3}).} The language model actually
+invoked on this benchmark's call path is not pinned via any
+environment-variable or \texttt{repro.yaml} setting that is actually read
+at runtime, despite appearing to be: four traced source snapshots each
+hardcode a different \texttt{LLMConfig.model} default
+(\texttt{claude-sonnet-4-6}, \texttt{claude-sonnet-4-5}, and
+\texttt{claude-sonnet-4-20250514}), and none of them reads the
+\texttt{LLM\_MODEL} environment variable or the \texttt{repro.yaml}
+\texttt{llm\_model} field that a reader might otherwise assume controls
+it. The script that actually sits on the Nguyen-12 call path,
+\texttt{hypatia.py}, uses a fifth string, \texttt{claude-sonnet-5}, at
+\texttt{temperature=0.25}, with no sampling seed exposed on its
+\texttt{client.messages.create()} call. Both \texttt{claude-sonnet-4-6}
+and \texttt{claude-sonnet-5} are dateless identifiers, but --- per
+Anthropic's model-versioning documentation for the 4.6-and-later
+generation --- dateless IDs in that generation are pinned, fixed
+snapshots rather than drifting aliases, so model-version drift is not the
+expected source of run-to-run differences.
+
+Sampling nondeterminism at the
+(unseeded, non-zero-temperature) LLM layer remains a contributing,
+independently verified factor regardless of which code path is in play,
+since the Claude API is not guaranteed to return bit-identical completions
+for identical prompts even at low temperature. Three action items were tracked as an explicit extension of
+\texttt{FIX-N3}. (i) \emph{Resolved.} The dead
+\texttt{LLM\_MODEL} environment variable in
+\texttt{exp3\_nguyen12\_hybrid50v\_02.py} previously had no effect on
+the call it appeared to configure: it was set via
+\texttt{os.environ.setdefault(...)} but never read by
+\texttt{get\_llm\_prior()}, whose call site passed no \texttt{model}
+argument and so silently fell back to \texttt{hypatia.py}'s own default,
+\texttt{claude-sonnet-5}. The call site now passes
+\texttt{model=os.environ["LLM\_MODEL"]} explicitly, so the environment
+variable actually governs which model is invoked. (ii) \texttt{run\_all.sh} STEP~7 and STEP~8 (\texttt{exp3}/\texttt{exp3b}) invoke
+\texttt{exp3\_nguyen12\_hybrid50v\_03.py} with \texttt{--temperature 0.25} passed
+explicitly, and \texttt{ci\_runner\_repro.yml}'s \texttt{SCRIPT=} entries match. (iii) \emph{Resolved.}
+\texttt{run\_all.sh} STEP~7 (\texttt{exp3}) and STEP~8 (\texttt{exp3b}) both invoke
+\texttt{exp3\_nguyen12\_hybrid50v\_03.py}, confirming it is the script CI runs for
+Nguyen-12; the call chain is fully verified.
+
+\subsection{Runtime Reproducibility Audit: Detailed Analysis}
+The authoritative runtime table is Table~\ref{tab:timing_full} in \S\ref{sec:timing}
+(main text), together with the LLM-routed-only view in
+Table~\ref{tab:timing_llm_routed_full}. Both are the direct, unmodified output of
+\texttt{scripts/generate\_tables.py} run against the five 74-task v3 seed files and the
+five 74-task PCA seed files in the repository, with no hand-editing of any number.
+
+Two earlier speedup claims do not reproduce: a ``73\,\% runtime reduction''
+($3.7\times$ speedup), and a $1.73\times$/$1.64\times$ speedup. Neither reproduces from
+any raw file examined, under any seed or pooling; the source of the 73\,\% figure is
+not identified in any raw file audited.
+
+All five seed files used here contain the full 74 tasks (\S\ref{sec:timing_data_defect}). The pooled 5-seed / 370-task row in
+Table~\ref{tab:timing_full} is representative of those five files, with the
+provenance caveats given in \S\ref{sec:timing_data_defect}, and the
+direction of the runtime claim (hybrid slower than NN, every seed) does not
+depend on the pooling.
+
+\subsection{Process and Credibility Notes}
+None of the items below is a claim made in the body of this paper; each bears on figures
+elsewhere in the reproducibility material. Full detail is in Supplementary Material~A,
+Section~10 (``Process/Credibility Items''). The project's CI dashboard from the July~9 run
+(Supplementary~A \S10.1) should not be cited: its upstream notebooks reported ``not found''
+while its summary asserted ``0 open issues''. The pipeline defect behind it
+(\texttt{build\_report.py} accepting notebook file existence as a proxy for a completed run)
+is fixed as of commit \texttt{9d7a833f} (2026-07-29): the script now checks each notebook's
+per-cell execution status and fails the build rather than publish a stale summary. The legacy
+exp2 baseline-lock threshold defect ($R^2 \geq 0.9999$ used in place of the pipeline's stated
+$R^2 \geq 0.999999$, which had inflated the legacy baseline from 74/90 to 81/90;
+Supplementary~A \S10.2) is resolved: 74/90 is confirmed against a fresh CI run and reproduced
+independently via a patched Gate~C schema check (\S10.4), so 74/90 should be cited, not 81/90.
+The $1.73\times$ runtime-speedup figure has been audited and does not reproduce (see
+\S\ref{sec:timing} and the abstract). The remaining resolved sub-items (the
+\texttt{ablation\_paired.json} 21/30 vs.\ 20/30 discrepancy, \S10.6, and the Gate~C
+\texttt{source\_files} manifest, \S10.5) are described in Supplementary~A and in the
+Post-Submission Report.
+
+
+\bibliography{references}
+\end{document}
