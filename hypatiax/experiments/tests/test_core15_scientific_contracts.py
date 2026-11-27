@@ -68,9 +68,11 @@ def test_kinetic_energy_rejects_logarithmic_and_wrong_velocity_dependence():
         "log(v*sqrt(m)*0.51 - 0.87 - 0.046/(m-2.069))",
     )
     good = _validate(problem, "0.5*m*v**2")
+    near_canonical = _validate(problem, "0.52*m*v**1.985")
     assert not bad.eligible
     assert "forbidden" in _reasons(bad) or "required" in _reasons(bad)
     assert good.eligible
+    assert near_canonical.eligible
 
 
 def test_gravity_rejects_variable_exponents_and_requires_inverse_square_distance():
@@ -79,8 +81,10 @@ def test_gravity_rejects_variable_exponents_and_requires_inverse_square_distance
         [(1e10, 1e12), (1e10, 1e12), (1e6, 1e8)],
     )
     bad = _validate(problem, "log(m1*m2/r)**(1.5**r)")
+    wrong_mass_power = _validate(problem, "0.036*m1**0.25*m2/r**2")
     good = _validate(problem, "6.674e-11*m1*m2/r**2")
     assert not bad.eligible
+    assert not wrong_mass_power.eligible
     assert good.eligible
 
 
