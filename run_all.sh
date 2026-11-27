@@ -1139,6 +1139,15 @@ run exp1_pca "DeFi benchmark: all 74 cases with PCA 40/60 split (mirrors exp1 wi
   _PCA_DEFI_DIR='${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi_pca'
   mkdir -p \"\${_PCA_DEFI_DIR}\"
 
+  # Remove only exp1_pca-generated result artifacts. Preserve baseline JSONs and unrelated files.
+  find '${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi_pca' -maxdepth 1 -type f \\
+    \\( -name 'hypatiax_defi_benchmark_pca_results*.json' \\
+       -o -name 'checkpoint*.json' \\
+       -o -name 'exp1_pca_summary.json' \\
+       -o -name 'split_protocol_disclosure.json' \\
+       -o -name 'pca_seed_aggregate_manifest.json' \\) -delete
+
+
   # Multi-seed, multi-worker: one background worker per seed (override with
   # EXP1_PCA_SEEDS=42,99,123,777,2024 / EXP1_PCA_MAX_PARALLEL). Each worker writes to its own
   # scratch dir so --force-fresh cannot clear a sibling seed's output; results are then
@@ -1195,6 +1204,45 @@ run exp1_pca "DeFi benchmark: all 74 cases with PCA 40/60 split (mirrors exp1 wi
     echo \"::error::exp1_pca worker(s) failed for seed(s):\${_FAILED_SEEDS} — see \${_SCRATCH_ROOT}/seed<N>.log and exp1_pca_run.log\"
     exit 1
   fi
+
+
+  # Fail closed unless each requested seed produced exactly 74 distinct equation records.
+  EXP1_PCA_VALIDATION_SEEDS=\"\${_SEEDS_CSV}\" python3 - <<'PYEOF_VALIDATE'
+import json, os, pathlib, sys
+root = pathlib.Path('${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi_pca')
+expected = [int(x) for x in os.environ['EXP1_PCA_VALIDATION_SEEDS'].split(',') if x.strip()]
+errors = []
+for seed in expected:
+    path = root / ('hypatiax_defi_benchmark_pca_results.json' if seed == 42
+                   else f'hypatiax_defi_benchmark_pca_results_seed{seed}.json')
+    if not path.is_file():
+        errors.append(f'seed {seed}: missing expected file {path.name}')
+        continue
+    try:
+        data = json.loads(path.read_text())
+    except Exception as exc:
+        errors.append(f'seed {seed}: invalid JSON ({exc})')
+        continue
+    cases = data if isinstance(data, list) else data.get('results', [data])
+    rows = [c for c in cases if isinstance(c, dict)]
+    ids = [c.get('equation_id') for c in rows]
+    if len(rows) != 74:
+        errors.append(f'seed {seed}: expected 74 records, found {len(rows)}')
+    if any(x is None for x in ids) or len(set(ids)) != 74:
+        errors.append(f'seed {seed}: expected 74 non-empty unique equation_id values')
+    for row in rows:
+        row_seed = row.get('seed')
+        if row_seed is not None and int(row_seed) != seed:
+            errors.append(f'seed {seed}: file contains record tagged seed {row_seed}')
+            break
+if len(set(expected)) != len(expected):
+    errors.append('EXP1_PCA_SEEDS contains duplicate seed values')
+if errors:
+    print('::error::exp1_pca output validation failed:')
+    for error in errors: print(' - ' + error)
+    sys.exit(1)
+print(f'[exp1_pca] Validated {len(expected)} seed files × 74 unique equations = {len(expected)*74} records.')
+PYEOF_VALIDATE
 
   python3 - <<'PYEOF'
 import json, pathlib, datetime
