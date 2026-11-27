@@ -72,7 +72,7 @@ def test_common_piecewise_and_distribution_helpers_are_supported():
 
 def test_ground_truth_expression_is_parsed_and_compared():
     result = adjudicate_symbolic_equivalence(
-        "def formula(x):\\n    return x * x + 2 * x + 1",
+        "def formula(x):\n    return x * x + 2 * x + 1",
         "(x + 1)**2", ["x"],
     )
     assert result["status"] == "exact_symbolic_equivalent"
@@ -81,7 +81,7 @@ def test_ground_truth_expression_is_parsed_and_compared():
 
 def test_invalid_ground_truth_expression_is_not_assessable():
     result = adjudicate_symbolic_equivalence(
-        "def formula(x):\\n    return x", "x +", ["x"],
+        "def formula(x):\n    return x", "x +", ["x"],
     )
     assert result["status"] == "not_assessable"
     assert result["symbolically_equivalent"] is None
