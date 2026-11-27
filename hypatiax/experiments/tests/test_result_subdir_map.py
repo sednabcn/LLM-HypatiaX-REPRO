@@ -142,8 +142,7 @@ def test_pipeline_forwards_force_rerun_to_runner():
 def test_exp1b_pca_fails_closed_on_missing_required_inputs_and_outputs():
     runner = (ROOT / "run_all.sh").read_text()
     start = runner.index('run exp1b_pca "')
-    end = runner.find("\\nrun ", start + 1)
-    block = runner[start: end if end >= 0 else len(runner)]
+    block = runner[start:start + 400]
     helper = (ROOT / "scripts/ci/run_exp1b_pca.sh").read_text()
     assert "run_exp1b_pca.sh" in block
     assert "set -euo pipefail" in helper
