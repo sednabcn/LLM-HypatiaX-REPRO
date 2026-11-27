@@ -62,8 +62,8 @@ Output    : /home/runner/work/_temp/exp1_4060_seed2024/hypatiax_defi_benchmark_v
 
 [09/74] Long position unrealized PnL  (EASY)
   Split → train=80, test=120
-  neural_network : train=0.9082, test=0.9515
-  hybrid         : train=1.0000, test=0.9901 [ensemble]
+  neural_network : train=0.9083, test=0.9500
+  hybrid         : train=1.0000, test=0.9896 [ensemble]
   💾 Checkpoint saved (9/74)
 
 [10/74] Short position unrealized PnL  (EASY)
@@ -339,7 +339,7 @@ Output    : /home/runner/work/_temp/exp1_4060_seed2024/hypatiax_defi_benchmark_v
 [55/74] Black-Scholes Put Price  (HARD)
   Split → train=80, test=120
   neural_network : train=0.9988, test=0.9965
-  hybrid         : train=1.0000, test=0.9996 [ensemble]
+  hybrid         : train=0.9988, test=0.9965 [nn]
   💾 Checkpoint saved (55/74)
 
 [56/74] Component ES  (HARD)
@@ -465,26 +465,26 @@ Total cases run : 74
 
 NOTE: All percentages use FIXED denominator (standard cases only).
       NaN / failure counts as 0 toward the denominator.\n
-  Neural Network: median=0.9965, mean(clip-10)=0.7451, >0.9: 71.2%, >0.99: 60.3%  (catastrophic R²<-10.0: 0)
-  Hybrid: median=0.9971, mean(clip-10)=0.7606, >0.9: 76.7%, >0.99: 64.4%  (catastrophic R²<-10.0: 0)
+  Neural Network: median=0.9965, mean(clip-10)=0.7450, >0.9: 71.2%, >0.99: 60.3%  (catastrophic R²<-10.0: 0)
+  Hybrid: median=0.9965, mean(clip-10)=0.7606, >0.9: 76.7%, >0.99: 63.0%  (catastrophic R²<-10.0: 0)
 
 ── Intractable cases (1) ─────────────────────────────────────
   Impermanent loss breakeven fee rate         Neural Network=-0.0443 | Hybrid=-0.0443
 
 ── By difficulty ─────────────────────────────────────────────────────────
   easy   | neural_network: median=0.9978, >0.99: 73.9%  (n=23)
-  easy   | hybrid        : median=0.9978, >0.99: 82.6%  (n=23)
+  easy   | hybrid        : median=0.9978, >0.99: 78.3%  (n=23)
   medium | neural_network: median=0.9974, >0.99: 62.1%  (n=29)
   medium | hybrid        : median=0.9974, >0.99: 65.5%  (n=29)
   hard   | neural_network: median=0.9762, >0.99: 42.9%  (n=21)
   hard   | hybrid        : median=0.9762, >0.99: 42.9%  (n=21)
 
 ── Timing summary (per-case wall time) ──────────────────────────────────
-  Neural Network: total=23.844s, mean=0.322s, median=0.427s (n=74)
-  Hybrid        : total=141.654s, mean=1.914s, median=1.530s (n=74)
-  Hybrid end-to-end components: NN=23.844s, LLM/routing/evaluation=117.810s
-  Hybrid provider request: total=107.620s, mean=1.454s, median=1.066s (n=74)
-  Hybrid LLM token usage: input=12193 (n=74), output=4879 (n=74)
+  Neural Network: total=18.183s, mean=0.246s, median=0.322s (n=74)
+  Hybrid        : total=131.517s, mean=1.777s, median=1.435s (n=74)
+  Hybrid end-to-end components: NN=18.183s, LLM/routing/evaluation=113.333s
+  Hybrid provider request: total=106.067s, mean=1.433s, median=1.048s (n=74)
+  Hybrid LLM token usage: input=12193 (n=74), output=4873 (n=74)
 
 ================================================================================
 
