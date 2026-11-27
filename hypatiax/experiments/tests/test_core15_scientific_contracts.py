@@ -20,7 +20,7 @@ def _problem(name, variables, ranges):
 
 
 def _validate(problem, expression):
-    return CandidateValidator().validate(problem, expression, source="regression_fixture")
+    return CandidateValidator().validate(problem, expression, source="pysr_search")
 
 
 def _reasons(record):
