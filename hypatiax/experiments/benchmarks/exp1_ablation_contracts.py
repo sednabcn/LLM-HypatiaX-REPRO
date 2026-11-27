@@ -210,8 +210,17 @@ def build_core15_discovery_problem(
             {"variable": safe_by_original["r"]},
             "Impermanent loss is invariant under reciprocal price-ratio transformation.")
     elif equation_name == "ideal gas law":
-        # The shared required_variables gate is the critical safeguard here.
-        pass
+        add("required_power", "ideal_gas_mole_linearity",
+            {"variable": safe_by_original["n"], "exponent": 1.0},
+            "The ideal-gas law is linear in amount of substance.")
+        add("required_power", "ideal_gas_temperature_linearity",
+            {"variable": safe_by_original["T"], "exponent": 1.0},
+            "The ideal-gas law is linear in absolute temperature.")
+        add("required_power", "ideal_gas_inverse_volume",
+            {"variable": safe_by_original["V"], "exponent": -1.0},
+            "The ideal-gas law is inverse in volume.")
+        add("no_variable_exponents", "ideal_gas_constant_exponents",
+            description="Ideal-gas exponents are fixed, not input-dependent.")
     elif equation_name == "michaelis-menten":
         add("variable_in_denominator", "michaelis_menten_saturation_denominator",
             {"variable": safe_by_original["S"]},
@@ -220,6 +229,9 @@ def build_core15_discovery_problem(
             {"variable": safe_by_original["S"]},
             "The Michaelis-Menten rate is increasing and concave-down over the declared substrate domain.")
     elif equation_name == "kinetic energy":
+        add("required_power", "kinetic_energy_mass_linearity",
+            {"variable": safe_by_original["m"], "exponent": 1.0},
+            "Classical kinetic energy is linear in mass.")
         add("required_power", "kinetic_energy_velocity_squared",
             {"variable": safe_by_original["v"], "exponent": 2.0, "tolerance": 0.05},
             "Classical kinetic energy is quadratic in velocity.")
