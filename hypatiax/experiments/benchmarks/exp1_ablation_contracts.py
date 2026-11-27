@@ -265,7 +265,7 @@ def audit_core15_expression(equation: dict, expression: str, seed: int) -> dict:
     return CandidateValidator().validate(
         problem,
         expression,
-        source="core15_post_selection_audit",
+        source="unknown",
         search_strategy="audit_only",
         seed=seed,
     ).to_dict()
