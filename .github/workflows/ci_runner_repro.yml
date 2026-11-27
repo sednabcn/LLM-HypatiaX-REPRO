@@ -5291,22 +5291,17 @@ jobs:
         with:
           token: ${{ secrets.PAT_TOKEN }}
           fetch-depth: 1
-      - name: Check this seed's result
+      - name: Prepare this seed for a fresh benchmark run
         id: check_random
         env:
-          RESULTS_DIR: ${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
           SEED: ${{ matrix.seed }}
-          FORCE_RERUN: ${{ github.event.inputs.force_rerun || 'false' }}
         run: |
           set -euo pipefail
-          SUFFIX=""
-          [[ "$SEED" == "42" ]] || SUFFIX="_seed${SEED}"
-          RESULT="${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi_random_4060/hypatiax_defi_benchmark_v3c_4060_results${SUFFIX}.json"
-          if [[ "$FORCE_RERUN" != "true" && -s "$RESULT" ]]; then
-            echo "already_done=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "already_done=false" >> "$GITHUB_OUTPUT"
-          fi
+          # A checked-in JSON file is not proof that this experiment completed:
+          # legacy/stale outputs can exist before the first real worker launch.
+          # Every explicit exp1_4060_seeds dispatch must execute its benchmark.
+          echo "already_done=false" >> "$GITHUB_OUTPUT"
+          echo "[run] Launching the random 40/60 benchmark for seed $SEED; any prior output will be replaced by validated fresh output."
       - name: Set up Python
         if: steps.check_random.outputs.already_done != 'true'
         uses: actions/setup-python@v5.3.0
