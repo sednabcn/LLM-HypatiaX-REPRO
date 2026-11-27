@@ -407,9 +407,9 @@ class CandidateValidator:
                     continue
                 if any(
                     isinstance(child, sp.Pow)
-                    and str(child.base) == str(variable)
                     and child.exp.is_number
-                    and math.isclose(float(child.exp), -1.0, abs_tol=1e-12)
+                    and float(child.exp) < 0.0
+                    and sp.Symbol(str(variable), real=True) in child.base.free_symbols
                     for arg in node.args for child in sp.preorder_traversal(arg)
                 ):
                     matches.append(sp.sstr(node))
