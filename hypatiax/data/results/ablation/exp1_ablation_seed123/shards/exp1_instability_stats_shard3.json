@@ -52,16 +52,16 @@
     {
       "equation": "Gravitational Force",
       "domain": "Physics",
-      "extrap_r2_near": 0.9972481051002985,
-      "extrap_r2_far": 0.9962626497851994,
-      "instability_index": 0.000985455315099082
+      "extrap_r2_near": null,
+      "extrap_r2_far": null,
+      "instability_index": null
     },
     {
       "equation": "Ideal Gas Law",
       "domain": "Physics",
-      "extrap_r2_near": 0.9999998881257697,
-      "extrap_r2_far": 0.9999998881257697,
-      "instability_index": 0.0
+      "extrap_r2_near": null,
+      "extrap_r2_far": null,
+      "instability_index": null
     },
     {
       "equation": "Impermanent Loss",
