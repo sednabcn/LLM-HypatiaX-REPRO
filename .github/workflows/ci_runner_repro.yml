@@ -752,6 +752,14 @@ jobs:
               DEFAULT_SEEDS="${SEEDS_IN:-99,123,777,2024}"
               ;;
 
+            exp1_4060_seeds)
+              # Random 40/60 DeFi control: helper executes all five seeds sequentially.
+              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c_4060.py"
+              NEEDS_JULIA=false
+              RESULT_SUBDIR="comparison_results/noise-noiseless/noiseless/defi_random_4060"
+              DEFAULT_SEEDS="42,99,123,777,2024"
+              ;;
+
             exp1_pca)
               # exp1_pca = the 74-task PCA 40/60 DeFi benchmark over the FULL seed set, one
               # worker (runner) per seed, all in parallel. Runs through the same plan/worker
