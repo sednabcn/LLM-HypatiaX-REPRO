@@ -1234,21 +1234,12 @@ seen = set()   # one record per (equation_id, seed)
 for fp in sorted(PCA_DIR.glob('*.json')) if PCA_DIR.exists() else []:
     if any(x in fp.name for x in ('checkpoint', 'disclosure', 'summary', 'baseline')):
         continue
-    if not fp.is_file() or fp.stat().st_size == 0:
-        raise SystemExit(f'FAIL: required isolated PCA seed result missing/empty: {fp}')
     try:
         data = json.loads(fp.read_text())
-    except Exception as exc:
-        raise SystemExit(f'FAIL: invalid JSON in {fp}: {exc}')
-    expected_seed = int(fp.stem.rsplit('seed', 1)[1])
-    if not isinstance(data, list) or len(data) != 74:
-        raise SystemExit(f'FAIL: {fp.name} must contain 74 case records')
-    if {row.get('seed') for row in data if isinstance(row, dict)} != {expected_seed}:
-        raise SystemExit(f'FAIL: seed provenance mismatch in {fp.name}')
-    if len({row.get('equation_id') for row in data if isinstance(row, dict)}) != 74:
-        raise SystemExit(f'FAIL: {fp.name} does not contain 74 unique equations')
+    except Exception:
+        continue
     source_files.append(fp.name)
-    cases = data
+    cases = data if isinstance(data, list) else data.get('results', [data])
     for case in cases:
         if not isinstance(case, dict):
             continue
@@ -1313,8 +1304,6 @@ summary = {
     'source_files':   source_files[:20],
     'timestamp':      datetime.datetime.now(datetime.timezone.utc).isoformat(),
 }
-if source_files != [f'hypatiax_defi_benchmark_pca_results_seed{s}.json' for s in (42, 99, 123, 777, 2024)]:
-    raise SystemExit('FAIL: PCA summary did not consume the complete canonical five-seed set')
 SUMMARY.write_text(json.dumps(summary, indent=2))
 rate_str = f'{n_pass}/{n_total}' if n_total > 0 else '?/?'
 print(f'  [exp1_pca] DeFi PCA solve rate (seed {canon}): {rate_str} → exp1_pca_summary.json')
@@ -1490,12 +1479,21 @@ seen_case_seed = set()  # dedup: keep one record per (equation_id, seed) across 
 for fp in [PCA15_DIR / f'hypatiax_defi_benchmark_pca_results_seed{s}.json' for s in (42, 99, 123, 777, 2024)] if PCA15_DIR.exists() else []:
     if any(x in fp.name for x in ('checkpoint', 'disclosure', 'summary', 'baseline')):
         continue
+    if not fp.is_file() or fp.stat().st_size == 0:
+        raise SystemExit(f'FAIL: required isolated PCA seed result missing/empty: {fp}')
     try:
         data = json.loads(fp.read_text())
-    except Exception:
-        continue
+    except Exception as exc:
+        raise SystemExit(f'FAIL: invalid JSON in {fp}: {exc}')
+    expected_seed = int(fp.stem.rsplit('seed', 1)[1])
+    if not isinstance(data, list) or len(data) != 74:
+        raise SystemExit(f'FAIL: {fp.name} must contain 74 case records')
+    if {row.get('seed') for row in data if isinstance(row, dict)} != {expected_seed}:
+        raise SystemExit(f'FAIL: seed provenance mismatch in {fp.name}')
+    if len({row.get('equation_id') for row in data if isinstance(row, dict)}) != 74:
+        raise SystemExit(f'FAIL: {fp.name} does not contain 74 unique equations')
     source_files.append(fp.name)
-    cases = data if isinstance(data, list) else data.get('results', [data])
+    cases = data
     for case in cases:
         if not isinstance(case, dict):
             continue
@@ -1554,6 +1552,8 @@ summary = {
     'source_files':    source_files[:20],
     'timestamp':       datetime.datetime.now(datetime.timezone.utc).isoformat(),
 }
+if source_files != [f'hypatiax_defi_benchmark_pca_results_seed{s}.json' for s in (42, 99, 123, 777, 2024)]:
+    raise SystemExit('FAIL: PCA summary did not consume the complete canonical five-seed set')
 SUMMARY.write_text(json.dumps(summary, indent=2))
 rate_str = f'{n_pass}/{n_total}' if n_total > 0 else '?/?'
 print(f'  [exp1b_pca] DeFi PCA portfolio-sweep solve rate: {rate_str} → exp1b_pca_summary.json')
