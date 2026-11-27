@@ -68,10 +68,11 @@ def test_exp1b_pca_summary_reads_only_the_five_isolated_seed_files():
     run_all = (repo_root / "run_all.sh").read_text(encoding="utf-8")
     start = run_all.index('run exp1b_pca "')
     summary_start = run_all.index("PYEOF_SUMMARY_1B", start)
-    block = run_all[start:summary_start]
+    summary_end = run_all.index("PYEOF_SUMMARY_1B", summary_start + len("PYEOF_SUMMARY_1B"))
+    summary_block = run_all[summary_start:summary_end]
 
-    assert "PCA15_DIR / f'hypatiax_defi_benchmark_pca_results_seed{s}.json'" in block
-    assert "(42, 99, 123, 777, 2024)" in block
-    assert "PCA15_DIR.glob('*.json')" not in block
-    assert "seed provenance mismatch" in block
-    assert "must contain 74 case records" in block
+    assert "PCA15_DIR / f'hypatiax_defi_benchmark_pca_results_seed{s}.json'" in summary_block
+    assert "(42, 99, 123, 777, 2024)" in summary_block
+    assert "PCA15_DIR.glob('*.json')" not in summary_block
+    assert "seed provenance mismatch" in summary_block
+    assert "must contain 74 case records" in summary_block
