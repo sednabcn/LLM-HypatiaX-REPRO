@@ -38,9 +38,9 @@
     {
       "equation": "Logistic Growth",
       "domain": "Biology",
-      "extrap_r2_near": -43.37211828351482,
-      "extrap_r2_far": -22.145373382898164,
-      "instability_index": 21.22674490061666
+      "extrap_r2_near": 0.9960012018706448,
+      "extrap_r2_far": 0.9999816346044194,
+      "instability_index": 0.003980432733774575
     },
     {
       "equation": "Kinetic Energy",

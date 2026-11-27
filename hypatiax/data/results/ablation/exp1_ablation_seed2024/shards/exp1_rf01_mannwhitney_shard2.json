@@ -16,28 +16,28 @@
       "Liquidation Price",
       "Portfolio Std Dev"
     ],
-    "U_greater": 3.0,
-    "p_greater": 0.8,
-    "U_two_sided": 3.0,
-    "p_two_sided": 0.7,
-    "wilcoxon_W": 1.0,
-    "wilcoxon_p_two": 0.5,
-    "wilcoxon_p_greater": 0.875,
-    "rank_biserial_r": -0.6666666666666666,
-    "H_median_far_r2": 0.8067765522336499,
-    "P_median_far_r2": 0.9926889931670724,
-    "H_mean_far_r2": -6.779532276888172,
-    "P_mean_far_r2": 0.9772872753128351,
-    "h_wins": 0,
-    "p_wins": 2,
-    "ties": 1,
+    "U_greater": 7.0,
+    "p_greater": 0.2,
+    "U_two_sided": 7.0,
+    "p_two_sided": 0.4,
+    "wilcoxon_W": 0.0,
+    "wilcoxon_p_two": 0.25,
+    "wilcoxon_p_greater": 0.125,
+    "rank_biserial_r": 1.0,
+    "H_median_far_r2": 0.9999816346044194,
+    "P_median_far_r2": 0.9974764808264275,
+    "H_mean_far_r2": 0.9355860622793565,
+    "P_mean_far_r2": 0.8721886447182855,
+    "h_wins": 1,
+    "p_wins": 0,
+    "ties": 2,
     "primary_test": "wilcoxon_signed_rank",
     "effect_size": "paired_rank_biserial",
     "rank_biserial_method": "paired_signed_rank",
-    "primary_p_greater": 0.875,
+    "primary_p_greater": 0.125,
     "significant_p05": false,
     "significance_status": "not_significant",
-    "paper_sentence": "Across Core-15, HypatiaX does not achieve statistically significant higher far-extrapolation $R^2$ than PySR-only (Wilcoxon signed-rank $W=1$, $p_{H>P}=0.8750$; Mann-Whitney sensitivity $U=3$, $p=0.8000$, $n=3$; paired rank-biserial $r=-0.67$). No single domain consistently drives the improvement.",
+    "paper_sentence": "Across Core-15, HypatiaX does not achieve statistically significant higher far-extrapolation $R^2$ than PySR-only (Wilcoxon signed-rank $W=0$, $p_{H>P}=0.1250$; Mann-Whitney sensitivity $U=7$, $p=0.2000$, $n=3$; paired rank-biserial $r=+1.00$). The directional improvement is concentrated in 1 domain(s) \u2014 Biology, suggesting benefit is domain-selective.",
     "equations_included": [
       "Allometric Scaling",
       "Michaelis-Menten",
@@ -46,20 +46,20 @@
     "H_far_r2_vector": [
       1.0,
       0.8067765522336499,
-      -22.145373382898164
+      0.9999816346044194
     ],
     "P_far_r2_vector": [
-      0.9926889931670724,
-      0.9391957660307733,
-      0.9999770667406596
+      0.9974764808264275,
+      0.6193178525543568,
+      0.9997716007740722
     ],
     "subdomain_breakdown": {
       "Biology": {
         "n": 3,
-        "h_wins": 0,
-        "ties": 1,
-        "p_wins": 2,
-        "mean_delta": -7.756819552201006,
+        "h_wins": 1,
+        "ties": 2,
+        "p_wins": 0,
+        "mean_delta": 0.06339741756107091,
         "equations": [
           "Allometric Scaling",
           "Michaelis-Menten",
@@ -67,9 +67,9 @@
         ]
       }
     },
-    "driving_domains": [],
-    "p_dominant_domains": [
+    "driving_domains": [
       "Biology"
-    ]
+    ],
+    "p_dominant_domains": []
   }
 }
