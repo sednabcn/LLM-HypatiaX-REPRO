@@ -11,6 +11,20 @@ from typing import Any
 from hypatiax.experiments.symbolic_equivalence import adjudicate_symbolic_equivalence
 
 
+def _audit_data_shapes(data: Any) -> dict[str, Any] | None:
+    if not isinstance(data, dict):
+        return None
+    result = {}
+    for key in ("X_train", "y_train", "X_test", "y_test"):
+        value = data.get(key)
+        if isinstance(value, list):
+            result[key] = {
+                "rows": len(value),
+                "columns": len(value[0]) if value and isinstance(value[0], list) else 1,
+            }
+    return result
+
+
 def audit_record(record: dict[str, Any]) -> dict[str, Any]:
     context = record.get("formula_context") or {}
     results = record.get("results") or {}
@@ -43,9 +57,8 @@ def audit_record(record: dict[str, Any]) -> dict[str, Any]:
             "execution_status": hybrid.get("route_execution_status"),
             "structural_risk_flag": hybrid.get("structural_risk_flag"),
             "structural_risk_tokens": hybrid.get("structural_risk_tokens"),
-            "llm_degradation_status": hybrid.get("llm_degradation_status"),
-            "llm_degradation_delta": hybrid.get("llm_degradation_delta"),
             "degradation_tau": hybrid.get("degradation_tau"),
+            "nn_degradation_probe": hybrid.get("degradation_probe"),
             "ood_diagnostic": hybrid.get("ood_diagnostic"),
             "ood_covariate_protocol": hybrid.get("ood_covariate_protocol"),
             "blend_weights": hybrid.get("blend_weights"),
@@ -53,9 +66,15 @@ def audit_record(record: dict[str, Any]) -> dict[str, Any]:
             "nn_abstained": hybrid.get("nn_abstained"),
             "nn_edge_r2": hybrid.get("nn_edge_r2"),
             "ridge_edge_r2": hybrid.get("ridge_edge_r2"),
-            "signed_ridge_edge_r2": hybrid.get("signed_ridge_edge_r2"),\n            "signed_ridge_eligible": hybrid.get("signed_ridge_eligible"),\n            "physical_bounds_applied": hybrid.get("physical_bounds_applied"),
+            "signed_ridge_edge_r2": hybrid.get("signed_ridge_edge_r2"),
+            "signed_ridge_eligible": hybrid.get("signed_ridge_eligible"),
+            "physical_bounds_applied": hybrid.get("physical_bounds_applied"),
             "nn_prediction_validation": hybrid.get("nn_prediction_validation"),
             "final_predictor_source": hybrid.get("selected_predictor_source"),
+            "llm_degradation_estimate": {
+                "status": "not_serialized_in_4060_case_record",
+                "delta": None,
+            },
         },
         "scores": {
             "llm_train_r2": hybrid.get("llm_train_r2"),
@@ -67,32 +86,22 @@ def audit_record(record: dict[str, Any]) -> dict[str, Any]:
             "hybrid_test_r2": hybrid.get("test_r2"),
         },
         "audit_scope": {
-            "route_field_note": (\n                "The saved case record includes route decision/reason, trust gate, NN probe, OOD diagnostic, blend weights, and selected NN model. It does not serialize a separate LLM degradation estimate; the saved degradation_probe is NN-derived."\n            ),\n            "formula_compared": (
+            "formula_compared": (
                 "saved results.hybrid.formula (serialized from hybrid llm_code), "
                 "not final selected predictor"
             ),
             "ground_truth_source": context.get("ground_truth_source"),
             "ground_truth_excluded_from_prompt": context.get("ground_truth_excluded_from_prompt"),
             "constants_used": constants or {},
+            "route_field_note": (
+                "degradation_probe is NN-derived; no separate LLM degradation estimate "
+                "is persisted in this case record"
+            ),
             "split_protocol": record.get("split_protocol"),
             "audit_data_present": bool(record.get("audit_data")),
             "audit_data_shapes": _audit_data_shapes(record.get("audit_data")),
         },
     }
-
-
-def _audit_data_shapes(data: Any) -> dict[str, Any] | None:
-    if not isinstance(data, dict):
-        return None
-    result = {}
-    for key in ("X_train", "y_train", "X_test", "y_test"):
-        value = data.get(key)
-        if isinstance(value, list):
-            result[key] = {
-                "rows": len(value),
-                "columns": len(value[0]) if value and isinstance(value[0], list) else 1,
-            }
-    return result
 
 
 def build_audit(records: list[dict[str, Any]]) -> dict[str, Any]:
