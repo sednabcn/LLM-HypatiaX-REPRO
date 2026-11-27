@@ -376,7 +376,7 @@ class CandidateValidator:
                 return "unknown", "required_power exponent must be finite", {}
             if not math.isfinite(expected):
                 return "unknown", "required_power exponent must be finite", {}
-            expanded_for_power_check = sp.expand(expression)
+            expanded_for_power_check = sp.expand(expression, deep=False)
             matches = [
                 sp.sstr(node) for node in sp.preorder_traversal(expanded_for_power_check)
                 if isinstance(node, sp.Pow)
