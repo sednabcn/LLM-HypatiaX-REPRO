@@ -596,7 +596,7 @@ jobs:
           if [[ "$EXP" == "exp1b_pca" || "$EXP" == "exp2_feynman_pca" || "$EXP" == "exp1_ablation_seeds" || "$EXP" == "exp1_4060_seeds" ]]; then
             echo "is_pca=true"    >> "$GITHUB_OUTPUT"
             echo "skip_plan=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::${EXP} uses its dedicated five-seed matrix; generic planning is disabled."
+            echo "::notice::${EXP} uses a dedicated workflow path; generic planning is disabled."
           else
             echo "is_pca=false"    >> "$GITHUB_OUTPUT"
             echo "skip_plan=false" >> "$GITHUB_OUTPUT"
