@@ -1140,7 +1140,7 @@ run exp1_pca "DeFi benchmark: all 74 cases with PCA 40/60 split (mirrors exp1 wi
   mkdir -p \"\${_PCA_DEFI_DIR}\"
 
   # Remove only exp1_pca-generated result artifacts. Preserve baseline JSONs and unrelated files.
-  find "${_PCA_DEFI_DIR}" -maxdepth 1 -type f \\
+  find "\\${_PCA_DEFI_DIR}" -maxdepth 1 -type f \\
     \\( -name 'hypatiax_defi_benchmark_pca_results*.json' \\
        -o -name 'checkpoint*.json' \\
        -o -name 'exp1_pca_summary.json' \\
@@ -1207,10 +1207,10 @@ run exp1_pca "DeFi benchmark: all 74 cases with PCA 40/60 split (mirrors exp1 wi
 
 
   # Fail closed unless each requested seed produced exactly 74 distinct equation records.
-  python3 - <<'PYEOF_VALIDATE'
-import json, pathlib, re, sys
+  EXP1_PCA_VALIDATION_SEEDS="\\${_SEEDS_CSV}" python3 - <<'PYEOF_VALIDATE'
+import json, os, pathlib, sys
 root = pathlib.Path('${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi_pca')
-expected = [int(x) for x in "${_SEEDS_CSV}".split(",") if x.strip()]
+expected = [int(x) for x in os.environ["EXP1_PCA_VALIDATION_SEEDS"].split(",") if x.strip()]
 errors = []
 for seed in expected:
     path = root / ("hypatiax_defi_benchmark_pca_results.json" if seed == 42
