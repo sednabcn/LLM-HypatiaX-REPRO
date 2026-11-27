@@ -1489,10 +1489,16 @@ jobs:
           # Julia 1.11 executable installed by setup-julia. Recreate it only after
           # setup-julia has put the pinned runner Julia on PATH.
           rm -rf "${GITHUB_WORKSPACE}/.venv/julia_env"
+          JULIA_EXE="$(command -v julia)"
+          test -x "${JULIA_EXE}"
           julia -e 'VERSION.major == 1 && VERSION.minor == 11 || error("Expected Julia 1.11, got $(VERSION)")'
+          # Tell JuliaPkg explicitly which Julia to use. This avoids its fallback
+          # downloader selecting a different Julia when PATH discovery changes.
+          echo "PYTHON_JULIAPKG_EXE=${JULIA_EXE}" >> "${GITHUB_ENV}"
+          export PYTHON_JULIAPKG_EXE="${JULIA_EXE}"
           # Resolve the package requirements declared by the installed PySR and
           # JuliaCall distributions without importing PySR/JuliaCall first.
-          # force=True regenerates the project/manifest for the active Julia.
+          # force=True regenerates the project/manifest for the pinned Julia 1.11.
           .venv/bin/python -c "import juliapkg; juliapkg.resolve(force=True)"
           # PythonCall 0.9.28 defaults to a CondaPkg-managed interpreter.
           # On current conda-forge that can resolve to Python builds without
