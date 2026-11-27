@@ -954,7 +954,10 @@ def run_condition(eq, condition, seed=42, niterations=None,
         )
         from hypatiax.core.llm_meta import llm_meta
         _llm_m = llm_meta(res)   # real LLM time/expression/confidence from the engine
-        _scientific_audit = audit_core15_expression(eq, best_expr_raw, eq_seed)
+        _scientific_audit = res.get("candidate_validation")
+        if not isinstance(_scientific_audit, dict):
+            # Fallback audit for compatibility with older engine result schemas.
+            _scientific_audit = audit_core15_expression(eq, best_expr_raw, eq_seed)
         return {
             "condition":             condition,
             "completed":             True,
