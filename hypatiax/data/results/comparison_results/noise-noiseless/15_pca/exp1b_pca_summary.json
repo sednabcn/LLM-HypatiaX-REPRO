@@ -1,10 +1,10 @@
 {
   "fixc3_step": "exp1b_pca",
-  "description": "DeFi PCA portfolio seed sweep \u2014 PCA-directed 40/60 split",
+  "description": "DeFi all-74 equation seed sweep \u2014 PCA-directed 40/60 split",
   "split_protocol": "pca_40_60",
   "test_size": 0.6,
   "train_size": 0.4,
-  "task_filter": "portfolio",
+  "task_filter": "all_74_equations",
   "n_pass": 35,
   "n_total": 365,
   "solve_rate": 0.0958904109589041,
@@ -53,5 +53,60 @@
     "hypatiax_defi_benchmark_pca_results_seed777.json",
     "hypatiax_defi_benchmark_pca_results_seed2024.json"
   ],
-  "timestamp": "2026-11-27T09:18:40.428842+00:00"
+  "nn_undefined_metrics": [
+    {
+      "equation_id": "Optimal LP Position (Kelly)",
+      "seed": 42,
+      "reason": "undefined_train_or_test_metric"
+    },
+    {
+      "equation_id": "Optimal LP Position (Kelly)",
+      "seed": 99,
+      "reason": "undefined_train_or_test_metric"
+    },
+    {
+      "equation_id": "Optimal LP Position (Kelly)",
+      "seed": 123,
+      "reason": "undefined_train_or_test_metric"
+    },
+    {
+      "equation_id": "Optimal LP Position (Kelly)",
+      "seed": 777,
+      "reason": "undefined_train_or_test_metric"
+    },
+    {
+      "equation_id": "Optimal LP Position (Kelly)",
+      "seed": 2024,
+      "reason": "undefined_train_or_test_metric"
+    }
+  ],
+  "hybrid_undefined_metrics": [
+    {
+      "equation_id": "Optimal LP Position (Kelly)",
+      "seed": 42,
+      "reason": "constant_target"
+    },
+    {
+      "equation_id": "Optimal LP Position (Kelly)",
+      "seed": 99,
+      "reason": "constant_target"
+    },
+    {
+      "equation_id": "Optimal LP Position (Kelly)",
+      "seed": 123,
+      "reason": "constant_target"
+    },
+    {
+      "equation_id": "Optimal LP Position (Kelly)",
+      "seed": 777,
+      "reason": "constant_target"
+    },
+    {
+      "equation_id": "Optimal LP Position (Kelly)",
+      "seed": 2024,
+      "reason": "constant_target"
+    }
+  ],
+  "nn_feature_mismatch_records": [],
+  "timestamp": "2026-11-27T13:51:26.121903+00:00"
 }
