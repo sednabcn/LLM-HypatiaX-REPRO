@@ -58,7 +58,7 @@ def test_audit_reports_duplicate_equation_seed_pairs_and_protocol_coverage():
         "formula_context": {
             "variable_names": ["x"], "ground_truth_expression": "x",
         },
-        "results": {"hybrid": {"formula": "def formula(x):\\n    return x"}},
+        "results": {"hybrid": {"formula": "def formula(x):\n    return x"}},
         "audit_data": {"X_train": [[1.0]]},
     }
     report = build_audit([record, record])
