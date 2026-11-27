@@ -5077,8 +5077,7 @@ jobs:
 
   pca_run_exp1b:
     name: "C5c-2 · Run exp1b_pca (DeFi portfolio seed sweep, PCA 40/60)"
-    # This runner is selected directly by its dispatch input; the PCA gate is
-    # informational only and must not be a dependency for scheduling this job.
+    # Selected directly by its dispatch input; keep it independent of the PCA jobs.
     needs: [credential_preflight]
     if: ${{ always() && github.event.inputs.experiment == 'exp1b_pca' && needs.credential_preflight.result == 'success' }}
     runs-on: ubuntu-latest
