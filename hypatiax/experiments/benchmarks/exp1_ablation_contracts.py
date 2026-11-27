@@ -217,13 +217,19 @@ def build_core15_discovery_problem(
             "The Michaelis-Menten rate is increasing and concave-down over the declared substrate domain.")
     elif equation_name == "kinetic energy":
         add("required_power", "kinetic_energy_velocity_squared",
-            {"variable": safe_by_original["v"], "exponent": 2.0},
+            {"variable": safe_by_original["v"], "exponent": 2.0, "tolerance": 0.05},
             "Classical kinetic energy is quadratic in velocity.")
         add("forbidden_functions", "kinetic_energy_no_log", {"functions": ["log", "log10"]},
             "A logarithmic transform is not part of the declared kinetic-energy law.")
         add("no_variable_exponents", "kinetic_energy_constant_exponents",
             description="The physical power-law exponents are constants, not input-dependent.")
     elif equation_name == "gravitational force":
+        add("required_power", "gravity_linear_mass_1",
+            {"variable": safe_by_original["m1"], "exponent": 1.0},
+            "Newtonian gravity is linear in the first mass.")
+        add("required_power", "gravity_linear_mass_2",
+            {"variable": safe_by_original["m2"], "exponent": 1.0},
+            "Newtonian gravity is linear in the second mass.")
         add("required_power", "gravity_inverse_square_distance",
             {"variable": safe_by_original["r"], "exponent": -2.0},
             "Newtonian gravity has inverse-square distance dependence.")
