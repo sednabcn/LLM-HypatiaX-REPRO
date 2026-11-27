@@ -92,7 +92,7 @@ def main() -> None:
         raise SystemExit("input must be a JSON list of benchmark records")
     report = build_audit(records)
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(report, indent=2, allow_nan=False) + "\\n", encoding="utf-8")
+    args.output.write_text(json.dumps(report, indent=2, allow_nan=False) + "\n", encoding="utf-8")
     print(f"Audited {report['case_count']} cases; symbolic statuses={report['symbolic_status_counts']}")
 
 
