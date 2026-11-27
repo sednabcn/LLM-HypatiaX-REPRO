@@ -52,9 +52,9 @@
     {
       "equation": "Gravitational Force",
       "domain": "Physics",
-      "extrap_r2_near": 1.0,
-      "extrap_r2_far": 1.0,
-      "instability_index": 0.0
+      "extrap_r2_near": 0.9972481051002985,
+      "extrap_r2_far": 0.9962626497851994,
+      "instability_index": 0.000985455315099082
     },
     {
       "equation": "Ideal Gas Law",
