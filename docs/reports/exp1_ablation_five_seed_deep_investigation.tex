@@ -1,0 +1,282 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=0.82in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{booktabs,longtable,tabularx,array}
+\usepackage{amsmath,amssymb}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{microtype}
+\hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue,citecolor=blue}
+\setlist{nosep,leftmargin=*}
+\title{Exp1 Core-15: Five-Seed Deep Performance Investigation}
+\author{HypatiaX Reproducibility Analysis}
+\date{27 November 2026}
+\begin{document}
+\maketitle
+
+\begin{center}
+\small
+\textbf{Data commit:} \href{https://github.com/sednabcn/LLM-HypatiaX-REPRO/commit/11ee474}{11ee474}
+\quad
+\textbf{Parent workflow:} \href{https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/45915400809}{45915400809}
+\end{center}
+
+\begin{abstract}
+This report investigates the five-seed Exp1 Core-15 ablation at expression level, rather than relying only on aggregate metrics. Across 15 equation families, five seeds (42, 99, 123, 777, 2024), and three arms, the committed run contains 225 completed records. Typical held-out test performance is high, but the run does not establish a general HypatiaX advantage over PySR. More importantly, HypatiaX and HypatiaX-noLLM both exhibit catastrophic far-out-of-distribution (far-OOD) results on every Arrhenius seed and every Impermanent Loss seed, plus Ideal Gas Law at seed 777. The underlying expressions explain much of this behaviour: high-power temperature approximations, inverse/linear ratio fits, missing variables, and unstable logarithmic or variable-exponent forms. The LLM ablation changes the exact final expression in fewer than half of matched cases and does not reliably repair these failures. The report recommends stronger scientific-structure and extrapolation gates before another large replication. No new benchmark was launched.
+\end{abstract}
+
+\section{Executive findings}
+\begin{enumerate}
+\item All 225 arm records completed successfully at the pipeline level. This does not mean all models are scientifically successful.
+\item HypatiaX far-OOD is catastrophic in 11/75 equation-seed units, compared with 4/75 for PySR-only. The hybrid failures comprise Arrhenius (5/5), Impermanent Loss (5/5), and Ideal Gas Law (seed 777).
+\item The headline finite-only far-OOD medians are optimistic unless accompanied by the catastrophic-failure counts. The raw scores remain in the committed result JSON even when the headline \texttt{extrap\_r2\_far} field is null.
+\item HypatiaX and noLLM select the exact same final expression in 34/75 matched cases; test R\textsuperscript{2} is identical to numerical tolerance in 37/75.
+\item Seed 777 exposes severe hybrid instability, especially for Ideal Gas Law and Kinetic Energy. Gravitational Force is difficult across multiple seeds.
+\item Runtime medians favour the hybrid arms in this run, but the search budgets and route mix differ. A controlled speedup claim is not justified.
+\end{enumerate}
+
+\section{Data, protocol and provenance}
+The parent workflow completed five child runs for seeds 42, 99, 123, 777 and 2024. The gatherer validated 15 equations and three arms per seed: 75 equation-seed units and 225 arm records. The 75 units are repeated measurements of \textbf{15 equation families}, not 75 independent scientific problems.
+
+\begin{tabularx}{\linewidth}{@{}lX@{}}
+\toprule
+Item & Recorded value\\
+\midrule
+Equation families & 15\\
+Seeds & 42, 99, 123, 777, 2024\\
+Arm records & 225 (75 per arm)\\
+Primary successful records & 225/225\\
+Symbolic engine & 5.4\\
+PySR populations / iterations & 30 / 1,000\\
+LLM model & claude-sonnet-4-6\\
+Primary test scope & untouched outer test\\
+Recorded source revision & \texttt{1bb4c9d7ccf4813b10014fc85a67b4a28d8f18c4}\\
+Benchmark script SHA-256 & \texttt{5a5eae79a57eeee3d0fcfd01f2dcf48fb2bfe5c924560db1a278891fa0d70}\\
+Results commit & \texttt{11ee474}\\
+\bottomrule
+\end{tabularx}
+
+All records have successful fit/evaluation status. This is a pipeline-completion indicator, not a scientific-quality guarantee. The committed seed JSONs preserve expressions, raw extrapolation scores, status fields, LLM routing metadata, complexity and timing. The case-level CSV is useful for aggregation but does not expose all forensic fields.
+
+\section{Overall performance}
+Values are across 75 equation-seed records per arm. Finite far-OOD medians and means exclude explicitly catastrophic values, so failure incidence is reported separately.
+
+\begin{center}
+\small
+\begin{tabular}{lrrr}
+\toprule
+Metric & PySR only & HypatiaX & HypatiaX noLLM\\
+\midrule
+Primary success & 75/75 & 75/75 & 75/75\\
+Median test R\textsuperscript{2} & 0.996999 & 0.996966 & 0.996992\\
+Mean test R\textsuperscript{2} & 0.983464 & 0.968705 & 0.965451\\
+Finite far-OOD records & 71/75 & 64/75 & 64/75\\
+Catastrophic far-OOD & 4/75 & 11/75 & 11/75\\
+Median finite far-OOD R\textsuperscript{2} & 0.999633 & 0.999732 & 0.999151\\
+Mean finite far-OOD R\textsuperscript{2} & -5.0312 & -1.2472 & 0.1644\\
+Median runtime (s) & 1101.32 & 375.37 & 407.35\\
+Median expression complexity & 7 & 33 & 34\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The test medians are practically indistinguishable. Means are more sensitive to severe cases. Finite-only far-OOD statistics are conditional summaries and are not sufficient evidence of robustness: 11/75 hybrid outcomes are omitted from those summaries. HypatiaX's higher median finite far-OOD score must therefore be read together with its higher catastrophic-failure rate. Hybrid expressions are substantially more complex without a systematic gain in held-out accuracy.
+
+\subsection{Matched paired comparisons}
+Across all 75 matched equation-seed units, HypatiaX minus PySR test R\textsuperscript{2} has median difference zero: HypatiaX wins 32, loses 36 and ties 7 (tolerance $10^{-9}$). HypatiaX minus noLLM has median difference zero: HypatiaX wins 22, loses 16 and ties 37. For raw far-OOD R\textsuperscript{2}, HypatiaX versus noLLM yields 26 wins, 12 losses and 37 ties, with median difference zero. These are descriptive paired counts, not independent-sample hypothesis tests. The mean of raw far-OOD differences is dominated by extreme tails and should not be interpreted.
+
+\section{Seed sensitivity}
+The source summary reports seed-level means. Far-OOD means are conditional on finite values; the finite count is shown explicitly.
+
+\begin{center}
+\small
+\begin{tabular}{rrrcrr}
+\toprule
+Seed & Arm & Mean test R\textsuperscript{2} & Mean finite far R\textsuperscript{2} & Finite far $n/15$ & Mean time (s)\\
+\midrule
+42 & PySR & 0.9783 & -4.7821 & 15 & 1104.4\\
+42 & HypatiaX & 0.9929 & 0.2885 & 13 & 350.9\\
+42 & noLLM & 0.9924 & 0.5742 & 13 & 469.8\\
+99 & PySR & 0.9711 & -4.2666 & 13 & 1079.4\\
+99 & HypatiaX & 0.9365 & -0.2703 & 13 & 404.6\\
+99 & noLLM & 0.9365 & -0.2713 & 13 & 567.6\\
+123 & PySR & 0.9860 & -4.3811 & 15 & 1063.5\\
+123 & HypatiaX & 0.9939 & 0.9988 & 13 & 334.0\\
+123 & noLLM & 0.9942 & 0.5326 & 13 & 430.7\\
+777 & PySR & 0.9964 & -6.3955 & 14 & 1061.2\\
+777 & HypatiaX & 0.9343 & -6.8519 & 12 & 603.9\\
+777 & noLLM & 0.9169 & -1.0575 & 12 & 698.9\\
+2024 & PySR & 0.9855 & -5.3403 & 14 & 1105.5\\
+2024 & HypatiaX & 0.9859 & -0.8321 & 13 & 376.0\\
+2024 & noLLM & 0.9873 & 0.9502 & 13 & 475.3\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Seeds 99 and 777 expose hybrid instability. At seed 99, both hybrid arms average about 0.9365 test R\textsuperscript{2}; at seed 777, HypatiaX averages 0.9343 and noLLM 0.9169. PySR's seed-777 mean test R\textsuperscript{2} is 0.9964. These averages are driven by a small number of severe equation-specific outcomes, not uniform degradation.
+
+\section{Equation-level robustness}
+The following table gives HypatiaX's median test R\textsuperscript{2} across five seeds, worst test R\textsuperscript{2}, and catastrophic far-OOD count.
+
+{\small
+\begin{longtable}{@{}p{0.34\linewidth}rrr@{}}
+\toprule
+Equation & Median test R\textsuperscript{2} & Minimum test R\textsuperscript{2} & Catastrophic far-OOD\\
+\midrule
+Arrhenius & 0.996791 & 0.996421 & \textbf{5/5}\\
+Henderson--Hasselbalch & 0.997151 & 0.996186 & 0/5\\
+Rate Law & 0.997170 & 0.995398 & 0/5\\
+Allometric Scaling & 0.997216 & 0.996397 & 0/5\\
+Michaelis--Menten & 0.997445 & 0.996965 & 0/5\\
+Logistic Growth & 0.996797 & 0.967177 & 0/5\\
+Kinetic Energy & 0.998108 & 0.859731 & 0/5\\
+Gravitational Force & 0.946971 & 0.701415 & 0/5\\
+Ideal Gas Law & 0.994782 & \textbf{0.198111} & \textbf{1/5}\\
+Impermanent Loss & 0.997258 & 0.995352 & \textbf{5/5}\\
+Price Impact & 0.997594 & 0.995757 & 0/5\\
+Constant Product & 0.992054 & 0.971402 & 0/5\\
+Value at Risk & 0.995878 & 0.995621 & 0/5\\
+Liquidation Price & 0.996845 & 0.995629 & 0/5\\
+Portfolio Std Dev & 0.997102 & 0.995732 & 0/5\\
+\bottomrule
+\end{longtable}
+}
+
+\subsection{Far-OOD failure concentration}
+Arrhenius and Impermanent Loss each fail catastrophically in all five HypatiaX and noLLM seeds. Ideal Gas Law fails catastrophically at seed 777, with raw far-OOD R\textsuperscript{2} around $-5.81\times10^{15}$. Kinetic Energy at seed 777 has a finite but very poor far-OOD score of $-82.12$; it is not tagged catastrophic because it is finite. Logistic Growth reaches $-22.15$ at seed 2024. Gravitational Force has multiple negative far-OOD outcomes, reaching $-8.60$ for HypatiaX. Michaelis--Menten reaches $-0.486$ despite strong test accuracy.
+
+The status \texttt{catastrophic} refers to the result JSON's explicit far-OOD status. It is not synonymous with every poor negative R\textsuperscript{2}. A finite negative score remains a serious extrapolation failure even when its status is \texttt{ok}.
+
+\section{Expression-level forensic analysis}
+
+\subsection{Arrhenius: repeatable wrong-form extrapolation}
+The Arrhenius relationship has exponential dependence on reciprocal absolute temperature, conventionally $k=A\exp(-E_a/(RT))$. HypatiaX instead selects high-power temperature laws, including:
+\begin{quote}\small
+\texttt{(T / 434.67657) \textasciicircum{} 12.908299}\\
+\texttt{(T * 0.0022998452) \textasciicircum{} 12.932167}\\
+\texttt{(T / 435.83212) \textasciicircum{} 13.172349}
+\end{quote}
+and a nested exponential:
+\begin{quote}\small
+\texttt{21.519812 / exp(exp(413.86047 / (T + -148.8998)))}
+\end{quote}
+All five HypatiaX and noLLM far-OOD outcomes are catastrophic despite test R\textsuperscript{2} around 0.9964--0.9971. This is consistent with interpolation by an incorrect functional form. The LLM proposals recorded for these cases were not selected; routes generally report \texttt{hybrid\_pysr\_better} or \texttt{hybrid\_structural\_risk\_pysr}. The LLM did not rescue the final expression.
+
+\subsection{Impermanent Loss: stable interpolation, unstable extrapolation}
+All five HypatiaX and noLLM seeds have catastrophic far-OOD status while test R\textsuperscript{2} remains around 0.9954--0.9975. Selected expressions include inverse and linear terms in the price ratio $r$, for example:
+\begin{quote}\small
+\texttt{((r * -11.67686) + (-11.684317 / r)) - -23.330292}
+\end{quote}
+Such a fit can approximate a narrow interval without preserving the target's behaviour outside that interval. PySR-only also has very poor finite far-OOD scores (roughly $-58$ to $-68$), so this family is difficult for all methods; hybrid raw scores are more negative and are flagged catastrophic.
+
+\subsection{Ideal Gas Law: missing-variable failure}
+At seed 777, HypatiaX selects:
+\begin{quote}\small \texttt{sqrt(n * 5.4327)} \end{quote}
+This omits temperature and volume. Test R\textsuperscript{2} is 0.1981 and raw far-OOD R\textsuperscript{2} is approximately $-5.81\times10^{15}$. The LLM proposal was \texttt{n * T / V}, but the selected route was \texttt{hybrid\_structural\_risk\_pysr} and the final expression remained the PySR candidate. A stronger variable-coverage/scientific-structure gate should reject this candidate. This does not prove the LLM proposal was sufficiently calibrated; it demonstrates that the selected candidate should not have passed.
+
+\subsection{Kinetic Energy: structurally implausible seed-777 expression}
+At seed 777 the selected expression is:
+\begin{quote}\small
+\texttt{log((((v * sqrt(m)) * 0.5100047) + -0.8729826) + (-0.04662489 / (m + -2.0693998)))}
+\end{quote}
+It contains a logarithm and a denominator that can approach a singularity. It does not recover the expected proportional structure $E_k\propto mv^2$. The LLM proposal \texttt{0.5 * m * v**2} was recorded, but the route selected the PySR path. Test R\textsuperscript{2} is 0.8597 and far-OOD R\textsuperscript{2} is $-82.12$. The noLLM result is also poor (test 0.7061; far-OOD $-17.33$). In seeds 42, 99, 123 and 2024, the LLM-only route selects \texttt{0.5 * m * v**2} and completes in about five seconds with high scores. Route/selection policy is therefore central to the outcome.
+
+\subsection{Gravitational Force: weak equation recovery}
+The expected Newtonian structure is $F=Gm_1m_2/r^2$. Selected expressions include variable exponents, logarithms and exponentials of masses or distance. Examples include:
+\begin{quote}\small
+\texttt{log(m1 * ((m2 * 0.121897295) / r)) \textasciicircum{} (1.5134895 \textasciicircum{} r)}\\
+\texttt{((m1 * 0.22206146) \textasciicircum{} m2) / (r \textasciicircum{} r)}
+\end{quote}
+These do not plausibly recover the inverse-square law. The median HypatiaX test R\textsuperscript{2} is 0.9470 and the minimum is 0.7014. This should be treated as a scientific-validity failure, not a minor metric fluctuation.
+
+\section{Incremental LLM contribution}
+HypatiaX versus noLLM is the closest available ablation for the incremental effect of enabling the LLM.
+
+\begin{center}
+\small
+\begin{tabular}{lr}
+\toprule
+Matched outcome (75 equation-seed units) & Count\\
+\midrule
+Identical final expression & \textbf{34}\\
+Identical test R\textsuperscript{2} to $10^{-12}$ tolerance & 37\\
+Identical far-OOD field & 38\\
+HypatiaX test R\textsuperscript{2} higher / lower / tied & 22 / 16 / 37\\
+HypatiaX raw far-OOD higher / lower / tied & 26 / 12 / 37\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The paired median difference is zero for test R\textsuperscript{2} and raw far-OOD R\textsuperscript{2}. The HypatiaX route breakdown is:
+\begin{center}
+\small
+\begin{tabular}{lrr}
+\toprule
+Selected route & Cases & Catastrophic far-OOD\\
+\midrule
+\texttt{hybrid\_llm\_only} & 22 & 0\\
+\texttt{hybrid\_pysr\_better} & 44 & 9\\
+\texttt{hybrid\_structural\_risk\_pysr} & 9 & 2\\
+\bottomrule
+\end{tabular}
+\end{center}
+The LLM-only cases are selected by routing logic, so their outcomes cannot be interpreted as a causal treatment effect. Nevertheless, the data suggest that direct acceptance of a structurally sound LLM proposal can be effective, while the fallback/search path remains vulnerable when a proposal is rejected. Arrhenius is identical across H/noLLM in all five seeds; Impermanent Loss is identical in four of five seeds. The LLM does not systematically correct these failures.
+
+\section{Runtime and complexity}
+The median recorded runtime is 1,101 seconds for PySR-only, 375 seconds for HypatiaX and 407 seconds for noLLM. This is not an apples-to-apples speedup experiment:
+\begin{enumerate}
+\item PySR-only records a 1,400-second budget and one allowed attempt.
+\item Hybrid arms record a 3,600-second budget and up to three attempts.
+\item Twenty-two HypatiaX cases use an LLM-only route and finish in roughly 4--15 seconds.
+\item Some hybrid cases take longer than PySR-only (up to roughly 1,837 seconds for HypatiaX and 2,058 seconds for noLLM).
+\end{enumerate}
+The supported conclusion is that the current hybrid routing policy often returns a candidate faster, not that it is more compute-efficient under equal budgets. A fair study must match hardware, timeout, iterations, restarts, evaluation budget and stopping criteria, and report wall-clock and CPU/GPU time. Median complexity is 33--34 for the hybrid arms versus 7 for PySR-only; greater complexity has not produced a systematic accuracy gain.
+
+\section{Statistical interpretation and limitations}
+This is a descriptive replication, not a confirmatory hypothesis test. The primary scientific unit is the equation family ($n=15$), with five repeated seeds. Treating all 75 equation-seed records as independent problems would inflate effective sample size. Any inferential analysis should preserve the repeated-measures structure, cluster by equation family, and treat seed as a stochastic replicate.
+
+Important caveats:
+\begin{itemize}
+\item \textbf{Catastrophic scores:} 11/75 hybrid scores per arm are null in the headline far-OOD field but retained in raw JSON. Excluding them creates an optimistic conditional summary. Report failure incidence alongside conditional performance.
+\item \textbf{R\textsuperscript{2}:} high R\textsuperscript{2} on a narrow range does not establish physical validity. Include original-unit RMSE/MAE, variable coverage, dimensional consistency and expression plausibility.
+\item \textbf{Repeated equations:} do not run naive tests on 75 observations as unrelated units.
+\item \textbf{Routing selection:} LLM-only versus fallback comparisons are confounded by route selection.
+\item \textbf{Compute policy:} different budgets and attempt counts invalidate a simple speedup claim.
+\item \textbf{Pathology detection:} highlighted expressions warrant stronger checks. Their \texttt{formula\_pathology\_reasons} fields are empty, so the current detector/validator is insufficient for these cases.
+\end{itemize}
+
+\section{Recommendations}
+\subsection{Before another large run}
+\begin{enumerate}
+\item Add equation-aware variable coverage checks (e.g. Ideal Gas Law candidates must account for $T$ and $V$).
+\item Add dimensional-analysis checks for physical equations, especially Gravitational Force and Kinetic Energy.
+\item Add structural risk checks for variable exponents, nested exponentials, logarithms of dimensional quantities, and denominators with poles in or near the evaluation domain.
+\item Require multi-range extrapolation sanity checks before accepting a candidate as robust. Preserve raw metrics and mark catastrophic far-OOD as scientific failure.
+\item Separate pipeline completion, test performance and scientific robustness in status/reporting.
+\end{enumerate}
+
+\subsection{Retrospective analysis using existing artifacts}
+\begin{enumerate}
+\item Re-evaluate stored expressions on existing train/test/near/medium/far arrays.
+\item Plot predictions against ground truth by range for Arrhenius, Impermanent Loss, Ideal Gas Law, Kinetic Energy, Gravitational Force and Logistic Growth.
+\item Inspect split boundaries and variable ranges, particularly for Arrhenius and Impermanent Loss.
+\item Compare selected expressions, LLM proposals, validation scores and routing reasons.
+\item Add regression tests from stored failures; this requires no expensive search.
+\end{enumerate}
+
+\subsection{Confirmatory study, only after explicit approval}
+Use matched per-equation seeds and identical compute budgets; pre-register failure-aware far-OOD success rate, test RMSE, far-OOD RMSE and formula-validity rate; report all equation families; use cluster-aware uncertainty estimates; and separate LLM proposal quality from routing/acceptance effects.
+
+\section{Reproducibility links}
+\begin{itemize}
+\item Parent workflow: \url{https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/45915400809}
+\item Multi-seed summary: \url{https://github.com/sednabcn/LLM-HypatiaX-REPRO/blob/11ee474/hypatiax/data/results/ablation/exp1_ablation_multiseed/exp1_ablation_multiseed_summary.json}
+\item Case/seed CSV: \url{https://github.com/sednabcn/LLM-HypatiaX-REPRO/blob/11ee474/hypatiax/data/results/ablation/exp1_ablation_multiseed/exp1_ablation_multiseed_case_seed_records.csv}
+\item Benchmark source: \url{https://github.com/sednabcn/LLM-HypatiaX-REPRO/blob/1bb4c9d7ccf4813b10014fc85a67b4a28d8f18c4/hypatiax/experiments/benchmarks/exp1_ablation.py}
+\end{itemize}
+
+\section*{Conclusion}
+HypatiaX is competitive on typical in-distribution cases and can be very fast when a correct LLM-only expression is accepted. The five-seed evidence does not establish general superiority over PySR. It exposes systematic extrapolation failures and weaknesses in expression validation/routing that should be fixed before another expensive replication. No new benchmark was launched for this investigation.
+
+\end{document}
