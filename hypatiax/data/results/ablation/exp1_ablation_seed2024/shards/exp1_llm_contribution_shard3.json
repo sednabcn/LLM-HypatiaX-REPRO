@@ -1,0 +1,122 @@
+{
+  "n": 3,
+  "equations": [
+    "Kinetic Energy",
+    "Gravitational Force",
+    "Ideal Gas Law"
+  ],
+  "H_far": [
+    1.0,
+    0.5259855744079984,
+    0.9999902740991415
+  ],
+  "N_far": [
+    0.9954406621446499,
+    0.5667895914094224,
+    0.9999902740991415
+  ],
+  "P_far": [
+    0.9995351092113287,
+    -9.797267097960164,
+    0.999968152197612
+  ],
+  "tests": {
+    "H_vs_P": {
+      "median_a": 0.9999902740991415,
+      "median_b": 0.9995351092113287,
+      "wins": 1,
+      "ties": 2,
+      "losses": 0,
+      "U_greater": 5.0,
+      "p_greater": 0.5,
+      "p_two_sided": 1.0,
+      "rank_biserial_r": 1.0,
+      "rank_biserial_method": "paired_signed_rank",
+      "n_tied": 2,
+      "tie_tol": 0.01,
+      "wilcoxon_W": 1.0,
+      "wilcoxon_p_greater": 0.5,
+      "wilcoxon_p_greater_holm": 1.0
+    },
+    "N_vs_P": {
+      "median_a": 0.9954406621446499,
+      "median_b": 0.9995351092113287,
+      "wins": 1,
+      "ties": 2,
+      "losses": 0,
+      "U_greater": 5.0,
+      "p_greater": 0.5,
+      "p_two_sided": 1.0,
+      "rank_biserial_r": 1.0,
+      "rank_biserial_method": "paired_signed_rank",
+      "n_tied": 2,
+      "tie_tol": 0.01,
+      "wilcoxon_W": 1.0,
+      "wilcoxon_p_greater": 0.5,
+      "wilcoxon_p_greater_holm": 1.0
+    },
+    "H_vs_N": {
+      "median_a": 0.9999902740991415,
+      "median_b": 0.9954406621446499,
+      "wins": 0,
+      "ties": 2,
+      "losses": 1,
+      "U_greater": 4.0,
+      "p_greater": 0.673452442533909,
+      "p_two_sided": 1.0,
+      "rank_biserial_r": -1.0,
+      "rank_biserial_method": "paired_signed_rank",
+      "n_tied": 2,
+      "tie_tol": 0.01,
+      "wilcoxon_W": 0.0,
+      "wilcoxon_p_greater": 1.0,
+      "wilcoxon_p_greater_holm": 1.0
+    }
+  },
+  "failures_per_arm": {
+    "P": [
+      "Arrhenius",
+      "Henderson-Hasselbalch",
+      "Rate Law",
+      "Allometric Scaling",
+      "Michaelis-Menten",
+      "Logistic Growth",
+      "Impermanent Loss",
+      "Price Impact",
+      "Constant Product",
+      "Value at Risk",
+      "Liquidation Price",
+      "Portfolio Std Dev"
+    ],
+    "H": [
+      "Arrhenius",
+      "Henderson-Hasselbalch",
+      "Rate Law",
+      "Allometric Scaling",
+      "Michaelis-Menten",
+      "Logistic Growth",
+      "Impermanent Loss",
+      "Price Impact",
+      "Constant Product",
+      "Value at Risk",
+      "Liquidation Price",
+      "Portfolio Std Dev"
+    ],
+    "N": [
+      "Arrhenius",
+      "Henderson-Hasselbalch",
+      "Rate Law",
+      "Allometric Scaling",
+      "Michaelis-Menten",
+      "Logistic Growth",
+      "Impermanent Loss",
+      "Price Impact",
+      "Constant Product",
+      "Value at Risk",
+      "Liquidation Price",
+      "Portfolio Std Dev"
+    ]
+  },
+  "primary_test": "wilcoxon_signed_rank",
+  "multiplicity": "holm_across_3_comparisons"
+}
