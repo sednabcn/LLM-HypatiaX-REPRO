@@ -23,12 +23,15 @@ def _norm_pdf(value: Any) -> Any:
     return sp.exp(-(value ** 2) / 2) / sp.sqrt(2 * sp.pi)
 
 _FUNCTIONS = {
-    "sqrt": sp.sqrt, "exp": sp.exp, "log": sp.log, "log10": sp.log,\n    "power": lambda a, b: a ** b, "floor": sp.floor, "ceil": sp.ceiling,
+    "sqrt": sp.sqrt, "exp": sp.exp, "log": sp.log, "log10": sp.log,
+    "power": lambda a, b: a ** b, "floor": sp.floor, "ceil": sp.ceiling,
     "sin": sp.sin, "cos": sp.cos, "tan": sp.tan,
     "asin": sp.asin, "arcsin": sp.asin, "acos": sp.acos, "arccos": sp.acos,
     "atan": sp.atan, "arctan": sp.atan, "sinh": sp.sinh, "cosh": sp.cosh,
     "tanh": sp.tanh, "erf": sp.erf, "Abs": sp.Abs, "abs": sp.Abs,
-    "Min": sp.Min, "min": sp.Min, "minimum": sp.Min,\n    "Max": sp.Max, "max": sp.Max, "maximum": sp.Max,\n    "clip": _clip, "norm_cdf": _norm_cdf, "norm_pdf": _norm_pdf,
+    "Min": sp.Min, "min": sp.Min, "minimum": sp.Min,
+    "Max": sp.Max, "max": sp.Max, "maximum": sp.Max,
+    "clip": _clip, "norm_cdf": _norm_cdf, "norm_pdf": _norm_pdf,
 }
 _BINOPS = {
     ast.Add: lambda a, b: a + b, ast.Sub: lambda a, b: a - b,
@@ -70,7 +73,10 @@ def _expr(node: ast.AST, env: dict[str, Any]) -> Any:
         return _BINOPS[type(node.op)](_expr(node.left, env), _expr(node.right, env))
     if isinstance(node, ast.UnaryOp) and type(node.op) in _UNARY:
         return _UNARY[type(node.op)](_expr(node.operand, env))
-    if (isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name)\n            and node.value.id == "np" and node.attr in {"pi", "e"}):\n        return sp.pi if node.attr == "pi" else sp.E\n    if isinstance(node, ast.Call):
+    if (isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name)
+            and node.value.id == "np" and node.attr in {"pi", "e"}):
+        return sp.pi if node.attr == "pi" else sp.E
+    if isinstance(node, ast.Call):
         if isinstance(node.func, ast.Name):
             name = node.func.id
         elif (isinstance(node.func, ast.Attribute)
