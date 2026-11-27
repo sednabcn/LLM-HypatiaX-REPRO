@@ -5263,7 +5263,7 @@ jobs:
 
   random_run_exp1_4060:
     name: "C5c-3 · Run exp1_4060_seeds (DeFi all-74 random 40/60 seed sweep)"
-    # Selected directly by its dispatch input; keep it independent of the PCA jobs.
+    # Selected directly by its dispatch input; independent of the PCA experiment jobs.
     needs: [credential_preflight]
     if: ${{ always() && github.event.inputs.experiment == 'exp1_4060_seeds' && needs.credential_preflight.result == 'success' }}
     runs-on: ubuntu-latest
@@ -5292,7 +5292,7 @@ jobs:
           fi
           if [[ "$FORCE_RERUN" == "true" ]]; then
             echo "already_done=false" >> "$GITHUB_OUTPUT"
-            echo "[run] force_rerun=true — bypassing existing-results guard; run_all.sh will use --force-fresh."
+            echo "[run] force_rerun=true — bypassing existing-results guard; the runner recreates isolated scratch outputs for all five seeds."
             exit 0
           fi
           RANDOM4060_DIR="${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi_random_4060"
