@@ -2,9 +2,9 @@ equation,domain,extrap_r2_near,extrap_r2_far,instability_index
 Arrhenius,Chemistry,,,
 Henderson-Hasselbalch,Chemistry,,,
 Rate Law,Chemistry,,,
-Allometric Scaling,Biology,1.0,1.0,0.0
-Michaelis-Menten,Biology,0.999642146510094,0.9916082492302718,0.008033897279822177
-Logistic Growth,Biology,0.9995826633741113,0.99959260519228,9.941818168712757e-06
+Allometric Scaling,Biology,-8.272589315307743,-8.272589315307739,3.552713678800501e-15
+Michaelis-Menten,Biology,0.9996056515035687,0.9902477702490988,0.009357881254469902
+Logistic Growth,Biology,0.9995816143583126,0.9995920520813433,1.0437723030665147e-05
 Kinetic Energy,Physics,,,
 Gravitational Force,Physics,,,
 Ideal Gas Law,Physics,,,
