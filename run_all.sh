@@ -1396,6 +1396,8 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
     PYSR_SEED="\${_SEED}" \
     EXPERIMENT_SEED="\${_SEED}" \
     NN_SEED="\${_SEED}" \
+    TASK_IDS="" SHARD_IDS="" DOMAIN_FILTER="" DEFI_TASK_FILTER="" \
+    ONE_EQUATION="" CASE_RANGE_START="" CASE_RANGE_END="" \
       python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_pca.py' \
         --output-dir "\${_SEED_SCRATCH}" \
         --force-fresh \
