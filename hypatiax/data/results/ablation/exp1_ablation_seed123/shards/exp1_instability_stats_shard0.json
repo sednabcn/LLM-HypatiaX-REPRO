@@ -3,16 +3,16 @@
     {
       "equation": "Arrhenius",
       "domain": "Chemistry",
-      "extrap_r2_near": -7.54441338886166,
-      "extrap_r2_far": null,
-      "instability_index": null
+      "extrap_r2_near": 0.9936800718775618,
+      "extrap_r2_far": 0.6692877297835438,
+      "instability_index": 0.324392342094018
     },
     {
       "equation": "Henderson-Hasselbalch",
       "domain": "Chemistry",
-      "extrap_r2_near": 0.9989268377891887,
-      "extrap_r2_far": 0.9989268377891887,
-      "instability_index": 0.0
+      "extrap_r2_near": null,
+      "extrap_r2_far": null,
+      "instability_index": null
     },
     {
       "equation": "Rate Law",
