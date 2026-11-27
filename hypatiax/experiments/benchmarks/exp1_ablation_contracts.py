@@ -187,6 +187,12 @@ def build_core15_discovery_problem(
 
     equation_name = str(equation.get("name", "")).strip().lower()
     safe_by_original = dict(zip(original_names, names))
+    if equation_name == "impermanent loss":
+        add("nonpositive_output_screen", "impermanent_loss_nonpositive",
+            description="Impermanent loss is non-positive relative to the hold benchmark.")
+    else:
+        add("positive_output_screen", "core15_positive_output",
+            description="This Core-15 target family is positive over its declared training domain.")
 
     if equation_name == "arrhenius":
         add("required_functions", "arrhenius_exponential", {"functions": ["exp"]},
@@ -210,8 +216,6 @@ def build_core15_discovery_problem(
         add("variable_in_denominator", "michaelis_menten_saturation_denominator",
             {"variable": safe_by_original["S"]},
             "Michaelis-Menten kinetics has substrate concentration in its saturation denominator.")
-        add("positive_output_screen", "michaelis_menten_positive_rate",
-            description="The reaction rate must remain positive over the declared substrate domain.")
         add("monotone_concave_in", "michaelis_menten_saturating_shape",
             {"variable": safe_by_original["S"]},
             "The Michaelis-Menten rate is increasing and concave-down over the declared substrate domain.")
