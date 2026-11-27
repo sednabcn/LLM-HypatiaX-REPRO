@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-hypatiax_defi_benchmark_v3.py
+hypatiax_defi_benchmark_v3c_4060.py
 ==============================
 HypatiaX DeFi Extrapolation Benchmark — v3.0 (paper-ready)
 
@@ -10,7 +10,7 @@ Single authoritative script. Replaces all previous versions:
   - hybrid_ensemble_system_defi_domain.py
   - hybrid_system_defi_llm_nn.py
   - complete_defi_hybrid_system.py
-  - hypatiax_defi_benchmark_v3.py
+  - hypatiax_defi_benchmark_v3c_4060.py
 
 What changed in v2.0
 ─────────────────────
@@ -114,11 +114,11 @@ different per-method denominators and are NOT comparable.
 
 Usage
 ─────
-  python hypatiax_defi_benchmark_v3.py                            # full 74-case run
-  python hypatiax_defi_benchmark_v3.py --resume                   # continue from checkpoint
-  python hypatiax_defi_benchmark_v3.py --verify-fix5              # run only the 4 known broken cases
-  python hypatiax_defi_benchmark_v3.py --report-only              # print report from saved JSON
-  python hypatiax_defi_benchmark_v3.py --output-dir /tmp/out      # write results to a custom directory
+  python hypatiax_defi_benchmark_v3c_4060.py                            # full 74-case run
+  python hypatiax_defi_benchmark_v3c_4060.py --resume                   # continue from checkpoint
+  python hypatiax_defi_benchmark_v3c_4060.py --verify-fix5              # run only the 4 known broken cases
+  python hypatiax_defi_benchmark_v3c_4060.py --report-only              # print report from saved JSON
+  python hypatiax_defi_benchmark_v3c_4060.py --output-dir /tmp/out      # write results to a custom directory
 
 Author : HypatiaX Team
 Version: 3.1 — protocol fixes: 3 skipped cases added, Borrowing Interest time_years feature, model updated to claude-sonnet-4-6
@@ -2611,14 +2611,14 @@ if __name__ == "__main__":
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""\
 Examples:
-  python hypatiax_defi_benchmark_v3.py                              # full 74-case run
-  python hypatiax_defi_benchmark_v3.py --resume                     # continue from checkpoint
-  python hypatiax_defi_benchmark_v3.py --verify-fix5               # run only the 4 Fix-5 target cases
-  python hypatiax_defi_benchmark_v3.py --report-only               # print report from saved results
-  python hypatiax_defi_benchmark_v3.py --cases moneyness           # run only moneyness case(s)
-  python hypatiax_defi_benchmark_v3.py --cases moneyness delta     # run multiple named cases
-  python hypatiax_defi_benchmark_v3.py --output-dir /tmp/out       # write results to a custom directory
-  python hypatiax_defi_benchmark_v3.py --output-dir ./results --resume  # resume from a custom directory
+  python hypatiax_defi_benchmark_v3c_4060.py                              # full 74-case run
+  python hypatiax_defi_benchmark_v3c_4060.py --resume                     # continue from checkpoint
+  python hypatiax_defi_benchmark_v3c_4060.py --verify-fix5               # run only the 4 Fix-5 target cases
+  python hypatiax_defi_benchmark_v3c_4060.py --report-only               # print report from saved results
+  python hypatiax_defi_benchmark_v3c_4060.py --cases moneyness           # run only moneyness case(s)
+  python hypatiax_defi_benchmark_v3c_4060.py --cases moneyness delta     # run multiple named cases
+  python hypatiax_defi_benchmark_v3c_4060.py --output-dir /tmp/out       # write results to a custom directory
+  python hypatiax_defi_benchmark_v3c_4060.py --output-dir ./results --resume  # resume from a custom directory
         """,
     )
     parser.add_argument("--resume",      action="store_true",
