@@ -3,23 +3,23 @@
     {
       "equation": "Arrhenius",
       "domain": "Chemistry",
-      "extrap_r2_near": -5.631654268726541,
+      "extrap_r2_near": null,
       "extrap_r2_far": null,
       "instability_index": null
     },
     {
       "equation": "Henderson-Hasselbalch",
       "domain": "Chemistry",
-      "extrap_r2_near": 0.9989601884750956,
-      "extrap_r2_far": 0.9989601884750956,
-      "instability_index": 0.0
+      "extrap_r2_near": null,
+      "extrap_r2_far": null,
+      "instability_index": null
     },
     {
       "equation": "Rate Law",
       "domain": "Chemistry",
-      "extrap_r2_near": 0.9994766945032844,
-      "extrap_r2_far": 0.9950261158505168,
-      "instability_index": 0.004450578652767545
+      "extrap_r2_near": 0.9994590958791881,
+      "extrap_r2_far": 0.994692455519156,
+      "instability_index": 0.004766640360032159
     },
     {
       "equation": "Allometric Scaling",
@@ -31,16 +31,16 @@
     {
       "equation": "Michaelis-Menten",
       "domain": "Biology",
-      "extrap_r2_near": 0.9804089844592981,
-      "extrap_r2_far": 0.1809689408174201,
-      "instability_index": 0.799440043641878
+      "extrap_r2_near": 0.9804889862565633,
+      "extrap_r2_far": 0.18398674975851803,
+      "instability_index": 0.7965022364980453
     },
     {
       "equation": "Logistic Growth",
       "domain": "Biology",
-      "extrap_r2_near": 0.9998239603252416,
-      "extrap_r2_far": 0.999707230432164,
-      "instability_index": 0.00011672989307753845
+      "extrap_r2_near": 0.9998290988766526,
+      "extrap_r2_far": 0.9997133827322253,
+      "instability_index": 0.00011571614442729139
     },
     {
       "equation": "Kinetic Energy",
@@ -52,21 +52,21 @@
     {
       "equation": "Gravitational Force",
       "domain": "Physics",
-      "extrap_r2_near": -3.438534038298995,
-      "extrap_r2_far": -7.423416600367711,
-      "instability_index": 3.984882562068716
+      "extrap_r2_near": null,
+      "extrap_r2_far": null,
+      "instability_index": null
     },
     {
       "equation": "Ideal Gas Law",
       "domain": "Physics",
-      "extrap_r2_near": 0.9999999046806634,
-      "extrap_r2_far": 0.9999999046806634,
+      "extrap_r2_near": 0.9999849908834161,
+      "extrap_r2_far": 0.9999849908834161,
       "instability_index": 0.0
     },
     {
       "equation": "Impermanent Loss",
       "domain": "DeFi AMM",
-      "extrap_r2_near": 0.7160086184848446,
+      "extrap_r2_near": null,
       "extrap_r2_far": null,
       "instability_index": null
     },
@@ -80,8 +80,8 @@
     {
       "equation": "Constant Product",
       "domain": "DeFi AMM",
-      "extrap_r2_near": 0.9995625228159449,
-      "extrap_r2_far": 0.9995625228159449,
+      "extrap_r2_near": 0.9995652382037383,
+      "extrap_r2_far": 0.9995652382037383,
       "instability_index": 0.0
     },
     {

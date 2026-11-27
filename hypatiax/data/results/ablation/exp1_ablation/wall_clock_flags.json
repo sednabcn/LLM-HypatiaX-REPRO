@@ -4,17 +4,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1115.2373077869415
+      "wall_secs": 1113.3431141376495
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 424.7786762714386
+      "wall_secs": 1441.706068277359
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 413.65465688705444
+      "wall_secs": 1444.2031638622284
     }
   },
   "1": {
@@ -22,17 +22,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1101.325267314911
+      "wall_secs": 1101.3152623176575
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 644.6221973896027
+      "wall_secs": 348.3543212413788
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 423.6395947933197
+      "wall_secs": 346.89890813827515
     }
   },
   "2": {
@@ -40,17 +40,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1101.3187086582184
+      "wall_secs": 1101.2180006504059
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 405.6711039543152
+      "wall_secs": 349.61158633232117
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 639.335884809494
+      "wall_secs": 343.09141063690186
     }
   },
   "3": {
@@ -58,17 +58,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1115.2902989387512
+      "wall_secs": 1076.3764395713806
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 3.847740888595581
+      "wall_secs": 4.160638809204102
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 546.7121908664703
+      "wall_secs": 538.387793302536
     }
   },
   "4": {
@@ -76,17 +76,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1101.3160099983215
+      "wall_secs": 1100.9905650615692
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 435.8445975780487
+      "wall_secs": 386.86771988868713
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 426.90063071250916
+      "wall_secs": 340.9636197090149
     }
   },
   "5": {
@@ -94,17 +94,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1101.979941368103
+      "wall_secs": 1101.350093126297
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 398.4596893787384
+      "wall_secs": 399.328165769577
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 393.7292642593384
+      "wall_secs": 368.2788391113281
     }
   },
   "6": {
@@ -112,17 +112,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1111.8467345237732
+      "wall_secs": 1116.4745750427246
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 5.0511109828948975
+      "wall_secs": 5.032740116119385
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 301.3756377696991
+      "wall_secs": 457.87996339797974
     }
   },
   "7": {
@@ -130,17 +130,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1100.9683122634888
+      "wall_secs": 1101.3716044425964
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1211.0092370510101
+      "wall_secs": 2022.7854857444763
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1382.2000570297241
+      "wall_secs": 2080.8085367679596
     }
   },
   "8": {
@@ -148,17 +148,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1081.3740482330322
+      "wall_secs": 1101.3713736534119
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 4.133713722229004
+      "wall_secs": 346.4690988063812
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 236.26349878311157
+      "wall_secs": 342.2003176212311
     }
   },
   "9": {
@@ -166,17 +166,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1112.9204549789429
+      "wall_secs": 1112.0070383548737
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 519.1300346851349
+      "wall_secs": 1073.4812648296356
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 507.0937716960907
+      "wall_secs": 1019.6487402915955
     }
   },
   "10": {
@@ -184,17 +184,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1101.2641758918762
+      "wall_secs": 951.3592448234558
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 6.005990982055664
+      "wall_secs": 6.190049409866333
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 340.41351318359375
+      "wall_secs": 215.44069528579712
     }
   },
   "11": {
@@ -202,17 +202,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1101.0933136940002
+      "wall_secs": 1023.3595139980316
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 387.9875235557556
+      "wall_secs": 300.60695815086365
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 394.1786832809448
+      "wall_secs": 294.36937952041626
     }
   },
   "12": {
@@ -220,17 +220,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1116.9542133808136
+      "wall_secs": 1116.2700774669647
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 427.8466889858246
+      "wall_secs": 416.84948444366455
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 411.0303530693054
+      "wall_secs": 397.54131150245667
     }
   },
   "13": {
@@ -238,17 +238,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1101.5400686264038
+      "wall_secs": 1101.468948841095
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 383.9594871997833
+      "wall_secs": 369.87514781951904
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 370.5796146392822
+      "wall_secs": 365.8851251602173
     }
   },
   "14": {
@@ -256,17 +256,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1101.3373761177063
+      "wall_secs": 1101.2974965572357
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 4.600950002670288
+      "wall_secs": 4.989542484283447
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 259.8455021381378
+      "wall_secs": 255.70527601242065
     }
   }
 }
