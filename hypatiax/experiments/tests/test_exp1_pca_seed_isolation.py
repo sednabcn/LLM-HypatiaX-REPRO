@@ -95,6 +95,8 @@ def test_pythoncall_cache_probe_does_not_start_julia_before_julia_setup():
     resolve_step = workflow[resolve_start:warmup_start]
     assert 'rm -rf "${GITHUB_WORKSPACE}/.venv/julia_env"' in resolve_step
     assert "VERSION.minor == 11" in resolve_step
+    assert 'PYTHON_JULIAPKG_EXE=${JULIA_EXE}' in resolve_step
+    assert 'export PYTHON_JULIAPKG_EXE="${JULIA_EXE}"' in resolve_step
     assert "juliapkg.resolve(force=True)" in resolve_step
     assert 'julia_env' in resolve_step
     assert "Pkg.instantiate()" in resolve_step
