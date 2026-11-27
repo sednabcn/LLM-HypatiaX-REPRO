@@ -42,3 +42,36 @@ def test_exp1b_pca_skip_guard_requires_all_five_seed_results_and_summaries():
     assert "exp1b_pca_summary.json" in guard
     assert "MISSING=()" in guard
     assert '[[ ! -s "${FILE}" ]]' in guard
+
+
+
+def test_exp1b_pca_runs_each_canonical_seed_in_an_isolated_process():
+    repo_root = Path(__file__).resolve().parents[3]
+    run_all = (repo_root / "run_all.sh").read_text(encoding="utf-8")
+    start = run_all.index('run exp1b_pca "')
+    end = run_all.index('\nrun ', start)
+    block = run_all[start:end]
+
+    assert "_PCA_SEEDS=(42 99 123 777 2024)" in block
+    assert 'DEFI_SEEDS="\${_SEED}"' in block
+    assert 'PYSR_SEED="\${_SEED}"' in block
+    assert 'EXPERIMENT_SEED="\${_SEED}"' in block
+    assert 'NN_SEED="\${_SEED}"' in block
+    assert '_SEED_SCRATCH="\${_PCA_SCRATCH_ROOT}/seed\${_SEED}"' in block
+    assert "74 case records" in block
+    assert "seed provenance verified" in block
+    assert "portfolio_variance_v3c2.py" not in block
+
+
+def test_exp1b_pca_summary_reads_only_the_five_isolated_seed_files():
+    repo_root = Path(__file__).resolve().parents[3]
+    run_all = (repo_root / "run_all.sh").read_text(encoding="utf-8")
+    start = run_all.index('run exp1b_pca "')
+    summary_start = run_all.index("PYEOF_SUMMARY_1B", start)
+    block = run_all[start:summary_start]
+
+    assert "PCA15_DIR / f'hypatiax_defi_benchmark_pca_results_seed{s}.json'" in block
+    assert "(42, 99, 123, 777, 2024)" in block
+    assert "PCA15_DIR.glob('*.json')" not in block
+    assert "seed provenance mismatch" in block
+    assert "must contain 74 case records" in block
