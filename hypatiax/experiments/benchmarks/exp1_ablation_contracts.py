@@ -206,6 +206,15 @@ def build_core15_discovery_problem(
     elif equation_name == "ideal gas law":
         # The shared required_variables gate is the critical safeguard here.
         pass
+    elif equation_name == "michaelis-menten":
+        add("variable_in_denominator", "michaelis_menten_saturation_denominator",
+            {"variable": safe_by_original["S"]},
+            "Michaelis-Menten kinetics has substrate concentration in its saturation denominator.")
+        add("positive_output_screen", "michaelis_menten_positive_rate",
+            description="The reaction rate must remain positive over the declared substrate domain.")
+        add("monotone_concave_in", "michaelis_menten_saturating_shape",
+            {"variable": safe_by_original["S"]},
+            "The Michaelis-Menten rate is increasing and concave-down over the declared substrate domain.")
     elif equation_name == "kinetic energy":
         add("required_power", "kinetic_energy_velocity_squared",
             {"variable": safe_by_original["v"], "exponent": 2.0},
@@ -226,6 +235,9 @@ def build_core15_discovery_problem(
         add("required_power", "logistic_quadratic_population",
             {"variable": safe_by_original["N"], "exponent": 2.0},
             "The logistic growth law contains a quadratic population term.")
+        add("monotone_concave_in", "logistic_training_domain_shape",
+            {"variable": safe_by_original["N"]},
+            "On the declared pre-carrying-capacity training interval, logistic growth is increasing and concave-down.")
 
     return DiscoveryProblem(
         target_name=str(equation.get("name", "Core-15 target")),
