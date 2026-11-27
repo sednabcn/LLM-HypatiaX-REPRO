@@ -87,16 +87,16 @@
     {
       "equation": "Value at Risk",
       "domain": "DeFi Risk",
-      "extrap_r2_near": 0.9998415686458455,
-      "extrap_r2_far": 0.9998415686458455,
+      "extrap_r2_near": 0.999841629297164,
+      "extrap_r2_far": 0.999841629297164,
       "instability_index": 0.0
     },
     {
       "equation": "Liquidation Price",
       "domain": "DeFi Risk",
-      "extrap_r2_near": 0.999998790375545,
-      "extrap_r2_far": 0.9999999428445192,
-      "instability_index": 1.152468974252585e-06
+      "extrap_r2_near": 0.9999904802511774,
+      "extrap_r2_far": 0.9999722917153275,
+      "instability_index": 1.818853584989455e-05
     },
     {
       "equation": "Portfolio Std Dev",
