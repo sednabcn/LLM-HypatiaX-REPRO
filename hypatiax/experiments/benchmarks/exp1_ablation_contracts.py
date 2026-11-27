@@ -253,3 +253,19 @@ def build_core15_discovery_problem(
             "scientific_priors_are_declared": True,
         },
     )
+
+
+def audit_core15_expression(equation: dict, expression: str, seed: int) -> dict:
+    """Return a post-selection scientific audit without changing benchmark metrics."""
+    from hypatiax.tools.symbolic.discovery_validation import CandidateValidator
+
+    problem = build_core15_discovery_problem(
+        equation, equation.get("vars", ()), seed
+    )
+    return CandidateValidator().validate(
+        problem,
+        expression,
+        source="core15_post_selection_audit",
+        search_strategy="audit_only",
+        seed=seed,
+    ).to_dict()
