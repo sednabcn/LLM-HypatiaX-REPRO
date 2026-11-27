@@ -83,9 +83,11 @@ def test_gravity_rejects_variable_exponents_and_requires_inverse_square_distance
     bad = _validate(problem, "log(m1*m2/r)**(1.5**r)")
     wrong_mass_power = _validate(problem, "0.036*m1**0.25*m2/r**2")
     good = _validate(problem, "6.674e-11*m1*m2/r**2")
+    physical_constant_form = _validate(problem, "G*m1*m2/r**2")
     assert not bad.eligible
     assert not wrong_mass_power.eligible
     assert good.eligible
+    assert physical_constant_form.eligible
 
 
 def test_logistic_growth_requires_quadratic_population_term():
@@ -143,4 +145,6 @@ def test_ideal_gas_contract_accepts_declared_physical_constants():
         [(0.1, 5.0), (200.0, 500.0), (0.01, 1.0)],
     )
     record = _validate(problem, "n * T * k_B * N_A / V")
+    gas_constant_form = _validate(problem, "n * R * T / V")
     assert record.eligible
+    assert gas_constant_form.eligible
