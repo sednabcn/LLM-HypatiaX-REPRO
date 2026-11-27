@@ -277,7 +277,7 @@ Use matched per-equation seeds and identical compute budgets; pre-register failu
 \end{itemize}
 
 
-\section{Post-merge remediation review and targeted investigation (27 November 2026)}
+\section{Post-merge ablation remediation review (27 November 2026)}
 \subsection{Merge and CI verification}
 PR \href{https://github.com/sednabcn/LLM-HypatiaX-REPRO/pull/411}{\#411} (this report) and PR \href{https://github.com/sednabcn/LLM-HypatiaX-REPRO/pull/412}{\#412} (Core-15 scientific candidate gates) are merged. PR \#412 is in master commit \href{https://github.com/sednabcn/LLM-HypatiaX-REPRO/commit/dd9eef58fb4a666ed0ffb3632b27562d3567e74d}{dd9eef5}.
 
@@ -286,7 +286,7 @@ Post-merge checks on that commit:
 \item Runner smoke: \href{https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/45982952869}{success}.
 \item R2 policy, metrics API and recovery evaluator: \href{https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/45982953065}{success}.
 \item Full pinned-Python 3.12 suite: \textbf{1,419 passed, 3 skipped, 0 failed}.
-\item R2 policy/workflow cleanup: 85 passed; PCA split protocol: 7 passed; experiment artifact/workflow contracts: success.
+\item R2 policy/workflow cleanup: 85 passed; experiment artifact/workflow contracts: success.
 \end{itemize}
 This verifies merged code against CI, not scientific outcome resolution.
 
@@ -314,22 +314,11 @@ Michaelis--Menten: saturation instability & Saturation denominator and sampled s
 \end{center}
 Regression tests cover representative valid and invalid expressions. They verify gate logic, not post-fix stochastic benchmark outcomes.
 
-\subsection{Targeted investigation: Kelly NN metric failures in exp1b\_pca}
-The five-seed PCA run \href{https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/45970544339}{45970544339} completed 74 cases per seed (42, 99, 123, 777, 2024), 370 records. It reported 365 finite hybrid test-R2 values and five missing values, all for \textit{Optimal LP Position (Kelly)}. Each log reports \texttt{undefined\_train\_or\_test\_metric}.
-
-Reproducing the committed protocol and split shows 200 rows, expected APY in 0.05--0.18 and 0.22--0.30 (shuffled with seed 44), risk in 0.05--0.25, and target $f^*=\min(\mathrm{APY}/(2\,\mathrm{risk}^2),1)$. PCA is fit on the raw two-feature matrix. PC1 loadings are approximately $(0.9969,0.0784)$, explaining 65.16\% of feature variance. The 80-row training target has 10 distinct values, while \textbf{all 120/120 test targets equal exactly 1.0} because the cap is active throughout testing.
-
-The canonical R2 policy correctly returns NaN with status \texttt{degenerate\_target} for a zero-variance target. This is not evidence of a scaler mismatch or failed fit. The benchmark collapses the status into \texttt{undefined\_train\_or\_test\_metric} and does not persist the detailed R2 status. The seed finalizer and \texttt{run\_all.sh} also classify any missing NN test-R2 as a feature-mismatch fingerprint, creating five false positives in this run.
-
-Before another PCA run: redesign the Kelly test distribution/split to preserve target variance; persist train/test R2 statuses and failure reason; restrict the feature-mismatch fingerprint to actual scaler/feature-count errors; and report 370 attempted records, 365 finite hybrid scores and five degenerate-target records separately. Do not randomize the split merely to make R2 finite.
-
-This investigation used deterministic protocol code only. No benchmark or model-training run was launched.
-
 \subsection{Current disposition}
-The engineering remediation is merged and CI-verified. The Kelly warning is explained by a degenerate test-target design and an over-broad diagnostic label. The scientific effectiveness of Core-15 gates remains \textbf{not empirically verified}; a fresh five-seed ablation under the merged gates is still required. No benchmark was launched for this report update.
+The engineering remediation is merged and CI-verified. The scientific effectiveness of Core-15 gates remains \textbf{not empirically verified}; a fresh five-seed \texttt{exp1\_ablation\_seeds} replication under the merged gates, compared failure-aware against the historical 225-record baseline, is still required. No benchmark was launched for this report update.
 
 
 \section*{Conclusion}
-HypatiaX is competitive on typical in-distribution cases and can be very fast when a correct LLM-only expression is accepted. The historical five-seed evidence does not establish general superiority over PySR. PR \#412 adds equation-aware scientific candidate safeguards, but their empirical effectiveness remains unknown until a fresh replication. The separate Kelly PCA split has a degenerate held-out target and requires a protocol/reporting correction before its NN metric can be interpreted. No new benchmark was launched for the original investigation or this report update.
+HypatiaX is competitive on typical in-distribution cases and can be very fast when a correct LLM-only expression is accepted. The historical five-seed evidence does not establish general superiority over PySR. PR \#412 adds equation-aware scientific candidate safeguards, but their empirical effectiveness remains unknown until a fresh replication. No new benchmark was launched for the original investigation or this report update.
 
 \end{document}
