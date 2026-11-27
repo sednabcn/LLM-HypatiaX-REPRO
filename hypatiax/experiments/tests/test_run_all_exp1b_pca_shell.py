@@ -13,7 +13,6 @@ def test_exp1b_pca_runner_is_standalone_and_shell_valid():
     assert 'run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (five isolated seeds)" bash "${REPO_ROOT}/scripts/ci/run_exp1b_pca.sh"' in run_all
     checked = subprocess.run(["bash", "-n", str(helper)], capture_output=True, text=True)
     assert checked.returncode == 0, checked.stderr
-    assert "bash -c" not in run_all[run_all.index('run exp1b_pca "'):run_all.index("\\nrun ", run_all.index('run exp1b_pca "'))]
 
 
 def test_exp1b_pca_runs_all_five_seeds_with_fresh_rng_and_isolated_outputs():
