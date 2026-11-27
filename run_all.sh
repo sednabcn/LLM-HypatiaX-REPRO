@@ -1378,6 +1378,15 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
   cd '${REPO_ROOT}'
   _PCA15_DIR='${RESULTS_DIR}/comparison_results/noise-noiseless/15_pca'
   mkdir -p \"\${_PCA15_DIR}\"
+  # Remove previously published PCA outputs before rebuilding so an interrupted
+  # run cannot leave a mixed old/new five-seed set in the working tree.
+  rm -f "\${_PCA15_DIR}/hypatiax_defi_benchmark_pca_results_seed42.json" \
+        "\${_PCA15_DIR}/hypatiax_defi_benchmark_pca_results_seed99.json" \
+        "\${_PCA15_DIR}/hypatiax_defi_benchmark_pca_results_seed123.json" \
+        "\${_PCA15_DIR}/hypatiax_defi_benchmark_pca_results_seed777.json" \
+        "\${_PCA15_DIR}/hypatiax_defi_benchmark_pca_results_seed2024.json" \
+        "\${_PCA15_DIR}/exp1b_pca_summary.json" \
+        "\${_PCA15_DIR}/split_protocol_disclosure.json"
 
   # Fixed five-seed protocol: execute each seed in a separate fresh process.
   # Do not inherit generic task/shard seed filters or rely on the benchmark's
