@@ -115,3 +115,19 @@ def test_post_selection_audit_marks_pySR_style_failures_without_rewriting_metric
     assert audit["source"] == "unknown"
     assert audit["search_strategy"] == "audit_only"
     assert audit["rejection_reasons"]
+
+
+def test_michaelis_menten_requires_saturating_denominator_and_shape():
+    problem = _problem("Michaelis-Menten", ["S"], [(0.1, 5.0)])
+    bad = _validate(problem, "2*S")
+    good = _validate(problem, "10*S/(2+S)")
+    assert not bad.eligible
+    assert good.eligible
+
+
+def test_logistic_candidate_must_be_increasing_and_concave_on_training_domain():
+    problem = _problem("Logistic Growth", ["N"], [(10.0, 500.0)])
+    convex = _validate(problem, "0.3*N + 0.0001*N**2")
+    logistic = _validate(problem, "0.3*N*(1-N/1000)")
+    assert not convex.eligible
+    assert logistic.eligible
