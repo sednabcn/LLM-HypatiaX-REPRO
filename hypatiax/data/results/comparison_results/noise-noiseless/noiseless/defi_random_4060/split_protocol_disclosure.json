@@ -1,0 +1,21 @@
+{
+  "experiment_id": "exp1_4060_seeds",
+  "split_protocol": "random_40_60",
+  "split_function": "_random_split_random_40_60",
+  "split_level": "outer_loop",
+  "train_size": 0.4,
+  "test_size": 0.6,
+  "random_split_used": true,
+  "random_state_policy": "one seeded permutation per benchmark seed; reused across cases with matching row counts",
+  "force_fresh": true,
+  "script": "hypatiax_defi_benchmark_v3c_4060.py",
+  "seeds": [
+    42,
+    99,
+    123,
+    777,
+    2024
+  ],
+  "generated_by": "run_all.sh exp1_4060_seeds isolated five-seed runner",
+  "timestamp": "2026-11-27T14:25:52.117094+00:00"
+}
