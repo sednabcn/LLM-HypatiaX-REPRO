@@ -59,9 +59,9 @@
     {
       "equation": "Ideal Gas Law",
       "domain": "Physics",
-      "extrap_r2_near": -13.346441514429777,
-      "extrap_r2_far": -24.391158593577675,
-      "instability_index": 11.044717079147897
+      "extrap_r2_near": -2.863595128587435,
+      "extrap_r2_far": -15.503899634510859,
+      "instability_index": 12.640304505923424
     },
     {
       "equation": "Impermanent Loss",
