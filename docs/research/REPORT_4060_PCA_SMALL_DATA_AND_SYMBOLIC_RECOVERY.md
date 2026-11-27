@@ -234,3 +234,56 @@ Record whether the LLM was actually called, whether it returned a parseable form
 - Random 40/60 run #354: https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/46021448210
 
 **Caveats:** This is a documentation and research-plan change. The numeric PCA seed medians are reproduced from the inspected per-seed analysis; the compact committed summary itself does not contain those median fields. The per-seed PCA mean values are the raw values in the pooled report. FAR-OO is not available as a named, well-defined per-seed metric in those summary files. No new results are claimed.
+
+
+## 10. Additional source-level findings from the deeper hybrid-path audit
+
+The following points were confirmed by reading the 4060 runner and shared routing implementation. They sharpen the experimental priorities above.
+
+### 10.1 The LLM prompt does not consume the split's training examples
+
+In `_generate_llm_formula`, the prompt is assembled from the equation description, domain, ordered variable names, and known constants. The answer-key field `metadata['ground_truth']` is explicitly excluded. The prompt does not include `X_train`, `y_train`, NN predictions, or a number of demonstrations selected from the current split.
+
+**Implication:** if the same equation metadata and LLM request settings are used, changing the outer split should not directly change the textual LLM prompt. A change in LLM output across seeds is more likely to come from decoding/provider nondeterminism or a changed request context/configuration than from the smaller numerical training sample. However, the *hybrid decision and reported hybrid score* can change because the NN and covariate-dependent routing inputs change.
+
+### 10.2 The current route is fail-closed to an ensemble, not a pure LLM route
+
+The 4060 hybrid function sets `llm_degradation_delta = None` and status `not_calibrated`, with an explicit comment that the LLM-specific degradation cohort is not ready. The shared `route_decision_from_diagnostics` returns the ensemble route whenever either degradation delta or calibrated tau is unavailable. Therefore, with the current code path, a passing formula trust gate and no structural-risk token still do not select a pure-LLM route: the route reason is `degradation_probe_or_tau_unavailable`.
+
+The code does run `_extrapolation_probe(X_train, y_train)`, but that probe trains an NN on a core subset of outer training data and evaluates on the training-edge subset. It is an **NN degradation diagnostic**, not an LLM-formula degradation estimate; its result is recorded separately and is not passed as `llm_degradation_delta`.
+
+**Implication:** a reported hybrid score cannot be interpreted as the LLM's standalone symbolic-recovery performance. The experiment should report formula generation and trust-gate outcomes separately from the final ensemble/fallback predictor.
+
+### 10.3 The NN has an internal edge-validation and abstention policy
+
+The current MLP is `[128, 64, 32]` with LayerNorm and SiLU and no Dropout (the source comment says Dropout was omitted because training samples are few). Adam is created with learning rate 0.001 and no explicit weight decay argument. Early stopping uses a 20%-of-outer-train directional edge validation subset, patience 30, and the best validation checkpoint.
+
+Two Ridge candidates are evaluated on the same edge-validation rows: positive-domain log-Ridge (`alpha=1.0`) and signed-feature Ridge (`alpha=1.0`). If the best Ridge edge score beats `max(0, NN edge R²)`, the MLP is rejected in favour of that Ridge candidate. If the NN edge R² is nonfinite or negative and no Ridge wins, the model abstains to the training-mean predictor.
+
+**Implication:** “NN performance” in the saved arm is not necessarily the MLP's performance. It may be log-Ridge, signed Ridge, or a training-mean fallback. The report must separate raw MLP predictions/metrics from the selected NN-arm predictor and record selection frequency by sample size. The low-data study should test weight decay, dropout, smaller networks, and validation strategy, but also treat the Ridge/mean fallback policy as a separate factor.
+
+### 10.4 Hybrid output can be an ensemble or NN replacement, not a recovered formula
+
+When the formula passes the training trust gate, the current unavailable degradation calibration causes the ensemble route. The ensemble uses a query-wise weight based on KDE OOD probability computed from training covariates and test/query covariates: (w_{LLM}=0.3+0.7p_{OOD}), with the NN receiving the complement. If the NN arm abstains, the code selects its replacement predictor and does not blend the rejected MLP output.
+
+If the formula fails the trust gate, the route is NN; the final score can then be from the NN, Ridge, or training mean. If the LLM formula route is selected in a future calibrated configuration, it evaluates the generated formula directly. The present configuration's unavailable LLM degradation delta makes that pure-LLM branch unavailable under the shared route policy.
+
+**Implication:** add an explicit per-case field identifying the final predictor source (LLM formula / LLM-NN blend / MLP / log-Ridge / signed Ridge / training mean), and count formula trust-gate pass rates separately. A single hybrid (R^2) obscures these distinct outcomes.
+
+### 10.5 Covariate-only access to the held-out query set
+
+The OOD KDE is fitted using (X_{train}), then scores (X_{test}) covariates to set per-query blend weights. It does not use (y_{test}) for that weighting. This is not target leakage, but it is a transductive/query-covariate-aware evaluation policy. The PCA split is also explicitly described in its disclosure as transductive.
+
+**Implication:** distinguish (a) inductive evaluation, where prediction for each query uses only the training-fitted model and query row, from (b) transductive batch evaluation, where the distribution of the whole query covariate set influences blend weights. Report both if deployment conditions do not guarantee access to the complete query batch.
+
+### 10.6 Highest-priority concrete tests following this audit
+
+1. **Formula-generation repeatability:** replay identical equation metadata and identical LLM settings over multiple calls; compare formula hashes and exact request provenance. No training rows are in the prompt, so this isolates LLM/provider variation.
+2. **Formula-only rescoring:** evaluate each saved formula on the same saved train/test arrays, bypassing route selection and NN blending. Report train/test predictive scores and symbolic equivalence separately.
+3. **Route decomposition:** for each case, tabulate formula present, parse/evaluation success, trust-gate pass/rejection reason, structural-risk flags, route reason, OOD weights, selected NN submodel, abstention, and final predictor source.
+4. **MLP-versus-selected-NN comparison:** preserve raw MLP predictions before Ridge/mean substitution and compare their learning curves with the selected NN-arm output.
+5. **Nested probe accounting:** record `n_fit` and `n_edge` for the NN extrapolation probe. It consumes only outer training data, but at small outer training sizes it may become unavailable (`n < 20`) or too small to provide a stable diagnostic.
+6. **Inductive-versus-transductive OOD weighting:** compare per-query weights derived from a fixed training-only calibration reference with weights derived from the complete held-out query batch.
+7. **Exact split manifests:** persist stable row IDs for outer train/test and NN fit/validation, plus the probe core/edge indices. This will make any future hidden-split concern directly auditable.
+
+These findings do not prove that the LLM is the source of the performance gap. They show that the final hybrid metric currently mixes formula quality, NN quality, an NN abstention policy, OOD-weighted blending, and route availability. The next benchmark should expose these components rather than treating the hybrid as one opaque method.
