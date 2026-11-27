@@ -1,0 +1,226 @@
+seed,equation_id,equation,domain,arm,completed,success,fit_status,evaluation_status,test_r2,extrap_r2_far,total_time_s
+42,0,Arrhenius,Chemistry,pysr_only,True,True,success,success,0.9973065533096875,-12.553898236643828,1115.2373077869415
+42,0,Arrhenius,Chemistry,hypatia,True,True,success,success,0.9965179190330193,,424.7786762714386
+42,0,Arrhenius,Chemistry,hypatia_nollm,True,True,success,success,0.9965179190330193,,413.65465688705444
+42,1,Henderson-Hasselbalch,Chemistry,pysr_only,True,True,success,success,0.9957838459765589,0.9969528120762586,1101.325267314911
+42,1,Henderson-Hasselbalch,Chemistry,hypatia,True,True,success,success,0.9971511131978484,0.9989601884750956,644.6221973896027
+42,1,Henderson-Hasselbalch,Chemistry,hypatia_nollm,True,True,success,success,0.9971517341755051,0.9989613473979284,423.6395947933197
+42,2,Rate Law,Chemistry,pysr_only,True,True,success,success,0.9985355312140458,0.999958129789591,1101.3187086582184
+42,2,Rate Law,Chemistry,hypatia,True,True,success,success,0.9985804993960428,0.9950261158505168,405.6711039543152
+42,2,Rate Law,Chemistry,hypatia_nollm,True,True,success,success,0.9985796204464549,0.995091292941598,639.335884809494
+42,3,Allometric Scaling,Biology,pysr_only,True,True,success,success,0.9972408538713506,0.9999838518244824,1115.2902989387512
+42,3,Allometric Scaling,Biology,hypatia,True,True,success,success,0.9972164852991815,1.0,3.847740888595581
+42,3,Allometric Scaling,Biology,hypatia_nollm,True,True,success,success,0.9973145955772668,0.9841703071057473,546.7121908664703
+42,4,Michaelis-Menten,Biology,pysr_only,True,True,success,success,0.9980811638451261,0.21924427379121114,1101.3160099983215
+42,4,Michaelis-Menten,Biology,hypatia,True,True,success,success,0.9980637269282439,0.1809689408174201,435.8445975780487
+42,4,Michaelis-Menten,Biology,hypatia_nollm,True,True,success,success,0.9980637269282439,0.1809689408174201,426.90063071250916
+42,5,Logistic Growth,Biology,pysr_only,True,True,success,success,0.9978900494249,0.9996622939775708,1101.979941368103
+42,5,Logistic Growth,Biology,hypatia,True,True,success,success,0.9978874609743278,0.999707230432164,398.4596893787384
+42,5,Logistic Growth,Biology,hypatia_nollm,True,True,success,success,0.9978874609743278,0.999707230432164,393.7292642593384
+42,6,Kinetic Energy,Physics,pysr_only,True,True,success,success,0.9982793294406981,0.9999646701369286,1111.8467345237732
+42,6,Kinetic Energy,Physics,hypatia,True,True,success,success,0.9983336129404532,1.0,5.0511109828948975
+42,6,Kinetic Energy,Physics,hypatia_nollm,True,True,success,success,0.9983002660578103,0.9992376854157753,301.3756377696991
+42,7,Gravitational Force,Physics,pysr_only,True,True,success,success,0.8294660611845831,-7.448454707171724,1100.9683122634888
+42,7,Gravitational Force,Physics,hypatia,True,True,success,success,0.957017922161516,-7.423416600367711,1211.0092370510101
+42,7,Gravitational Force,Physics,hypatia_nollm,True,True,success,success,0.9493193425023556,-3.691915301222343,1382.2000570297241
+42,8,Ideal Gas Law,Physics,pysr_only,True,True,success,success,0.9972366817570859,0.9999909408228139,1081.3740482330322
+42,8,Ideal Gas Law,Physics,hypatia,True,True,success,success,0.9972216810073377,0.9999999046806634,4.133713722229004
+42,8,Ideal Gas Law,Physics,hypatia_nollm,True,True,success,success,0.9972413605951285,0.9999849885378398,236.26349878311157
+42,9,Impermanent Loss,DeFi AMM,pysr_only,True,True,success,success,0.9975887205383803,-62.8785251878626,1112.9204549789429
+42,9,Impermanent Loss,DeFi AMM,hypatia,True,True,success,success,0.9973668402739759,,519.1300346851349
+42,9,Impermanent Loss,DeFi AMM,hypatia_nollm,True,True,success,success,0.9973668402739759,,507.0937716960907
+42,10,Price Impact,DeFi AMM,pysr_only,True,True,success,success,0.9979566867769165,1.0,1101.2641758918762
+42,10,Price Impact,DeFi AMM,hypatia,True,True,success,success,0.9979566867769165,1.0,6.005990982055664
+42,10,Price Impact,DeFi AMM,hypatia_nollm,True,True,success,success,0.9979566867769165,1.0,340.41351318359375
+42,11,Constant Product,DeFi AMM,pysr_only,True,True,success,success,0.9714028886414002,0.9995518336809729,1101.0933136940002
+42,11,Constant Product,DeFi AMM,hypatia,True,True,success,success,0.9714023711191218,0.9995625228159449,387.9875235557556
+42,11,Constant Product,DeFi AMM,hypatia_nollm,True,True,success,success,0.9714023711191218,0.9995625228159449,394.1786832809448
+42,12,Value at Risk,DeFi Risk,pysr_only,True,True,success,success,0.9954601102634301,0.9999392726821341,1116.9542133808136
+42,12,Value at Risk,DeFi Risk,hypatia,True,True,success,success,0.9954629365730348,0.9999438254593332,427.8466889858246
+42,12,Value at Risk,DeFi Risk,hypatia_nollm,True,True,success,success,0.9954638429810956,0.9999452529339797,411.0303530693054
+42,13,Liquidation Price,DeFi Risk,pysr_only,True,True,success,success,0.996471414912598,0.9999981059539594,1101.5400686264038
+42,13,Liquidation Price,DeFi Risk,hypatia,True,True,success,success,0.9964434088984333,0.999198296885269,383.9594871997833
+42,13,Liquidation Price,DeFi Risk,hypatia_nollm,True,True,success,success,0.9964434088984333,0.999198296885269,370.5796146392822
+42,14,Portfolio Std Dev,DeFi Risk,pysr_only,True,True,success,success,0.9050873465294916,0.9338867639321191,1101.3373761177063
+42,14,Portfolio Std Dev,DeFi Risk,hypatia,True,True,success,success,0.9967258733197543,1.0,4.600950002670288
+42,14,Portfolio Std Dev,DeFi Risk,hypatia_nollm,True,True,success,success,0.9966804039809681,0.9999539213551529,259.8455021381378
+99,0,Arrhenius,Chemistry,pysr_only,True,True,success,success,0.9964918443907445,,1112.6667284965515
+99,0,Arrhenius,Chemistry,hypatia,True,True,success,success,0.9971445132923502,,383.0653541088104
+99,0,Arrhenius,Chemistry,hypatia_nollm,True,True,success,success,0.9971445132923502,,406.11768102645874
+99,1,Henderson-Hasselbalch,Chemistry,pysr_only,True,True,success,success,0.9964684302127083,0.9983738366194145,1101.2478272914886
+99,1,Henderson-Hasselbalch,Chemistry,hypatia,True,True,success,success,0.9969657011283847,0.9998579704388263,377.7808029651642
+99,1,Henderson-Hasselbalch,Chemistry,hypatia_nollm,True,True,success,success,0.9969655990460813,0.9998579501989504,416.69491481781006
+99,2,Rate Law,Chemistry,pysr_only,True,True,success,success,0.9953342804793545,0.9995793498552047,1101.215301990509
+99,2,Rate Law,Chemistry,hypatia,True,True,success,success,0.9953980036970264,0.9941339450532585,622.7269186973572
+99,2,Rate Law,Chemistry,hypatia_nollm,True,True,success,success,0.995397467781455,0.9940325112844813,506.01260209083557
+99,3,Allometric Scaling,Biology,pysr_only,True,True,success,success,0.9969874079157834,0.9997925702347552,1112.3583869934082
+99,3,Allometric Scaling,Biology,hypatia,True,True,success,success,0.9969320836508075,1.0,3.68129301071167
+99,3,Allometric Scaling,Biology,hypatia_nollm,True,True,success,success,0.9969924452403511,0.9999088534261712,518.1918256282806
+99,4,Michaelis-Menten,Biology,pysr_only,True,True,success,success,0.9959317073499704,,1101.1962690353394
+99,4,Michaelis-Menten,Biology,hypatia,True,True,success,success,0.9973077425821425,0.9998713453867265,660.6190841197968
+99,4,Michaelis-Menten,Biology,hypatia_nollm,True,True,success,success,0.9973077425821425,0.9998713453867265,655.1129922866821
+99,5,Logistic Growth,Biology,pysr_only,True,True,success,success,0.9968551049108497,0.9993657641159969,1101.625082731247
+99,5,Logistic Growth,Biology,hypatia,True,True,success,success,0.9968494189729596,0.9969506158723656,371.77341961860657
+99,5,Logistic Growth,Biology,hypatia_nollm,True,True,success,success,0.9968494189729596,0.9969506158723656,369.32814502716064
+99,6,Kinetic Energy,Physics,pysr_only,True,True,success,success,0.9985490467302095,0.9999807085502485,1055.0844552516937
+99,6,Kinetic Energy,Physics,hypatia,True,True,success,success,0.9985855944033891,1.0,4.912418603897095
+99,6,Kinetic Energy,Physics,hypatia_nollm,True,True,success,success,0.9985199300709515,0.9898354285892714,489.06680130958557
+99,7,Gravitational Force,Physics,pysr_only,True,True,success,success,0.6170073266937992,-8.604983340648916,874.307154417038
+99,7,Gravitational Force,Physics,hypatia,True,True,success,success,0.7014154625343672,1.0,14.313331842422485
+99,7,Gravitational Force,Physics,hypatia_nollm,True,True,success,success,0.701232279962863,0.9980704999678541,541.1352052688599
+99,8,Ideal Gas Law,Physics,pysr_only,True,True,success,success,0.9981558610959385,0.9989819048426322,994.4150817394257
+99,8,Ideal Gas Law,Physics,hypatia,True,True,success,success,0.39111047673447874,-15.503899634510859,1837.3439767360687
+99,8,Ideal Gas Law,Physics,hypatia_nollm,True,True,success,success,0.39111047673447874,-15.503899634510859,1868.8324382305145
+99,9,Impermanent Loss,DeFi AMM,pysr_only,True,True,success,success,0.9954324241405812,-57.855588668347394,1114.297105550766
+99,9,Impermanent Loss,DeFi AMM,hypatia,True,True,success,success,0.9953518834128432,,599.5919361114502
+99,9,Impermanent Loss,DeFi AMM,hypatia_nollm,True,True,success,success,0.9953367460414235,,581.3980898857117
+99,10,Price Impact,DeFi AMM,pysr_only,True,True,success,success,0.9975939408363912,1.0,1101.2723982334137
+99,10,Price Impact,DeFi AMM,hypatia,True,True,success,success,0.9975939408363912,1.0,6.4438560009002686
+99,10,Price Impact,DeFi AMM,hypatia_nollm,True,True,success,success,0.9975939408363912,1.0,318.5555684566498
+99,11,Constant Product,DeFi AMM,pysr_only,True,True,success,success,0.992053686342531,0.9990821194292638,1101.1583125591278
+99,11,Constant Product,DeFi AMM,hypatia,True,True,success,success,0.9920542547047466,0.9991048707160595,375.3669264316559
+99,11,Constant Product,DeFi AMM,hypatia_nollm,True,True,success,success,0.9920542370160312,0.9991041640601068,313.08910274505615
+99,12,Value at Risk,DeFi Risk,pysr_only,True,True,success,success,0.9956227401220459,0.9998177998548463,1116.7988421916962
+99,12,Value at Risk,DeFi Risk,hypatia,True,True,success,success,0.9956209286177712,0.999841629297164,460.2381992340088
+99,12,Value at Risk,DeFi Risk,hypatia_nollm,True,True,success,success,0.9956209335368734,0.9998415686458455,414.9334981441498
+99,13,Liquidation Price,DeFi Risk,pysr_only,True,True,success,success,0.9968503814831097,0.9999998483559337,1101.4839069843292
+99,13,Liquidation Price,DeFi Risk,hypatia,True,True,success,success,0.9968447024321897,0.9999722917153275,346.15420722961426
+99,13,Liquidation Price,DeFi Risk,hypatia_nollm,True,True,success,success,0.9968447024321897,0.9999722917153275,339.16147661209106
+99,14,Portfolio Std Dev,DeFi Risk,pysr_only,True,True,success,success,0.9978230445356874,1.0,1101.3722298145294
+99,14,Portfolio Std Dev,DeFi Risk,hypatia,True,True,success,success,0.9978230445356874,1.0,4.3709259033203125
+99,14,Portfolio Std Dev,DeFi Risk,hypatia_nollm,True,True,success,success,0.9977977424161505,0.9999824402946392,775.9211912155151
+123,0,Arrhenius,Chemistry,pysr_only,True,True,success,success,0.9968526883081789,-14.356020951224588,1071.0186419487
+123,0,Arrhenius,Chemistry,hypatia,True,True,success,success,0.996790975572358,,330.68249464035034
+123,0,Arrhenius,Chemistry,hypatia_nollm,True,True,success,success,0.996790975572358,,319.6953420639038
+123,1,Henderson-Hasselbalch,Chemistry,pysr_only,True,True,success,success,0.8931307743715221,0.8634217293256622,925.7599990367889
+123,1,Henderson-Hasselbalch,Chemistry,hypatia,True,True,success,success,0.9985227473261369,0.9989268377891887,427.71510004997253
+123,1,Henderson-Hasselbalch,Chemistry,hypatia_nollm,True,True,success,success,0.9985227473261369,0.9989268377891887,407.3476791381836
+123,2,Rate Law,Chemistry,pysr_only,True,True,success,success,0.9970369926422383,0.9999307711918075,1101.156730413437
+123,2,Rate Law,Chemistry,hypatia,True,True,success,success,0.9970347194882531,0.9997349594832544,334.1416072845459
+123,2,Rate Law,Chemistry,hypatia_nollm,True,True,success,success,0.997034243153403,0.999712783237804,276.67146849632263
+123,3,Allometric Scaling,Biology,pysr_only,True,True,success,success,0.9972738837137919,0.99990212523261,1055.5471420288086
+123,3,Allometric Scaling,Biology,hypatia,True,True,success,success,0.9973395451080157,1.0,4.720278263092041
+123,3,Allometric Scaling,Biology,hypatia_nollm,True,True,success,success,0.9972699413134337,0.9976581606376589,433.62608218193054
+123,4,Michaelis-Menten,Biology,pysr_only,True,True,success,success,0.9974555152015491,0.9957529454354828,1100.9299499988556
+123,4,Michaelis-Menten,Biology,hypatia,True,True,success,success,0.9974446417832532,0.9916082492302718,704.4426627159119
+123,4,Michaelis-Menten,Biology,hypatia_nollm,True,True,success,success,0.9974446417832532,0.9916082492302718,689.6002821922302
+123,5,Logistic Growth,Biology,pysr_only,True,True,success,success,0.9967948308786222,0.9996325941147288,1101.223016500473
+123,5,Logistic Growth,Biology,hypatia,True,True,success,success,0.9967969915321955,0.99959260519228,350.6081075668335
+123,5,Logistic Growth,Biology,hypatia_nollm,True,True,success,success,0.9967969915321955,0.99959260519228,347.69138193130493
+123,6,Kinetic Energy,Physics,pysr_only,True,True,success,success,0.997341086659714,0.9999528452170254,1114.4138114452362
+123,6,Kinetic Energy,Physics,hypatia,True,True,success,success,0.9973642707892129,1.0,4.363821744918823
+123,6,Kinetic Energy,Physics,hypatia_nollm,True,True,success,success,0.99739985797673,0.9847918375078588,378.76073598861694
+123,7,Gravitational Force,Physics,pysr_only,True,True,success,success,0.9533414530347533,0.9678241791814234,1101.3575007915497
+123,7,Gravitational Force,Physics,hypatia,True,True,success,success,0.9469713204918769,0.9962626497851994,1544.0414817333221
+123,7,Gravitational Force,Physics,hypatia_nollm,True,True,success,success,0.9521504690188642,-5.027165460869469,1408.2500710487366
+123,8,Ideal Gas Law,Physics,pysr_only,True,True,success,success,0.9987150158918606,0.999945550255342,1101.1972358226776
+123,8,Ideal Gas Law,Physics,hypatia,True,True,success,success,0.9987301076224924,0.9999998881257697,5.140746831893921
+123,8,Ideal Gas Law,Physics,hypatia_nollm,True,True,success,success,0.9987151181213331,0.9999461831943127,298.9167158603668
+123,9,Impermanent Loss,DeFi AMM,pysr_only,True,True,success,success,0.9979520485365526,-63.30699143399826,1112.3020768165588
+123,9,Impermanent Loss,DeFi AMM,hypatia,True,True,success,success,0.997539311707615,,432.4935095310211
+123,9,Impermanent Loss,DeFi AMM,hypatia_nollm,True,True,success,success,0.997539311707615,,438.88171458244324
+123,10,Price Impact,DeFi AMM,pysr_only,True,True,success,success,0.9957566261893815,1.0,941.5116713047028
+123,10,Price Impact,DeFi AMM,hypatia,True,True,success,success,0.9957566261893815,1.0,6.752221584320068
+123,10,Price Impact,DeFi AMM,hypatia_nollm,True,True,success,success,0.9957566261893815,1.0,284.4801197052002
+123,11,Constant Product,DeFi AMM,pysr_only,True,True,success,success,0.9985012366311649,0.9987922638296305,1058.4954693317413
+123,11,Constant Product,DeFi AMM,hypatia,True,True,success,success,0.9985015071414374,0.9987985459316994,284.0220682621002
+123,11,Constant Product,DeFi AMM,hypatia_nollm,True,True,success,success,0.9985015154184018,0.9987987379825418,278.07280468940735
+123,12,Value at Risk,DeFi Risk,pysr_only,True,True,success,success,0.9970420410560248,0.9997388641083469,1051.2893235683441
+123,12,Value at Risk,DeFi Risk,hypatia,True,True,success,success,0.9970408969696622,0.9997285928937332,297.7403485774994
+123,12,Value at Risk,DeFi Risk,hypatia_nollm,True,True,success,success,0.9970409409208626,0.999728988650148,269.38355779647827
+123,13,Liquidation Price,DeFi Risk,pysr_only,True,True,success,success,0.9974952041918904,0.9999968480853644,1101.00727725029
+123,13,Liquidation Price,DeFi Risk,hypatia,True,True,success,success,0.9975277772609434,0.9999979474743471,277.27178931236267
+123,13,Liquidation Price,DeFi Risk,hypatia_nollm,True,True,success,success,0.9975277772609434,0.9999979474743471,253.17534828186035
+123,14,Portfolio Std Dev,DeFi Risk,pysr_only,True,True,success,success,0.9755584859889679,0.1214345543130072,1015.2547118663788
+123,14,Portfolio Std Dev,DeFi Risk,hypatia,True,True,success,success,0.9957320037921402,1.0,5.728527069091797
+123,14,Portfolio Std Dev,DeFi Risk,hypatia_nollm,True,True,success,success,0.994750130390621,0.9796280815528127,375.6144299507141
+777,0,Arrhenius,Chemistry,pysr_only,True,True,success,success,0.9959509269990411,-11.616753000613008,865.8780672550201
+777,0,Arrhenius,Chemistry,hypatia,True,True,success,success,0.996421062101099,,259.2289752960205
+777,0,Arrhenius,Chemistry,hypatia_nollm,True,True,success,success,0.996421062101099,,250.54104161262512
+777,1,Henderson-Hasselbalch,Chemistry,pysr_only,True,True,success,success,0.9878797594694373,-16.881116756516267,811.0808897018433
+777,1,Henderson-Hasselbalch,Chemistry,hypatia,True,True,success,success,0.9961861588700374,0.9978461232009268,683.5987722873688
+777,1,Henderson-Hasselbalch,Chemistry,hypatia_nollm,True,True,success,success,0.9961861588700374,0.9978461232009268,674.8694448471069
+777,2,Rate Law,Chemistry,pysr_only,True,True,success,success,0.9970851930611498,0.9999933947725594,1100.98446393013
+777,2,Rate Law,Chemistry,hypatia,True,True,success,success,0.99717020207236,0.9857950598111118,489.69557905197144
+777,2,Rate Law,Chemistry,hypatia_nollm,True,True,success,success,0.99717020207236,0.9857950598111118,572.114408493042
+777,3,Allometric Scaling,Biology,pysr_only,True,True,success,success,0.9981107375782605,0.9999764075235266,1116.062716960907
+777,3,Allometric Scaling,Biology,hypatia,True,True,success,success,0.9980770069926214,1.0,5.0207297801971436
+777,3,Allometric Scaling,Biology,hypatia_nollm,True,True,success,success,0.9981229600310061,0.9996674766942464,616.081042766571
+777,4,Michaelis-Menten,Biology,pysr_only,True,True,success,success,0.9969993315860113,,1101.7507321834564
+777,4,Michaelis-Menten,Biology,hypatia,True,True,success,success,0.9969652163570979,-0.48623798474585267,519.0738289356232
+777,4,Michaelis-Menten,Biology,hypatia_nollm,True,True,success,success,0.9969652163570979,-0.48623798474585267,511.2958462238312
+777,5,Logistic Growth,Biology,pysr_only,True,True,success,success,0.9967792194490432,0.9993898610791715,1101.8583512306213
+777,5,Logistic Growth,Biology,hypatia,True,True,success,success,0.9967843381360065,0.9993986740259359,488.7282521724701
+777,5,Logistic Growth,Biology,hypatia_nollm,True,True,success,success,0.9967843939057336,0.9994003758316606,495.7784562110901
+777,6,Kinetic Energy,Physics,pysr_only,True,True,success,success,0.9981158624674323,0.9999999044072899,1109.7325856685638
+777,6,Kinetic Energy,Physics,hypatia,True,True,success,success,0.8597312311430054,-82.11597849011841,1296.1534543037415
+777,6,Kinetic Energy,Physics,hypatia_nollm,True,True,success,success,0.7061223873398099,-17.332815680742232,1606.554212808609
+777,7,Gravitational Force,Physics,pysr_only,True,True,success,success,0.9922149882555777,-4.68217871041853,978.6830925941467
+777,7,Gravitational Force,Physics,hypatia,True,True,success,success,0.9903314738090856,-8.598331386589702,1693.7947645187378
+777,7,Gravitational Force,Physics,hypatia_nollm,True,True,success,success,0.8820171201793904,-3.8477329568199643,2058.3517591953278
+777,8,Ideal Gas Law,Physics,pysr_only,True,True,success,success,0.9978526820617608,0.9993870172666899,1100.8633909225464
+777,8,Ideal Gas Law,Physics,hypatia,True,True,success,success,0.1981106983680021,,1447.4022719860077
+777,8,Ideal Gas Law,Physics,hypatia_nollm,True,True,success,success,0.1981106983680021,,1408.3639645576477
+777,9,Impermanent Loss,DeFi AMM,pysr_only,True,True,success,success,0.9978255738835918,-66.35339591078511,1112.9740982055664
+777,9,Impermanent Loss,DeFi AMM,hypatia,True,True,success,success,0.9972579792826787,,467.98590183258057
+777,9,Impermanent Loss,DeFi AMM,hypatia_nollm,True,True,success,success,0.9972579792826787,,472.59532380104065
+777,10,Price Impact,DeFi AMM,pysr_only,True,True,success,success,0.9979968433296057,1.0,1101.215791940689
+777,10,Price Impact,DeFi AMM,hypatia,True,True,success,success,0.9980359834591501,0.9987865568791255,370.3537542819977
+777,10,Price Impact,DeFi AMM,hypatia_nollm,True,True,success,success,0.998037277759076,0.998528324211182,329.1481282711029
+777,11,Constant Product,DeFi AMM,pysr_only,True,True,success,success,0.9986361654860745,0.997921472466232,1101.16787981987
+777,11,Constant Product,DeFi AMM,hypatia,True,True,success,success,0.9986365802518582,0.9979457643992529,360.5210382938385
+777,11,Constant Product,DeFi AMM,hypatia_nollm,True,True,success,success,0.9986365802518582,0.9979457643992529,358.4957637786865
+777,12,Value at Risk,DeFi Risk,pysr_only,True,True,success,success,0.9958807942143527,0.9998005803190415,1113.126680612564
+777,12,Value at Risk,DeFi Risk,hypatia,True,True,success,success,0.9958775654592437,0.999780279762648,569.0025444030762
+777,12,Value at Risk,DeFi Risk,hypatia_nollm,True,True,success,success,0.9958786329616273,0.9997870511480902,429.5137069225311
+777,13,Liquidation Price,DeFi Risk,pysr_only,True,True,success,success,0.998033665250556,0.9999999634569,1101.2873015403748
+777,13,Liquidation Price,DeFi Risk,hypatia,True,True,success,success,0.9981320373171434,0.9978714059508542,403.2714729309082
+777,13,Liquidation Price,DeFi Risk,hypatia_nollm,True,True,success,success,0.9981320373171434,0.9978714059508542,421.05111622810364
+777,14,Portfolio Std Dev,DeFi Risk,pysr_only,True,True,success,success,0.9973267288861953,1.0,1101.2058749198914
+777,14,Portfolio Std Dev,DeFi Risk,hypatia,True,True,success,success,0.9973267288861953,1.0,4.75797963142395
+777,14,Portfolio Std Dev,DeFi Risk,hypatia_nollm,True,True,success,success,0.9973282814039632,0.9999053195800847,278.4380626678467
+2024,0,Arrhenius,Chemistry,pysr_only,True,True,success,success,0.9972156067481174,,1115.3654687404633
+2024,0,Arrhenius,Chemistry,hypatia,True,True,success,success,0.9968523736378733,,479.3126027584076
+2024,0,Arrhenius,Chemistry,hypatia_nollm,True,True,success,success,0.9968523736378733,,472.3881781101227
+2024,1,Henderson-Hasselbalch,Chemistry,pysr_only,True,True,success,success,0.9913800348764501,-8.383712246876836,1101.4129447937012
+2024,1,Henderson-Hasselbalch,Chemistry,hypatia,True,True,success,success,0.9979507102148779,0.9997635033357002,400.4500617980957
+2024,1,Henderson-Hasselbalch,Chemistry,hypatia_nollm,True,True,success,success,0.9979507102148779,0.9997635033357002,391.3437852859497
+2024,2,Rate Law,Chemistry,pysr_only,True,True,success,success,0.9980677250318091,0.999999565728714,1101.4839158058167
+2024,2,Rate Law,Chemistry,hypatia,True,True,success,success,0.9980221113981101,0.9975977359866036,808.7861392498016
+2024,2,Rate Law,Chemistry,hypatia_nollm,True,True,success,success,0.9980204585179989,0.997387736251482,402.28675866127014
+2024,3,Allometric Scaling,Biology,pysr_only,True,True,success,success,0.9961947444217925,0.9926889931670724,1112.7467641830444
+2024,3,Allometric Scaling,Biology,hypatia,True,True,success,success,0.9963967231313126,1.0,4.736640214920044
+2024,3,Allometric Scaling,Biology,hypatia_nollm,True,True,success,success,0.9963852805706896,0.9886927121368146,502.17660093307495
+2024,4,Michaelis-Menten,Biology,pysr_only,True,True,success,success,0.9979961015606681,0.9391957660307733,1101.3164525032043
+2024,4,Michaelis-Menten,Biology,hypatia,True,True,success,success,0.9979387387520076,0.8067765522336499,361.04315090179443
+2024,4,Michaelis-Menten,Biology,hypatia_nollm,True,True,success,success,0.9979387387520076,0.8067765522336499,355.24445033073425
+2024,5,Logistic Growth,Biology,pysr_only,True,True,success,success,0.9969137829308461,0.9999770667406596,1101.533467054367
+2024,5,Logistic Growth,Biology,hypatia,True,True,success,success,0.9671761698606808,-22.145373382898164,14.970575094223022
+2024,5,Logistic Growth,Biology,hypatia_nollm,True,True,success,success,0.9969335245930155,0.9999818734961612,370.2167317867279
+2024,6,Kinetic Energy,Physics,pysr_only,True,True,success,success,0.998109273084234,0.9995351092113287,1116.1561155319214
+2024,6,Kinetic Energy,Physics,hypatia,True,True,success,success,0.9981076767536607,1.0,5.033395051956177
+2024,6,Kinetic Energy,Physics,hypatia_nollm,True,True,success,success,0.9980442283183317,0.9954406621446499,485.8166353702545
+2024,7,Gravitational Force,Physics,pysr_only,True,True,success,success,0.839376142107181,-9.797267097960164,1101.379822731018
+2024,7,Gravitational Force,Physics,hypatia,True,True,success,success,0.8698044629074955,0.5259855744079984,1750.989571094513
+2024,7,Gravitational Force,Physics,hypatia_nollm,True,True,success,success,0.8616543752167619,0.5667895914094224,1793.4475219249725
+2024,8,Ideal Gas Law,Physics,pysr_only,True,True,success,success,0.9947640020835986,0.999968152197612,1101.5570385456085
+2024,8,Ideal Gas Law,Physics,hypatia,True,True,success,success,0.994781733427849,0.9999902740991415,367.033962726593
+2024,8,Ideal Gas Law,Physics,hypatia_nollm,True,True,success,success,0.994781733427849,0.9999902740991415,359.7985289096832
+2024,9,Impermanent Loss,DeFi AMM,pysr_only,True,True,success,success,0.9976561611221211,-67.51234377573482,1112.5550830364227
+2024,9,Impermanent Loss,DeFi AMM,hypatia,True,True,success,success,0.9971341481163798,,387.0574550628662
+2024,9,Impermanent Loss,DeFi AMM,hypatia_nollm,True,True,success,success,0.9971341481163798,,375.91211771965027
+2024,10,Price Impact,DeFi AMM,pysr_only,True,True,success,success,0.9969272348400462,1.0,1101.3464047908783
+2024,10,Price Impact,DeFi AMM,hypatia,True,True,success,success,0.9969272348400462,1.0,5.285042762756348
+2024,10,Price Impact,DeFi AMM,hypatia_nollm,True,True,success,success,0.9969272348400462,1.0,317.7296781539917
+2024,11,Constant Product,DeFi AMM,pysr_only,True,True,success,success,0.98787502598439,0.9981711040312564,1101.0784559249878
+2024,11,Constant Product,DeFi AMM,hypatia,True,True,success,success,0.987873865026577,0.9981889998387427,352.1639895439148
+2024,11,Constant Product,DeFi AMM,hypatia_nollm,True,True,success,success,0.987873865026577,0.9981889998387427,346.635217666626
+2024,12,Value at Risk,DeFi Risk,pysr_only,True,True,success,success,0.9967191634215773,0.9999827064365664,1112.6605398654938
+2024,12,Value at Risk,DeFi Risk,hypatia,True,True,success,success,0.9967187781784443,0.999984166181746,294.9354486465454
+2024,12,Value at Risk,DeFi Risk,hypatia_nollm,True,True,success,success,0.9967187781784443,0.999984166181746,321.4271409511566
+2024,13,Liquidation Price,DeFi Risk,pysr_only,True,True,success,success,0.9956465090019787,0.999998383971703,1101.2049343585968
+2024,13,Liquidation Price,DeFi Risk,hypatia,True,True,success,success,0.9956292253224179,0.9995931968645568,402.01471185684204
+2024,13,Liquidation Price,DeFi Risk,hypatia_nollm,True,True,success,success,0.9956292253224179,0.9995931968645568,398.3036229610443
+2024,14,Portfolio Std Dev,DeFi Risk,pysr_only,True,True,success,success,0.9971016515044858,1.0,1101.1362929344177
+2024,14,Portfolio Std Dev,DeFi Risk,hypatia,True,True,success,success,0.9971016515044858,1.0,6.127965450286865
+2024,14,Portfolio Std Dev,DeFi Risk,hypatia_nollm,True,True,success,success,0.9970806100498407,0.9999496667501788,236.39060235023499

@@ -1,9 +1,6 @@
 {
-  "all_complete": false,
-  "cross_seed_problems": [
-    "cross-seed provenance mismatch: source_revision differs across seeds",
-    "cross-seed provenance mismatch: benchmark_script_sha256 differs across seeds"
-  ],
+  "all_complete": true,
+  "cross_seed_problems": [],
   "expected_arms": [
     "pysr_only",
     "hypatia",
@@ -11,14 +8,14 @@
   ],
   "expected_equations": 15,
   "experiment": "exp1_ablation_seeds",
-  "generated_at": "2026-11-27T00:01:00Z",
+  "generated_at": "2026-11-27T05:21:32Z",
   "per_seed": {
     "123": {
       "directory": "hypatiax/data/results/ablation/exp1_ablation_seed123",
       "files": {
         "exp1_ablation_results.json": {
-          "bytes": 47334,
-          "sha256": "caa8ca4f0403d95eff0ff718721d0fc43ccdc61470c6eee1e8a65d150005b892",
+          "bytes": 105161,
+          "sha256": "0955e6cbd28722edc32d90c81b9031568869bd9700abfc08ee2156e6ae16071e",
           "structure": {
             "keys": [
               "0",
@@ -42,264 +39,8 @@
           }
         },
         "exp1_llm_contribution.json": {
-          "bytes": 2464,
-          "sha256": "0ece5a7a594748ba708d64fd2c3ade4bc3c89294a8e1c868056730286b21941f",
-          "structure": {
-            "keys": [
-              "H_far",
-              "N_far",
-              "P_far",
-              "equations",
-              "n",
-              "tests"
-            ],
-            "n_keys": 6,
-            "type": "dict"
-          }
-        },
-        "exp1_rf01_mannwhitney.json": {
-          "bytes": 3543,
-          "sha256": "84fcaa255b24e5e4453517cd114fb0500438abe22677c7cded26aa4da3be34d7",
-          "structure": {
-            "keys": [
-              "rf01_mann_whitney"
-            ],
-            "n_keys": 1,
-            "type": "dict"
-          }
-        },
-        "provenance_map_exp1.json": {
-          "bytes": 3102,
-          "sha256": "c54c41e85ee6ecb244e22e0aa69528276c7783966078e55377fd9bd0a64a76f3",
-          "structure": {
-            "keys": [
-              "anthropic_sdk",
-              "engine",
-              "engine_version",
-              "family",
-              "fixes_applied",
-              "flags",
-              "git_sha",
-              "model_string",
-              "n_rows_hypatia_failed",
-              "niterations",
-              "outputs",
-              "paper_sections",
-              "paper_targets",
-              "populations",
-              "pysr",
-              "seed",
-              "seed_is_paper_primary",
-              "timestamp"
-            ],
-            "n_keys": 18,
-            "type": "dict"
-          }
-        }
-      },
-      "last_commit": {
-        "commit": "268f27144dfac1f149b7168c3d7b5f24d7d76454",
-        "committed_at": "2026-11-26T23:58:59Z"
-      },
-      "problems": [
-        "equation 0/pysr_only: record is not terminal",
-        "equation 0/pysr_only: missing fit_status",
-        "equation 0/pysr_only: missing evaluation_status",
-        "equation 0/hypatia: record is not terminal",
-        "equation 0/hypatia: missing fit_status",
-        "equation 0/hypatia: missing evaluation_status",
-        "equation 0/hypatia_nollm: record is not terminal",
-        "equation 0/hypatia_nollm: missing fit_status",
-        "equation 0/hypatia_nollm: missing evaluation_status",
-        "equation 1/pysr_only: record is not terminal",
-        "equation 1/pysr_only: missing fit_status",
-        "equation 1/pysr_only: missing evaluation_status",
-        "equation 1/hypatia: record is not terminal",
-        "equation 1/hypatia: missing fit_status",
-        "equation 1/hypatia: missing evaluation_status",
-        "equation 1/hypatia_nollm: record is not terminal",
-        "equation 1/hypatia_nollm: missing fit_status",
-        "equation 1/hypatia_nollm: missing evaluation_status",
-        "equation 2/pysr_only: record is not terminal",
-        "equation 2/pysr_only: missing fit_status",
-        "equation 2/pysr_only: missing evaluation_status",
-        "equation 2/hypatia: record is not terminal",
-        "equation 2/hypatia: missing fit_status",
-        "equation 2/hypatia: missing evaluation_status",
-        "equation 2/hypatia_nollm: record is not terminal",
-        "equation 2/hypatia_nollm: missing fit_status",
-        "equation 2/hypatia_nollm: missing evaluation_status",
-        "equation 3/pysr_only: record is not terminal",
-        "equation 3/pysr_only: missing fit_status",
-        "equation 3/pysr_only: missing evaluation_status",
-        "equation 3/hypatia: record is not terminal",
-        "equation 3/hypatia: missing fit_status",
-        "equation 3/hypatia: missing evaluation_status",
-        "equation 3/hypatia_nollm: record is not terminal",
-        "equation 3/hypatia_nollm: missing fit_status",
-        "equation 3/hypatia_nollm: missing evaluation_status",
-        "equation 4/pysr_only: record is not terminal",
-        "equation 4/pysr_only: missing fit_status",
-        "equation 4/pysr_only: missing evaluation_status",
-        "equation 4/hypatia: record is not terminal",
-        "equation 4/hypatia: missing fit_status",
-        "equation 4/hypatia: missing evaluation_status",
-        "equation 4/hypatia_nollm: record is not terminal",
-        "equation 4/hypatia_nollm: missing fit_status",
-        "equation 4/hypatia_nollm: missing evaluation_status",
-        "equation 5/pysr_only: record is not terminal",
-        "equation 5/pysr_only: missing fit_status",
-        "equation 5/pysr_only: missing evaluation_status",
-        "equation 5/hypatia: record is not terminal",
-        "equation 5/hypatia: missing fit_status",
-        "equation 5/hypatia: missing evaluation_status",
-        "equation 5/hypatia_nollm: record is not terminal",
-        "equation 5/hypatia_nollm: missing fit_status",
-        "equation 5/hypatia_nollm: missing evaluation_status",
-        "equation 6/pysr_only: record is not terminal",
-        "equation 6/pysr_only: missing fit_status",
-        "equation 6/pysr_only: missing evaluation_status",
-        "equation 6/hypatia: record is not terminal",
-        "equation 6/hypatia: missing fit_status",
-        "equation 6/hypatia: missing evaluation_status",
-        "equation 6/hypatia_nollm: record is not terminal",
-        "equation 6/hypatia_nollm: missing fit_status",
-        "equation 6/hypatia_nollm: missing evaluation_status",
-        "equation 7/pysr_only: record is not terminal",
-        "equation 7/pysr_only: missing fit_status",
-        "equation 7/pysr_only: missing evaluation_status",
-        "equation 7/hypatia: record is not terminal",
-        "equation 7/hypatia: missing fit_status",
-        "equation 7/hypatia: missing evaluation_status",
-        "equation 7/hypatia_nollm: record is not terminal",
-        "equation 7/hypatia_nollm: missing fit_status",
-        "equation 7/hypatia_nollm: missing evaluation_status",
-        "equation 8/pysr_only: record is not terminal",
-        "equation 8/pysr_only: missing fit_status",
-        "equation 8/pysr_only: missing evaluation_status",
-        "equation 8/hypatia: record is not terminal",
-        "equation 8/hypatia: missing fit_status",
-        "equation 8/hypatia: missing evaluation_status",
-        "equation 8/hypatia_nollm: record is not terminal",
-        "equation 8/hypatia_nollm: missing fit_status",
-        "equation 8/hypatia_nollm: missing evaluation_status",
-        "equation 9/pysr_only: record is not terminal",
-        "equation 9/pysr_only: missing fit_status",
-        "equation 9/pysr_only: missing evaluation_status",
-        "equation 9/hypatia: record is not terminal",
-        "equation 9/hypatia: missing fit_status",
-        "equation 9/hypatia: missing evaluation_status",
-        "equation 9/hypatia_nollm: record is not terminal",
-        "equation 9/hypatia_nollm: missing fit_status",
-        "equation 9/hypatia_nollm: missing evaluation_status",
-        "equation 10/pysr_only: record is not terminal",
-        "equation 10/pysr_only: missing fit_status",
-        "equation 10/pysr_only: missing evaluation_status",
-        "equation 10/hypatia: record is not terminal",
-        "equation 10/hypatia: missing fit_status",
-        "equation 10/hypatia: missing evaluation_status",
-        "equation 10/hypatia_nollm: record is not terminal",
-        "equation 10/hypatia_nollm: missing fit_status",
-        "equation 10/hypatia_nollm: missing evaluation_status",
-        "equation 11/pysr_only: record is not terminal",
-        "equation 11/pysr_only: missing fit_status",
-        "equation 11/pysr_only: missing evaluation_status",
-        "equation 11/hypatia: record is not terminal",
-        "equation 11/hypatia: missing fit_status",
-        "equation 11/hypatia: missing evaluation_status",
-        "equation 11/hypatia_nollm: record is not terminal",
-        "equation 11/hypatia_nollm: missing fit_status",
-        "equation 11/hypatia_nollm: missing evaluation_status",
-        "equation 12/pysr_only: record is not terminal",
-        "equation 12/pysr_only: missing fit_status",
-        "equation 12/pysr_only: missing evaluation_status",
-        "equation 12/hypatia: record is not terminal",
-        "equation 12/hypatia: missing fit_status",
-        "equation 12/hypatia: missing evaluation_status",
-        "equation 12/hypatia_nollm: record is not terminal",
-        "equation 12/hypatia_nollm: missing fit_status",
-        "equation 12/hypatia_nollm: missing evaluation_status",
-        "equation 13/pysr_only: record is not terminal",
-        "equation 13/pysr_only: missing fit_status",
-        "equation 13/pysr_only: missing evaluation_status",
-        "equation 13/hypatia: record is not terminal",
-        "equation 13/hypatia: missing fit_status",
-        "equation 13/hypatia: missing evaluation_status",
-        "equation 13/hypatia_nollm: record is not terminal",
-        "equation 13/hypatia_nollm: missing fit_status",
-        "equation 13/hypatia_nollm: missing evaluation_status",
-        "equation 14/pysr_only: record is not terminal",
-        "equation 14/pysr_only: missing fit_status",
-        "equation 14/pysr_only: missing evaluation_status",
-        "equation 14/hypatia: record is not terminal",
-        "equation 14/hypatia: missing fit_status",
-        "equation 14/hypatia: missing evaluation_status",
-        "equation 14/hypatia_nollm: record is not terminal",
-        "equation 14/hypatia_nollm: missing fit_status",
-        "equation 14/hypatia_nollm: missing evaluation_status",
-        "provenance_map_exp1.json: missing source_revision",
-        "provenance_map_exp1.json: missing benchmark_script_sha256"
-      ],
-      "provenance": {
-        "benchmark_script_sha256": null,
-        "engine_version": "5.4",
-        "flags": {
-          "HYPATIAX_ALLOW_LEGACY": null,
-          "HYPATIAX_DISABLE_HARDCODED": "1",
-          "HYPATIAX_DISABLE_PROMPT_HINTS": "1",
-          "HYPATIAX_R2_SIGN_FLIP": "0",
-          "clean_run": true,
-          "r2_sign_flip": false
-        },
-        "model_string": "claude-sonnet-4-6",
-        "niterations": 1000,
-        "populations": 30,
-        "seed": 123,
-        "source_revision": null
-      },
-      "status": "incomplete",
-      "workflow_run_id": "45912882461"
-    },
-    "2024": {
-      "directory": "hypatiax/data/results/ablation/exp1_ablation_seed2024",
-      "files": {},
-      "problems": [
-        "results directory missing: hypatiax/data/results/ablation/exp1_ablation_seed2024"
-      ],
-      "status": "incomplete",
-      "workflow_run_id": "45912886207"
-    },
-    "42": {
-      "directory": "hypatiax/data/results/ablation/exp1_ablation",
-      "files": {
-        "exp1_ablation_results.json": {
-          "bytes": 104925,
-          "sha256": "b10b399ca429a4a311792bb25a6beb884c8780704456776bec23e34d3a223987",
-          "structure": {
-            "keys": [
-              "0",
-              "1",
-              "10",
-              "11",
-              "12",
-              "13",
-              "14",
-              "2",
-              "3",
-              "4",
-              "5",
-              "6",
-              "7",
-              "8",
-              "9"
-            ],
-            "n_keys": 15,
-            "type": "dict"
-          }
-        },
-        "exp1_llm_contribution.json": {
-          "bytes": 2931,
-          "sha256": "999979248e5b36edf56d05fe40ea96b6d011deef4d56501668ba8a5a640e8099",
+          "bytes": 2948,
+          "sha256": "985c7b3f667f07fe401faac511591e3ac2b3bba762c8c1856844cdbb31bb6545",
           "structure": {
             "keys": [
               "H_far",
@@ -317,8 +58,8 @@
           }
         },
         "exp1_rf01_mannwhitney.json": {
-          "bytes": 3746,
-          "sha256": "e392df76cb844991aa84e3842fdb3642bacf39cf5693cfbaab57f89dd9c83776",
+          "bytes": 3770,
+          "sha256": "142127678722a0b5fe489ef3482c23606deaf94cc79318f2f0c028490f33ca0c",
           "structure": {
             "keys": [
               "rf01_mann_whitney"
@@ -328,8 +69,8 @@
           }
         },
         "provenance_map_exp1.json": {
-          "bytes": 5395,
-          "sha256": "c6523afc51c73801f7a1162bc4f1fca206c54d2c87ec20136471fc8ae83c1d0b",
+          "bytes": 5430,
+          "sha256": "e8e2bd16af7b2804fa4a237c4806a1c5a0b724941cc538626f27af6f2e4e1e8c",
           "structure": {
             "keys": [
               "benchmark_script_path",
@@ -360,8 +101,8 @@
         }
       },
       "last_commit": {
-        "commit": "268f27144dfac1f149b7168c3d7b5f24d7d76454",
-        "committed_at": "2026-11-26T23:58:59Z"
+        "commit": "6adab37a240a14debb4a12ff4968f4ee6406a481",
+        "committed_at": "2026-11-27T05:20:09Z"
       },
       "problems": [],
       "provenance": {
@@ -378,34 +119,18 @@
         "model_string": "claude-sonnet-4-6",
         "niterations": 1000,
         "populations": 30,
-        "seed": 42,
-        "source_revision": "b460be2475ad9527bb7a56c9aaa11e740d26dea6"
+        "seed": 123,
+        "source_revision": "1bb4c9d7ccf4813b10014fc85a67b4a28d8f18c4"
       },
       "status": "complete",
-      "workflow_run_id": "45912878298"
+      "workflow_run_id": "45915423319"
     },
-    "777": {
-      "directory": "hypatiax/data/results/ablation/exp1_ablation_seed777",
-      "files": {},
-      "last_commit": {
-        "commit": "268f27144dfac1f149b7168c3d7b5f24d7d76454",
-        "committed_at": "2026-11-26T23:58:59Z"
-      },
-      "problems": [
-        "exp1_ablation_results.json: missing or empty",
-        "exp1_rf01_mannwhitney.json: missing or empty",
-        "exp1_llm_contribution.json: missing or empty",
-        "provenance_map_exp1.json: missing or empty"
-      ],
-      "status": "incomplete",
-      "workflow_run_id": "45912884263"
-    },
-    "99": {
-      "directory": "hypatiax/data/results/ablation/exp1_ablation_seed99",
+    "2024": {
+      "directory": "hypatiax/data/results/ablation/exp1_ablation_seed2024",
       "files": {
         "exp1_ablation_results.json": {
-          "bytes": 47252,
-          "sha256": "c9f416643ad7cbbcb09fa86b04da76539050fff712399e8c7b34fb4889682b38",
+          "bytes": 106360,
+          "sha256": "c8e18dabad1ee14b70ed8e4a1cf02c5e77312424e605cbc9adcc60a0ccf4d803",
           "structure": {
             "keys": [
               "0",
@@ -429,24 +154,27 @@
           }
         },
         "exp1_llm_contribution.json": {
-          "bytes": 2450,
-          "sha256": "81319b2642a514edef91367bd13480aa5430fe10d2d416c4088bf4ecd22f0f91",
+          "bytes": 2959,
+          "sha256": "0702f5412dad39ff09be7b72b043b220fadfbceebf17a1ef00f75daea56b5b48",
           "structure": {
             "keys": [
               "H_far",
               "N_far",
               "P_far",
               "equations",
+              "failures_per_arm",
+              "multiplicity",
               "n",
+              "primary_test",
               "tests"
             ],
-            "n_keys": 6,
+            "n_keys": 9,
             "type": "dict"
           }
         },
         "exp1_rf01_mannwhitney.json": {
-          "bytes": 3493,
-          "sha256": "23bf2ce15c4b1fd27333a24cc870484991c5697d9ac9b3ed97ae1e547c7bf894",
+          "bytes": 3802,
+          "sha256": "df9a265af2c09b94ac40a45e65cbf90dd3503e44870557015dd821883f8310c0",
           "structure": {
             "keys": [
               "rf01_mann_whitney"
@@ -456,179 +184,389 @@
           }
         },
         "provenance_map_exp1.json": {
-          "bytes": 3093,
-          "sha256": "f96881d9547e8c03fe4a6f05afcd399be6fb9ad647e73b1f12cc542d02a4f4bd",
+          "bytes": 5272,
+          "sha256": "3f53f606969dfc48584468a439ff3fa8bb5e78573e3527434607d9c5cd5757d9",
           "structure": {
             "keys": [
-              "anthropic_sdk",
+              "benchmark_script_path",
+              "benchmark_script_sha256",
+              "benchmark_script_tracked",
               "engine",
               "engine_version",
               "family",
               "fixes_applied",
               "flags",
-              "git_sha",
+              "git_dirty",
+              "git_dirty_files",
+              "git_dirty_scope",
               "model_string",
-              "n_rows_hypatia_failed",
               "niterations",
               "outputs",
               "paper_sections",
               "paper_targets",
               "populations",
-              "pysr",
               "seed",
               "seed_is_paper_primary",
+              "source_revision",
               "timestamp"
             ],
-            "n_keys": 18,
+            "n_keys": 21,
             "type": "dict"
           }
         }
       },
       "last_commit": {
-        "commit": "268f27144dfac1f149b7168c3d7b5f24d7d76454",
-        "committed_at": "2026-11-26T23:58:59Z"
+        "commit": "6adab37a240a14debb4a12ff4968f4ee6406a481",
+        "committed_at": "2026-11-27T05:20:09Z"
       },
-      "problems": [
-        "equation 0/pysr_only: record is not terminal",
-        "equation 0/pysr_only: missing fit_status",
-        "equation 0/pysr_only: missing evaluation_status",
-        "equation 0/hypatia: record is not terminal",
-        "equation 0/hypatia: missing fit_status",
-        "equation 0/hypatia: missing evaluation_status",
-        "equation 0/hypatia_nollm: record is not terminal",
-        "equation 0/hypatia_nollm: missing fit_status",
-        "equation 0/hypatia_nollm: missing evaluation_status",
-        "equation 1/pysr_only: record is not terminal",
-        "equation 1/pysr_only: missing fit_status",
-        "equation 1/pysr_only: missing evaluation_status",
-        "equation 1/hypatia: record is not terminal",
-        "equation 1/hypatia: missing fit_status",
-        "equation 1/hypatia: missing evaluation_status",
-        "equation 1/hypatia_nollm: record is not terminal",
-        "equation 1/hypatia_nollm: missing fit_status",
-        "equation 1/hypatia_nollm: missing evaluation_status",
-        "equation 2/pysr_only: record is not terminal",
-        "equation 2/pysr_only: missing fit_status",
-        "equation 2/pysr_only: missing evaluation_status",
-        "equation 2/hypatia: record is not terminal",
-        "equation 2/hypatia: missing fit_status",
-        "equation 2/hypatia: missing evaluation_status",
-        "equation 2/hypatia_nollm: record is not terminal",
-        "equation 2/hypatia_nollm: missing fit_status",
-        "equation 2/hypatia_nollm: missing evaluation_status",
-        "equation 3/pysr_only: record is not terminal",
-        "equation 3/pysr_only: missing fit_status",
-        "equation 3/pysr_only: missing evaluation_status",
-        "equation 3/hypatia: record is not terminal",
-        "equation 3/hypatia: missing fit_status",
-        "equation 3/hypatia: missing evaluation_status",
-        "equation 3/hypatia_nollm: record is not terminal",
-        "equation 3/hypatia_nollm: missing fit_status",
-        "equation 3/hypatia_nollm: missing evaluation_status",
-        "equation 4/pysr_only: record is not terminal",
-        "equation 4/pysr_only: missing fit_status",
-        "equation 4/pysr_only: missing evaluation_status",
-        "equation 4/hypatia: record is not terminal",
-        "equation 4/hypatia: missing fit_status",
-        "equation 4/hypatia: missing evaluation_status",
-        "equation 4/hypatia_nollm: record is not terminal",
-        "equation 4/hypatia_nollm: missing fit_status",
-        "equation 4/hypatia_nollm: missing evaluation_status",
-        "equation 5/pysr_only: record is not terminal",
-        "equation 5/pysr_only: missing fit_status",
-        "equation 5/pysr_only: missing evaluation_status",
-        "equation 5/hypatia: record is not terminal",
-        "equation 5/hypatia: missing fit_status",
-        "equation 5/hypatia: missing evaluation_status",
-        "equation 5/hypatia_nollm: record is not terminal",
-        "equation 5/hypatia_nollm: missing fit_status",
-        "equation 5/hypatia_nollm: missing evaluation_status",
-        "equation 6/pysr_only: record is not terminal",
-        "equation 6/pysr_only: missing fit_status",
-        "equation 6/pysr_only: missing evaluation_status",
-        "equation 6/hypatia: record is not terminal",
-        "equation 6/hypatia: missing fit_status",
-        "equation 6/hypatia: missing evaluation_status",
-        "equation 6/hypatia_nollm: record is not terminal",
-        "equation 6/hypatia_nollm: missing fit_status",
-        "equation 6/hypatia_nollm: missing evaluation_status",
-        "equation 7/pysr_only: record is not terminal",
-        "equation 7/pysr_only: missing fit_status",
-        "equation 7/pysr_only: missing evaluation_status",
-        "equation 7/hypatia: record is not terminal",
-        "equation 7/hypatia: missing fit_status",
-        "equation 7/hypatia: missing evaluation_status",
-        "equation 7/hypatia_nollm: record is not terminal",
-        "equation 7/hypatia_nollm: missing fit_status",
-        "equation 7/hypatia_nollm: missing evaluation_status",
-        "equation 8/pysr_only: record is not terminal",
-        "equation 8/pysr_only: missing fit_status",
-        "equation 8/pysr_only: missing evaluation_status",
-        "equation 8/hypatia: record is not terminal",
-        "equation 8/hypatia: missing fit_status",
-        "equation 8/hypatia: missing evaluation_status",
-        "equation 8/hypatia_nollm: record is not terminal",
-        "equation 8/hypatia_nollm: missing fit_status",
-        "equation 8/hypatia_nollm: missing evaluation_status",
-        "equation 9/pysr_only: record is not terminal",
-        "equation 9/pysr_only: missing fit_status",
-        "equation 9/pysr_only: missing evaluation_status",
-        "equation 9/hypatia: record is not terminal",
-        "equation 9/hypatia: missing fit_status",
-        "equation 9/hypatia: missing evaluation_status",
-        "equation 9/hypatia_nollm: record is not terminal",
-        "equation 9/hypatia_nollm: missing fit_status",
-        "equation 9/hypatia_nollm: missing evaluation_status",
-        "equation 10/pysr_only: record is not terminal",
-        "equation 10/pysr_only: missing fit_status",
-        "equation 10/pysr_only: missing evaluation_status",
-        "equation 10/hypatia: record is not terminal",
-        "equation 10/hypatia: missing fit_status",
-        "equation 10/hypatia: missing evaluation_status",
-        "equation 10/hypatia_nollm: record is not terminal",
-        "equation 10/hypatia_nollm: missing fit_status",
-        "equation 10/hypatia_nollm: missing evaluation_status",
-        "equation 11/pysr_only: record is not terminal",
-        "equation 11/pysr_only: missing fit_status",
-        "equation 11/pysr_only: missing evaluation_status",
-        "equation 11/hypatia: record is not terminal",
-        "equation 11/hypatia: missing fit_status",
-        "equation 11/hypatia: missing evaluation_status",
-        "equation 11/hypatia_nollm: record is not terminal",
-        "equation 11/hypatia_nollm: missing fit_status",
-        "equation 11/hypatia_nollm: missing evaluation_status",
-        "equation 12/pysr_only: record is not terminal",
-        "equation 12/pysr_only: missing fit_status",
-        "equation 12/pysr_only: missing evaluation_status",
-        "equation 12/hypatia: record is not terminal",
-        "equation 12/hypatia: missing fit_status",
-        "equation 12/hypatia: missing evaluation_status",
-        "equation 12/hypatia_nollm: record is not terminal",
-        "equation 12/hypatia_nollm: missing fit_status",
-        "equation 12/hypatia_nollm: missing evaluation_status",
-        "equation 13/pysr_only: record is not terminal",
-        "equation 13/pysr_only: missing fit_status",
-        "equation 13/pysr_only: missing evaluation_status",
-        "equation 13/hypatia: record is not terminal",
-        "equation 13/hypatia: missing fit_status",
-        "equation 13/hypatia: missing evaluation_status",
-        "equation 13/hypatia_nollm: record is not terminal",
-        "equation 13/hypatia_nollm: missing fit_status",
-        "equation 13/hypatia_nollm: missing evaluation_status",
-        "equation 14/pysr_only: record is not terminal",
-        "equation 14/pysr_only: missing fit_status",
-        "equation 14/pysr_only: missing evaluation_status",
-        "equation 14/hypatia: record is not terminal",
-        "equation 14/hypatia: missing fit_status",
-        "equation 14/hypatia: missing evaluation_status",
-        "equation 14/hypatia_nollm: record is not terminal",
-        "equation 14/hypatia_nollm: missing fit_status",
-        "equation 14/hypatia_nollm: missing evaluation_status",
-        "provenance_map_exp1.json: missing source_revision",
-        "provenance_map_exp1.json: missing benchmark_script_sha256"
-      ],
+      "problems": [],
       "provenance": {
-        "benchmark_script_sha256": null,
+        "benchmark_script_sha256": "5a5eae79a57eeee3d0fcfd01f2dcf48fb2bfe5c924560db1a278891491fa0d70",
+        "engine_version": "5.4",
+        "flags": {
+          "HYPATIAX_ALLOW_LEGACY": null,
+          "HYPATIAX_DISABLE_HARDCODED": "1",
+          "HYPATIAX_DISABLE_PROMPT_HINTS": "1",
+          "HYPATIAX_R2_SIGN_FLIP": "0",
+          "clean_run": true,
+          "r2_sign_flip": false
+        },
+        "model_string": "claude-sonnet-4-6",
+        "niterations": 1000,
+        "populations": 30,
+        "seed": 2024,
+        "source_revision": "1bb4c9d7ccf4813b10014fc85a67b4a28d8f18c4"
+      },
+      "status": "complete",
+      "workflow_run_id": "45915428001"
+    },
+    "42": {
+      "directory": "hypatiax/data/results/ablation/exp1_ablation",
+      "files": {
+        "exp1_ablation_results.json": {
+          "bytes": 105287,
+          "sha256": "f0b4c07d084991ebc852e9b394c26029172f3bca64d641bfa9c822f21e197573",
+          "structure": {
+            "keys": [
+              "0",
+              "1",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9"
+            ],
+            "n_keys": 15,
+            "type": "dict"
+          }
+        },
+        "exp1_llm_contribution.json": {
+          "bytes": 2976,
+          "sha256": "6eeba956568da12737f1051eac7705cecc0dd3029dea486eb42aebc3035ab65c",
+          "structure": {
+            "keys": [
+              "H_far",
+              "N_far",
+              "P_far",
+              "equations",
+              "failures_per_arm",
+              "multiplicity",
+              "n",
+              "primary_test",
+              "tests"
+            ],
+            "n_keys": 9,
+            "type": "dict"
+          }
+        },
+        "exp1_rf01_mannwhitney.json": {
+          "bytes": 3827,
+          "sha256": "0c0f592892f7048136c8c65d9ebf7af3e41c784e37c3897285cc86b8e56c4275",
+          "structure": {
+            "keys": [
+              "rf01_mann_whitney"
+            ],
+            "n_keys": 1,
+            "type": "dict"
+          }
+        },
+        "provenance_map_exp1.json": {
+          "bytes": 5395,
+          "sha256": "051c887dd6d6db21348bb7b687564d58e7a55c02f92ee88407996f3eee6c29c4",
+          "structure": {
+            "keys": [
+              "benchmark_script_path",
+              "benchmark_script_sha256",
+              "benchmark_script_tracked",
+              "engine",
+              "engine_version",
+              "family",
+              "fixes_applied",
+              "flags",
+              "git_dirty",
+              "git_dirty_files",
+              "git_dirty_scope",
+              "model_string",
+              "niterations",
+              "outputs",
+              "paper_sections",
+              "paper_targets",
+              "populations",
+              "seed",
+              "seed_is_paper_primary",
+              "source_revision",
+              "timestamp"
+            ],
+            "n_keys": 21,
+            "type": "dict"
+          }
+        }
+      },
+      "last_commit": {
+        "commit": "6adab37a240a14debb4a12ff4968f4ee6406a481",
+        "committed_at": "2026-11-27T05:20:09Z"
+      },
+      "problems": [],
+      "provenance": {
+        "benchmark_script_sha256": "5a5eae79a57eeee3d0fcfd01f2dcf48fb2bfe5c924560db1a278891491fa0d70",
+        "engine_version": "5.4",
+        "flags": {
+          "HYPATIAX_ALLOW_LEGACY": null,
+          "HYPATIAX_DISABLE_HARDCODED": "1",
+          "HYPATIAX_DISABLE_PROMPT_HINTS": "1",
+          "HYPATIAX_R2_SIGN_FLIP": "0",
+          "clean_run": true,
+          "r2_sign_flip": false
+        },
+        "model_string": "claude-sonnet-4-6",
+        "niterations": 1000,
+        "populations": 30,
+        "seed": 42,
+        "source_revision": "1bb4c9d7ccf4813b10014fc85a67b4a28d8f18c4"
+      },
+      "status": "complete",
+      "workflow_run_id": "45915418515"
+    },
+    "777": {
+      "directory": "hypatiax/data/results/ablation/exp1_ablation_seed777",
+      "files": {
+        "exp1_ablation_results.json": {
+          "bytes": 108559,
+          "sha256": "dcc6b9af8132fb30774d5d8de77b722cf5c179a72b88a908ebb5b7fb1296ef93",
+          "structure": {
+            "keys": [
+              "0",
+              "1",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9"
+            ],
+            "n_keys": 15,
+            "type": "dict"
+          }
+        },
+        "exp1_llm_contribution.json": {
+          "bytes": 2853,
+          "sha256": "df4e52c6a0de6b67f46ea436096f71f87198fd7e3135ba6cf60e7b18de71eda7",
+          "structure": {
+            "keys": [
+              "H_far",
+              "N_far",
+              "P_far",
+              "equations",
+              "failures_per_arm",
+              "multiplicity",
+              "n",
+              "primary_test",
+              "tests"
+            ],
+            "n_keys": 9,
+            "type": "dict"
+          }
+        },
+        "exp1_rf01_mannwhitney.json": {
+          "bytes": 3494,
+          "sha256": "3ab32b7c50136a1c69e123d176ca44f265530972c80479999ad6db52747549b1",
+          "structure": {
+            "keys": [
+              "rf01_mann_whitney"
+            ],
+            "n_keys": 1,
+            "type": "dict"
+          }
+        },
+        "provenance_map_exp1.json": {
+          "bytes": 5380,
+          "sha256": "947c147c3d651773e883dcbe2ab606457821be6bee482a57cf10c6b8999f3098",
+          "structure": {
+            "keys": [
+              "benchmark_script_path",
+              "benchmark_script_sha256",
+              "benchmark_script_tracked",
+              "engine",
+              "engine_version",
+              "family",
+              "fixes_applied",
+              "flags",
+              "git_dirty",
+              "git_dirty_files",
+              "git_dirty_scope",
+              "model_string",
+              "niterations",
+              "outputs",
+              "paper_sections",
+              "paper_targets",
+              "populations",
+              "seed",
+              "seed_is_paper_primary",
+              "source_revision",
+              "timestamp"
+            ],
+            "n_keys": 21,
+            "type": "dict"
+          }
+        }
+      },
+      "last_commit": {
+        "commit": "6adab37a240a14debb4a12ff4968f4ee6406a481",
+        "committed_at": "2026-11-27T05:20:09Z"
+      },
+      "problems": [],
+      "provenance": {
+        "benchmark_script_sha256": "5a5eae79a57eeee3d0fcfd01f2dcf48fb2bfe5c924560db1a278891491fa0d70",
+        "engine_version": "5.4",
+        "flags": {
+          "HYPATIAX_ALLOW_LEGACY": null,
+          "HYPATIAX_DISABLE_HARDCODED": "1",
+          "HYPATIAX_DISABLE_PROMPT_HINTS": "1",
+          "HYPATIAX_R2_SIGN_FLIP": "0",
+          "clean_run": true,
+          "r2_sign_flip": false
+        },
+        "model_string": "claude-sonnet-4-6",
+        "niterations": 1000,
+        "populations": 30,
+        "seed": 777,
+        "source_revision": "1bb4c9d7ccf4813b10014fc85a67b4a28d8f18c4"
+      },
+      "status": "complete",
+      "workflow_run_id": "45915425333"
+    },
+    "99": {
+      "directory": "hypatiax/data/results/ablation/exp1_ablation_seed99",
+      "files": {
+        "exp1_ablation_results.json": {
+          "bytes": 106671,
+          "sha256": "78f18aed54f62788dc272f4bd61cfa9c46a6240b2cad6edf5a8432b1e8aff2a9",
+          "structure": {
+            "keys": [
+              "0",
+              "1",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9"
+            ],
+            "n_keys": 15,
+            "type": "dict"
+          }
+        },
+        "exp1_llm_contribution.json": {
+          "bytes": 2895,
+          "sha256": "036a719f3b414523281df40b96fad586db9aa7f7392699cca424179b8a4c880f",
+          "structure": {
+            "keys": [
+              "H_far",
+              "N_far",
+              "P_far",
+              "equations",
+              "failures_per_arm",
+              "multiplicity",
+              "n",
+              "primary_test",
+              "tests"
+            ],
+            "n_keys": 9,
+            "type": "dict"
+          }
+        },
+        "exp1_rf01_mannwhitney.json": {
+          "bytes": 3514,
+          "sha256": "2bb7b3d20b48082be9a7dfbae122d61634c77413c4c294366042ab1461433a2a",
+          "structure": {
+            "keys": [
+              "rf01_mann_whitney"
+            ],
+            "n_keys": 1,
+            "type": "dict"
+          }
+        },
+        "provenance_map_exp1.json": {
+          "bytes": 5504,
+          "sha256": "99db92f4f890309f499c05cbc0c86956d5d4dd47b948a5cbc5b34a72bd7e24dd",
+          "structure": {
+            "keys": [
+              "benchmark_script_path",
+              "benchmark_script_sha256",
+              "benchmark_script_tracked",
+              "engine",
+              "engine_version",
+              "family",
+              "fixes_applied",
+              "flags",
+              "git_dirty",
+              "git_dirty_files",
+              "git_dirty_scope",
+              "model_string",
+              "niterations",
+              "outputs",
+              "paper_sections",
+              "paper_targets",
+              "populations",
+              "seed",
+              "seed_is_paper_primary",
+              "source_revision",
+              "timestamp"
+            ],
+            "n_keys": 21,
+            "type": "dict"
+          }
+        }
+      },
+      "last_commit": {
+        "commit": "6adab37a240a14debb4a12ff4968f4ee6406a481",
+        "committed_at": "2026-11-27T05:20:09Z"
+      },
+      "problems": [],
+      "provenance": {
+        "benchmark_script_sha256": "5a5eae79a57eeee3d0fcfd01f2dcf48fb2bfe5c924560db1a278891491fa0d70",
         "engine_version": "5.4",
         "flags": {
           "HYPATIAX_ALLOW_LEGACY": null,
@@ -642,10 +580,10 @@
         "niterations": 1000,
         "populations": 30,
         "seed": 99,
-        "source_revision": null
+        "source_revision": "1bb4c9d7ccf4813b10014fc85a67b4a28d8f18c4"
       },
-      "status": "incomplete",
-      "workflow_run_id": "45912880605"
+      "status": "complete",
+      "workflow_run_id": "45915420657"
     }
   },
   "required_files": [
