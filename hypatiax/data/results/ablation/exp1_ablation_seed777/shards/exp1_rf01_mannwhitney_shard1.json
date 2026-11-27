@@ -16,28 +16,28 @@
       "Price Impact",
       "Constant Product"
     ],
-    "U_greater": 2.5,
-    "p_greater": 0.8658570581614413,
-    "U_two_sided": 2.5,
-    "p_two_sided": 0.5065551690490403,
-    "wilcoxon_W": 0.0,
-    "wilcoxon_p_two": 0.5,
-    "wilcoxon_p_greater": 1.0,
-    "rank_biserial_r": -1.0,
+    "U_greater": 5.0,
+    "p_greater": 0.5,
+    "U_two_sided": 5.0,
+    "p_two_sided": 1.0,
+    "wilcoxon_W": 3.0,
+    "wilcoxon_p_two": 1.0,
+    "wilcoxon_p_greater": 0.625,
+    "rank_biserial_r": 0.0,
     "H_median_far_r2": 0.999780279762648,
-    "P_median_far_r2": 0.9999999634569,
+    "P_median_far_r2": 0.9997994612030471,
     "H_mean_far_r2": 0.9992172285711675,
-    "P_mean_far_r2": 0.9999335145919805,
-    "h_wins": 0,
+    "P_mean_far_r2": 0.9630948593227163,
+    "h_wins": 1,
     "p_wins": 0,
-    "ties": 3,
+    "ties": 2,
     "primary_test": "wilcoxon_signed_rank",
     "effect_size": "paired_rank_biserial",
     "rank_biserial_method": "paired_signed_rank",
-    "primary_p_greater": 1.0,
+    "primary_p_greater": 0.625,
     "significant_p05": false,
     "significance_status": "not_significant",
-    "paper_sentence": "Across Core-15, HypatiaX does not achieve statistically significant higher far-extrapolation $R^2$ than PySR-only (Wilcoxon signed-rank $W=0$, $p_{H>P}=1.0000$; Mann-Whitney sensitivity $U=2$, $p=0.8659$, $n=3$; paired rank-biserial $r=-1.00$). No single domain consistently drives the improvement.",
+    "paper_sentence": "Across Core-15, HypatiaX does not achieve statistically significant higher far-extrapolation $R^2$ than PySR-only (Wilcoxon signed-rank $W=3$, $p_{H>P}=0.6250$; Mann-Whitney sensitivity $U=5$, $p=0.5000$, $n=3$; paired rank-biserial $r=+0.00$). The directional improvement is concentrated in 1 domain(s) \u2014 DeFi Risk, suggesting benefit is domain-selective.",
     "equations_included": [
       "Value at Risk",
       "Liquidation Price",
@@ -49,17 +49,17 @@
       1.0
     ],
     "P_far_r2_vector": [
-      0.9998005803190415,
-      0.9999999634569,
-      1.0
+      0.9997994612030471,
+      0.9999997767407631,
+      0.8894853400243385
     ],
     "subdomain_breakdown": {
       "DeFi Risk": {
         "n": 3,
-        "h_wins": 0,
-        "ties": 3,
+        "h_wins": 1,
+        "ties": 2,
         "p_wins": 0,
-        "mean_delta": -0.0007162860208130839,
+        "mean_delta": 0.03612236924845117,
         "equations": [
           "Value at Risk",
           "Liquidation Price",
@@ -67,7 +67,9 @@
         ]
       }
     },
-    "driving_domains": [],
+    "driving_domains": [
+      "DeFi Risk"
+    ],
     "p_dominant_domains": []
   }
 }
