@@ -1,42 +1,42 @@
 {
   "rf01_mann_whitney": {
-    "n_pairs": 12,
-    "n_skipped": 3,
+    "n_pairs": 9,
+    "n_skipped": 6,
     "skipped_equations": [
       "Arrhenius",
+      "Henderson-Hasselbalch",
       "Michaelis-Menten",
+      "Gravitational Force",
+      "Ideal Gas Law",
       "Impermanent Loss"
     ],
-    "U_greater": 85.0,
-    "p_greater": 0.23250034193443642,
-    "U_two_sided": 85.0,
-    "p_two_sided": 0.46500068386887283,
-    "wilcoxon_W": 26.0,
-    "wilcoxon_p_two": 0.921875,
-    "wilcoxon_p_greater": 0.5771484375,
-    "rank_biserial_r": -0.05454545454545454,
-    "H_median_far_r2": 0.9999151310770769,
-    "P_median_far_r2": 0.9996859600449799,
-    "H_mean_far_r2": -0.3761698592848215,
-    "P_mean_far_r2": 0.1991658801007816,
+    "U_greater": 51.0,
+    "p_greater": 0.18612202099992098,
+    "U_two_sided": 51.0,
+    "p_two_sided": 0.37224404199984196,
+    "wilcoxon_W": 17.0,
+    "wilcoxon_p_two": 0.9453125,
+    "wilcoxon_p_greater": 0.47265625,
+    "rank_biserial_r": 0.05555555555555555,
+    "H_median_far_r2": 0.9999999431375768,
+    "P_median_far_r2": 0.9996932062460302,
+    "H_mean_far_r2": 0.9989178276522451,
+    "P_mean_far_r2": 0.9800089482576725,
     "h_wins": 1,
-    "p_wins": 1,
-    "ties": 10,
+    "p_wins": 0,
+    "ties": 8,
     "primary_test": "wilcoxon_signed_rank",
     "effect_size": "paired_rank_biserial",
     "rank_biserial_method": "paired_signed_rank",
-    "primary_p_greater": 0.5771484375,
+    "primary_p_greater": 0.47265625,
     "significant_p05": false,
     "significance_status": "not_significant",
-    "paper_sentence": "Across Core-15, HypatiaX does not achieve statistically significant higher far-extrapolation $R^2$ than PySR-only (Wilcoxon signed-rank $W=26$, $p_{H>P}=0.5771$; Mann-Whitney sensitivity $U=85$, $p=0.2325$, $n=12$; paired rank-biserial $r=-0.05$). No single domain consistently drives the improvement.",
+    "paper_sentence": "Across Core-15, HypatiaX does not achieve statistically significant higher far-extrapolation $R^2$ than PySR-only (Wilcoxon signed-rank $W=17$, $p_{H>P}=0.4727$; Mann-Whitney sensitivity $U=51$, $p=0.1861$, $n=9$; paired rank-biserial $r=+0.06$). The directional improvement is concentrated in 1 domain(s) \u2014 DeFi Risk, suggesting benefit is domain-selective.",
     "equations_included": [
-      "Henderson-Hasselbalch",
       "Rate Law",
       "Allometric Scaling",
       "Logistic Growth",
       "Kinetic Energy",
-      "Gravitational Force",
-      "Ideal Gas Law",
       "Price Impact",
       "Constant Product",
       "Value at Risk",
@@ -44,42 +44,35 @@
       "Portfolio Std Dev"
     ],
     "H_far_r2_vector": [
-      0.9998579704388263,
-      0.9941339450532585,
+      0.9943448050872847,
       1.0,
-      0.9969506158723656,
+      0.9969699072880733,
       1.0,
       1.0,
-      -15.503899634510859,
-      1.0,
-      0.9991048707160595,
+      0.9991041640601068,
       0.999841629297164,
-      0.9999722917153275,
+      0.9999999431375768,
       1.0
     ],
     "P_far_r2_vector": [
-      0.9983738366194145,
-      0.9995793498552047,
-      0.9997925702347552,
-      0.9993657641159969,
-      0.9999807085502485,
-      -8.604983340648916,
-      0.9989819048426322,
+      0.9995782441899809,
+      0.9996932062460302,
+      0.9973295769765781,
+      0.9999798507949711,
       1.0,
-      0.9990821194292638,
-      0.9998177998548463,
-      0.9999998483559337,
-      1.0
+      0.9991126796398827,
+      0.9998361473652244,
+      0.9999999636460877,
+      0.8245508654602972
     ],
     "subdomain_breakdown": {
       "Chemistry": {
-        "n": 2,
+        "n": 1,
         "h_wins": 0,
-        "ties": 2,
+        "ties": 1,
         "p_wins": 0,
-        "mean_delta": -0.001980635491267202,
+        "mean_delta": -0.005233439102696136,
         "equations": [
-          "Henderson-Hasselbalch",
           "Rate Law"
         ]
       },
@@ -88,22 +81,20 @@
         "h_wins": 0,
         "ties": 2,
         "p_wins": 0,
-        "mean_delta": -0.0011038592391932611,
+        "mean_delta": -2.64379672674786e-05,
         "equations": [
           "Allometric Scaling",
           "Logistic Growth"
         ]
       },
       "Physics": {
-        "n": 3,
-        "h_wins": 1,
+        "n": 1,
+        "h_wins": 0,
         "ties": 1,
-        "p_wins": 1,
-        "mean_delta": -2.2992929690849415,
+        "p_wins": 0,
+        "mean_delta": 2.0149205028907602e-05,
         "equations": [
-          "Kinetic Energy",
-          "Gravitational Force",
-          "Ideal Gas Law"
+          "Kinetic Energy"
         ]
       },
       "DeFi AMM": {
@@ -111,7 +102,7 @@
         "h_wins": 0,
         "ties": 2,
         "p_wins": 0,
-        "mean_delta": 1.137564339781516e-05,
+        "mean_delta": -4.257789887940344e-06,
         "equations": [
           "Price Impact",
           "Constant Product"
@@ -119,10 +110,10 @@
       },
       "DeFi Risk": {
         "n": 3,
-        "h_wins": 0,
-        "ties": 3,
+        "h_wins": 1,
+        "ties": 2,
         "p_wins": 0,
-        "mean_delta": -1.24239942948338e-06,
+        "mean_delta": 0.058484865321043834,
         "equations": [
           "Value at Risk",
           "Liquidation Price",
@@ -130,7 +121,9 @@
         ]
       }
     },
-    "driving_domains": [],
+    "driving_domains": [
+      "DeFi Risk"
+    ],
     "p_dominant_domains": []
   }
 }
