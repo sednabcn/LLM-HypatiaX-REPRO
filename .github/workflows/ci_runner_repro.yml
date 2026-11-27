@@ -595,7 +595,7 @@ jobs:
           # multi-seed matrix. exp1_ablation_seeds IS listed because its dedicated
           # dispatcher launches five child exp1_ablation workflows; allowing the parent
           # planner/matrix to run as well would duplicate the replication workload.
-          if [[ "$EXP" == "exp1b_pca" || "$EXP" == "exp2_feynman_pca" || "$EXP" == "exp1_ablation_seeds" ]]; then
+          if [[ "$EXP" == "exp1b_pca" || "$EXP" == "exp2_feynman_pca" || "$EXP" == "exp1_ablation_seeds" || "$EXP" == "exp1_4060_seeds" ]]; then
             echo "is_pca=true"    >> "$GITHUB_OUTPUT"
             echo "skip_plan=true" >> "$GITHUB_OUTPUT"
             echo "::notice::${EXP} is a PCA experiment — pca_run_* jobs will handle it."
