@@ -5,7 +5,7 @@ timeout_s   : METHOD_TIMEOUT=900s  PYSR_TIMEOUT=1100s
 wall-clock  : hypatia=3600s  pysr_only=1400s  (FIX-WALLCLOCK)
 seed        : 777  (source: PYSR_SEED)
 ✅ Parameters ready
-   [MEM] start: RSS=0.82 GB
+   [MEM] start: RSS=0.22 GB
 ✅ HybridDiscoverySystem (v5.1) imported from /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/tools/symbolic/hybrid_system_v50_2.py
 ✅ PySR 2.0.0a1 ready
   [    0.0s] Imports complete
@@ -43,38 +43,38 @@ Resuming    : 0 checkpointed entries
   [    0.0s] generate_data: Kinetic Energy  N=200  noise=0.05  seed=819
   [    0.0s] generate_data done: X_train=(160, 2)
   [    0.0s] make_pysr: pops=30  iter=1000  timeout=1100s  warm=False
-  [pysr_only] train_R²=0.9972  extrap(near=1.0000 med=1.0000 far=1.0000)  time=903.9s
-  [  903.9s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation_seed777/exp1_ablation_checkpoint.json
+  [pysr_only] train_R²=0.9972  extrap(near=1.0000 med=1.0000 far=1.0000)  time=1109.7s
+  [ 1109.7s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation_seed777/exp1_ablation_checkpoint_shard3.json
   ✓ pysr_only saved to checkpoint
-  [  903.9s] run_condition START: Kinetic Energy [hypatia]  seed=819  wall_clock=3600s
-  [  903.9s] generate_data: Kinetic Energy  N=200  noise=0.05  seed=819
-  [  903.9s] generate_data done: X_train=(160, 2)
-2026-11-03 09:48:05,371 - INFO - ======================================================================
-2026-11-03 09:48:05,371 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
-2026-11-03 09:48:05,371 - INFO - ======================================================================
-2026-11-03 09:48:05,371 - INFO - Domain: physics
-2026-11-03 09:48:05,372 - INFO - Discovery mode: strict
-2026-11-03 09:48:05,372 - INFO - Primary LLM: anthropic
-2026-11-03 09:48:05,372 - INFO - use_llm: True  |  llm_mode: hybrid
-2026-11-03 09:48:05,372 - INFO - Auto-config: True
-2026-11-03 09:48:05,372 - INFO - Max retries: 3
-2026-11-03 09:48:05,372 - INFO - PhysicsAware fallback: False
-2026-11-03 09:48:05,372 - INFO - Complexity threshold: 20
-2026-11-03 09:48:05,372 - INFO - Deterministic PySR: True
-2026-11-03 09:48:05,372 - INFO - ======================================================================
-2026-11-03 09:48:05,372 - INFO - Using provided iterations: 1000
-2026-11-03 09:48:05,372 - INFO - Parsimony: 0.01
-2026-11-03 09:48:05,372 - INFO - Transcendental compositions: False
-2026-11-03 09:48:05,372 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='physics', use_tc=False)
-2026-11-03 09:48:05,390 - INFO - [LLM] SymbolicEngineWithLLM instantiated (mode=hybrid, candidates=3)
-2026-11-03 09:48:05,565 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
+  [ 1109.7s] run_condition START: Kinetic Energy [hypatia]  seed=819  wall_clock=3600s
+  [ 1109.7s] generate_data: Kinetic Energy  N=200  noise=0.05  seed=819
+  [ 1109.7s] generate_data done: X_train=(160, 2)
+2026-11-27 02:03:36,156 - INFO - ======================================================================
+2026-11-27 02:03:36,156 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
+2026-11-27 02:03:36,156 - INFO - ======================================================================
+2026-11-27 02:03:36,156 - INFO - Domain: physics
+2026-11-27 02:03:36,156 - INFO - Discovery mode: strict
+2026-11-27 02:03:36,156 - INFO - Primary LLM: anthropic
+2026-11-27 02:03:36,156 - INFO - use_llm: True  |  llm_mode: hybrid
+2026-11-27 02:03:36,156 - INFO - Auto-config: True
+2026-11-27 02:03:36,156 - INFO - Max retries: 3
+2026-11-27 02:03:36,156 - INFO - PhysicsAware fallback: False
+2026-11-27 02:03:36,156 - INFO - Complexity threshold: 20
+2026-11-27 02:03:36,156 - INFO - Deterministic PySR: True
+2026-11-27 02:03:36,156 - INFO - ======================================================================
+2026-11-27 02:03:36,156 - INFO - Using provided iterations: 1000
+2026-11-27 02:03:36,156 - INFO - Parsimony: 0.01
+2026-11-27 02:03:36,156 - INFO - Transcendental compositions: False
+2026-11-27 02:03:36,156 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='physics', use_tc=False)
+2026-11-27 02:03:36,273 - INFO - [LLM] SymbolicEngineWithLLM instantiated (mode=hybrid, candidates=3)
+2026-11-27 02:03:36,367 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
 
-2026-11-03 09:48:05,565 - INFO - [FIX-D] Target y log10-scaled (extreme output range)
-2026-11-03 09:48:05,565 - INFO - [FIX-D] Extreme-scale log transform applied
-2026-11-03 09:48:05,566 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
-2026-11-03 09:48:05,566 - INFO - 
-[SYMBOLIC] Attempt 1/3 (seed=42)
-2026-11-03 09:48:09,980 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-11-27 02:03:36,367 - INFO - [FIX-D] Target y log10-scaled (extreme output range)
+2026-11-27 02:03:36,367 - INFO - [FIX-D] Extreme-scale log transform applied
+2026-11-27 02:03:36,367 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
+2026-11-27 02:03:36,367 - INFO - 
+[SYMBOLIC] Attempt 1/3 (seed=819)
+2026-11-27 02:03:40,351 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
    ✓ LLM engine initialized (claude-sonnet-4-6)
    ✓ LLM mode: hybrid
 
@@ -95,8 +95,9 @@ Equation hint: Kinetic Energy
    [FIX-D] LLM hypotheses mapped to the log10 fit space before scoring
    LLM best: (sign((0.5 * m * v**2))*log(abs((0.5 * m * v**2))+1)/log(10))
    LLM R²: 0.6860
-   LLM time: 4.42s
-   → Seeding PySR operator set from LLM candidate: {'binary_operators': ['*', '+', '/'], 'unary_operators': ['log']}
+   LLM time: 4.00s
+   ⚠ Structural-risk functions ['log']; bypassing pure-LLM acceptance and forcing PySR refinement.
+   → Seeding PySR operator set from LLM candidate: {'binary_operators': ['+', '*', '/'], 'unary_operators': ['log']}
    → Refining with PySR...
 
 [DISCOVERY] Starting symbolic regression...
@@ -113,25 +114,40 @@ Equation hint: Kinetic Energy
    [PySR] loss kwarg        = []
    [PySR] define_operators = NOT SET (old PySR path)
    [PySR] PySRRegressor constructed OK
-   [MEM] before PySR: RSS=1.04 GB
-   [MEM] after PySR: RSS=1.07 GB
-2026-11-03 09:49:50,680 - INFO -    Result: log(v * (sqrt(m) * 0.4239893))
-2026-11-03 09:49:50,680 - INFO -    R2 = 0.7725
-2026-11-03 09:49:50,680 - INFO -    LLM mode: hybrid_pysr_better
-2026-11-03 09:49:50,681 - INFO -    [BEST] New best!
-2026-11-03 09:49:50,681 - INFO - 
-[SYMBOLIC] Attempt 2/3 (seed=43)
-   ✅ Found: log(v * (sqrt(m) * 0.4239893))
-   R²: 0.7725  (selected index 5/21 by pysr_default)
-   PySR time: 100.58s
-   PySR R²: 0.7725
-   ✅ PySR refinement improved result
+   [POP-SCALE] populations=30 > baseline=10; niterations 1000 → 333 (keeps total evals ≤ 330,000)
+   [MEM] before PySR: RSS=1.07 GB
+   [MEM] after PySR: RSS=1.10 GB
+2026-11-27 02:12:02,357 - INFO -    Result: log(sqrt(m) / ((0.97877645 ^ (((v * (0.35268882 * m)) ^ v) - (0.48657054 / ((1.6229641 ^ v) - m)))) + (1.9961519 / v)))
+2026-11-27 02:12:02,357 - INFO -    R2 = 0.8656
+2026-11-27 02:12:02,357 - INFO -    LLM mode: hybrid_structural_risk_pysr
+2026-11-27 02:12:02,357 - WARNING -    [WARNING] Possible overfit
+2026-11-27 02:12:02,357 - WARNING -       High complexity (25) but R2=0.8656
+2026-11-27 02:12:02,357 - INFO -    [BEST FLAGGED] New fallback candidate
+2026-11-27 02:12:02,357 - INFO - 
+[SYMBOLIC] Attempt 2/3 (seed=820)
+2026-11-27 02:12:06,291 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+   ✅ Found: log(sqrt(m) / ((0.97877645 ^ (((v * (0.35268882 * m)) ^ v) - (0.48657054 / ((1.6229641 ^ v) - m)))) + (1.9961519 / v)))
+   R²: 0.8656  (selected index 19/21 by pysr_default)
+   PySR time: 501.92s
+   PySR R²: 0.8656
+   ✅ Structural-risk policy selected PySR refinement
+
+[HYBRID MODE] LLM first, PySR refinement...
+   [FIX-D] LLM hypotheses mapped to the log10 fit space before scoring
+   LLM best: (sign((0.5 * m * v**2))*log(abs((0.5 * m * v**2))+1)/log(10))
+   LLM R²: 0.6860
+   LLM time: 3.93s
+   ⚠ Structural-risk functions ['log']; bypassing pure-LLM acceptance and forcing PySR refinement.
+   → Seeding PySR operator set from LLM candidate: {'binary_operators': ['+', '*', '/'], 'unary_operators': ['log']}
+   → Refining with PySR...
 
 [DISCOVERY] Starting symbolic regression...
    Variables: m, v
    Samples: 160
    Iterations: 1000
-   [PySR] unary_operators   = ['sqrt']
+   [LLM-OPS] injected unary=['log'] binary=[]
+   [PySR] guesses param available — seeding with [] (1 of 1 dropped: unsupported_operator:sign)
+   [PySR] unary_operators   = ['sqrt', 'log']
    [PySR] binary_operators  = ['+', '-', '*', '/', 'pow']
    [PySR] niterations       = 1000
    [PySR] parsimony         = 0.01
@@ -139,21 +155,38 @@ Equation hint: Kinetic Energy
    [PySR] loss kwarg        = []
    [PySR] define_operators = NOT SET (old PySR path)
    [PySR] PySRRegressor constructed OK
-   [MEM] before PySR: RSS=1.07 GB
-   [MEM] after PySR: RSS=1.07 GB
-2026-11-03 09:51:18,938 - INFO -    Result: (v ^ (v ^ -0.22796145)) - (2.5942123 / (m ^ 0.35214233))
-2026-11-03 09:51:18,938 - INFO -    R2 = 0.8070
-2026-11-03 09:51:18,938 - INFO -    [BEST] New best!
-2026-11-03 09:51:18,938 - INFO - 
-[SYMBOLIC] Attempt 3/3 (seed=44)
-   ✅ Found: (v ^ (v ^ -0.22796145)) - (2.5942123 / (m ^ 0.35214233))
-   R²: 0.8070  (selected index 10/22 by pysr_default)
+   [POP-SCALE] populations=30 > baseline=10; niterations 1000 → 333 (keeps total evals ≤ 330,000)
+   [MEM] before PySR: RSS=1.10 GB
+   [MEM] after PySR: RSS=1.06 GB
+2026-11-27 02:17:57,251 - INFO -    Result: log((((v * sqrt(m)) * 0.5100047) + -0.8729826) + (-0.04662489 / (m + -2.0693998)))
+2026-11-27 02:17:57,251 - INFO -    R2 = 0.8340
+2026-11-27 02:17:57,251 - INFO -    LLM mode: hybrid_structural_risk_pysr
+2026-11-27 02:17:57,251 - INFO -    [BEST] New eligible candidate!
+2026-11-27 02:17:57,252 - INFO - 
+[SYMBOLIC] Attempt 3/3 (seed=821)
+2026-11-27 02:18:01,273 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+   ✅ Found: log((((v * sqrt(m)) * 0.5100047) + -0.8729826) + (-0.04662489 / (m + -2.0693998)))
+   R²: 0.8340  (selected index 13/21 by pysr_default)
+   PySR time: 350.84s
+   PySR R²: 0.8340
+   ✅ Structural-risk policy selected PySR refinement
+
+[HYBRID MODE] LLM first, PySR refinement...
+   [FIX-D] LLM hypotheses mapped to the log10 fit space before scoring
+   LLM best: (sign((0.5 * m * v**2))*log(abs((0.5 * m * v**2))+1)/log(10))
+   LLM R²: 0.6860
+   LLM time: 4.02s
+   ⚠ Structural-risk functions ['log']; bypassing pure-LLM acceptance and forcing PySR refinement.
+   → Seeding PySR operator set from LLM candidate: {'binary_operators': ['+', '*', '/'], 'unary_operators': ['log']}
+   → Refining with PySR...
 
 [DISCOVERY] Starting symbolic regression...
    Variables: m, v
    Samples: 160
    Iterations: 1000
-   [PySR] unary_operators   = ['sqrt']
+   [LLM-OPS] injected unary=['log'] binary=[]
+   [PySR] guesses param available — seeding with [] (1 of 1 dropped: unsupported_operator:sign)
+   [PySR] unary_operators   = ['sqrt', 'log']
    [PySR] binary_operators  = ['+', '-', '*', '/', 'pow']
    [PySR] niterations       = 1000
    [PySR] parsimony         = 0.01
@@ -161,62 +194,67 @@ Equation hint: Kinetic Energy
    [PySR] loss kwarg        = []
    [PySR] define_operators = NOT SET (old PySR path)
    [PySR] PySRRegressor constructed OK
-   [MEM] before PySR: RSS=1.07 GB
-   [MEM] after PySR: RSS=1.07 GB
-2026-11-03 09:53:20,606 - INFO -    Result: (-7.9170604 / sqrt(v * sqrt(m))) + 4.092252
-2026-11-03 09:53:20,606 - INFO -    R2 = 0.8032
-2026-11-03 09:53:20,606 - WARNING - 
-[WARNING] SymbolicEngine best R2=0.8070
-2026-11-03 09:53:20,606 - WARNING - [PARTIAL] Returning best result with R2=0.8070. If R2 is very low, check that the right unary operators are enabled.
-2026-11-03 09:53:20,606 - INFO - [NORMALISE] Expression rewritten for validator: '(v ^ (v ^ -0.22796145)) - (2.5942123 / (m ^ 0.35214233))' → '(v ** (v ** -0.22796145)) - (2.5942123 / (m ** 0.35214233))'
-   ✅ Found: (-7.9170604 / sqrt(v * sqrt(m))) + 4.092252
-   R²: 0.8032  (selected index 8/23 by pysr_default)
+   [POP-SCALE] populations=30 > baseline=10; niterations 1000 → 333 (keeps total evals ≤ 330,000)
+   [MEM] before PySR: RSS=1.06 GB
+   [MEM] after PySR: RSS=1.06 GB
+2026-11-27 02:25:12,397 - INFO -    Result: log(((sqrt(m) * v) - 1.34031) * 0.4918701)
+2026-11-27 02:25:12,397 - INFO -    R2 = 0.8043
+2026-11-27 02:25:12,397 - INFO -    LLM mode: hybrid_structural_risk_pysr
+2026-11-27 02:25:12,397 - WARNING - 
+[WARNING] SymbolicEngine best R2=0.8340
+2026-11-27 02:25:12,397 - WARNING - [PARTIAL] Returning best result with R2=0.8340. If R2 is very low, check that the right unary operators are enabled.
+   ✅ Found: log(((sqrt(m) * v) - 1.34031) * 0.4918701)
+   R²: 0.8043  (selected index 7/22 by pysr_default)
+   PySR time: 431.04s
+   PySR R²: 0.8043
+   ✅ Structural-risk policy selected PySR refinement
 
 [OK] Discovery complete
-   Expression: (v ^ (v ^ -0.22796145)) - (2.5942123 / (m ^ 0.35214233))
-   R2 Score: 0.8070
+   Expression: log((((v * sqrt(m)) * 0.5100047) + -0.8729826) + (-0.04662489 / (m + -2.0693998)))
+   R2 Score: 0.8340
    Engine: symbolic
+   LLM mode used: hybrid_structural_risk_pysr
    Attempt: 2/3
 
 [VALIDATE] Checking expression quality...
 [OK] Validation complete
-   Score: 91.3/100
+   Score: 70.0/100
 
 ======================================================================
 [OK] WORKFLOW COMPLETE
 ======================================================================
 
-  [hypatia] (v ^ (v ^ -0.22796145)) - (2.5942123 / (m ^ 0.35214233)  R²=0.8070  extrap(near=0.8842 med=-0.7629 far=-14.4455)  315.1s  scale_log=True  llm=hybrid_pysr_better
-  [ 1219.3s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation_seed777/exp1_ablation_checkpoint.json
+  [hypatia] log((((v * sqrt(m)) * 0.5100047) + -0.8729826) + (-0.04  R²=0.8340  extrap(near=-5.7361 med=-6.9739 far=-82.1160)  1296.2s  scale_log=True  llm=hybrid_structural_risk_pysr
+  [ 2406.1s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation_seed777/exp1_ablation_checkpoint_shard3.json
   ✓ hypatia saved to checkpoint
-  [ 1219.3s] run_condition START: Kinetic Energy [hypatia_nollm]  seed=819  wall_clock=3600s
-  [ 1219.3s] generate_data: Kinetic Energy  N=200  noise=0.05  seed=819
-  [ 1219.3s] generate_data done: X_train=(160, 2)
-2026-11-03 09:53:20,700 - INFO - ======================================================================
-2026-11-03 09:53:20,700 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
-2026-11-03 09:53:20,700 - INFO - ======================================================================
-2026-11-03 09:53:20,700 - INFO - Domain: physics
-2026-11-03 09:53:20,700 - INFO - Discovery mode: strict
-2026-11-03 09:53:20,700 - INFO - Primary LLM: anthropic
-2026-11-03 09:53:20,700 - INFO - use_llm: False  |  llm_mode: none
-2026-11-03 09:53:20,700 - INFO - Auto-config: True
-2026-11-03 09:53:20,700 - INFO - Max retries: 3
-2026-11-03 09:53:20,700 - INFO - PhysicsAware fallback: False
-2026-11-03 09:53:20,700 - INFO - Complexity threshold: 20
-2026-11-03 09:53:20,700 - INFO - Deterministic PySR: True
-2026-11-03 09:53:20,700 - INFO - ======================================================================
-2026-11-03 09:53:20,700 - INFO - Using provided iterations: 1000
-2026-11-03 09:53:20,700 - INFO - Parsimony: 0.01
-2026-11-03 09:53:20,700 - INFO - Transcendental compositions: False
-2026-11-03 09:53:20,700 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='physics', use_tc=False)
-2026-11-03 09:53:20,700 - INFO - [LLM] API key found but use_llm=False — running pure PySR. Pass use_llm=True to enable LLM guidance.
-2026-11-03 09:53:20,796 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
+  [ 2406.1s] run_condition START: Kinetic Energy [hypatia_nollm]  seed=819  wall_clock=3600s
+  [ 2406.1s] generate_data: Kinetic Energy  N=200  noise=0.05  seed=819
+  [ 2406.1s] generate_data done: X_train=(160, 2)
+2026-11-27 02:25:12,525 - INFO - ======================================================================
+2026-11-27 02:25:12,525 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
+2026-11-27 02:25:12,525 - INFO - ======================================================================
+2026-11-27 02:25:12,525 - INFO - Domain: physics
+2026-11-27 02:25:12,525 - INFO - Discovery mode: strict
+2026-11-27 02:25:12,525 - INFO - Primary LLM: anthropic
+2026-11-27 02:25:12,525 - INFO - use_llm: False  |  llm_mode: none
+2026-11-27 02:25:12,525 - INFO - Auto-config: True
+2026-11-27 02:25:12,525 - INFO - Max retries: 3
+2026-11-27 02:25:12,525 - INFO - PhysicsAware fallback: False
+2026-11-27 02:25:12,525 - INFO - Complexity threshold: 20
+2026-11-27 02:25:12,525 - INFO - Deterministic PySR: True
+2026-11-27 02:25:12,525 - INFO - ======================================================================
+2026-11-27 02:25:12,525 - INFO - Using provided iterations: 1000
+2026-11-27 02:25:12,525 - INFO - Parsimony: 0.01
+2026-11-27 02:25:12,525 - INFO - Transcendental compositions: False
+2026-11-27 02:25:12,525 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='physics', use_tc=False)
+2026-11-27 02:25:12,525 - INFO - [LLM] API key found but use_llm=False — running pure PySR. Pass use_llm=True to enable LLM guidance.
+2026-11-27 02:25:12,615 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
 
-2026-11-03 09:53:20,796 - INFO - [FIX-D] Target y log10-scaled (extreme output range)
-2026-11-03 09:53:20,796 - INFO - [FIX-D] Extreme-scale log transform applied
-2026-11-03 09:53:20,796 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
-2026-11-03 09:53:20,797 - INFO - 
-[SYMBOLIC] Attempt 1/3 (seed=42)
+2026-11-27 02:25:12,615 - INFO - [FIX-D] Target y log10-scaled (extreme output range)
+2026-11-27 02:25:12,615 - INFO - [FIX-D] Extreme-scale log transform applied
+2026-11-27 02:25:12,615 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
+2026-11-27 02:25:12,615 - INFO - 
+[SYMBOLIC] Attempt 1/3 (seed=819)
 
 ======================================================================
 DISCOVERY WORKFLOW v5.1
@@ -243,15 +281,16 @@ Equation hint: Kinetic Energy
    [PySR] loss kwarg        = []
    [PySR] define_operators = NOT SET (old PySR path)
    [PySR] PySRRegressor constructed OK
-   [MEM] before PySR: RSS=1.08 GB
+   [POP-SCALE] populations=30 > baseline=10; niterations 1000 → 333 (keeps total evals ≤ 330,000)
+   [MEM] before PySR: RSS=1.06 GB
    [MEM] after PySR: RSS=1.08 GB
-2026-11-03 09:55:52,886 - INFO -    Result: (-4.4625893 / ((1.1181198 ^ sqrt(m)) ^ v)) + 2.8938706
-2026-11-03 09:55:52,886 - INFO -    R2 = 0.8111
-2026-11-03 09:55:52,886 - INFO -    [BEST] New best!
-2026-11-03 09:55:52,886 - INFO - 
-[SYMBOLIC] Attempt 2/3 (seed=43)
-   ✅ Found: (-4.4625893 / ((1.1181198 ^ sqrt(m)) ^ v)) + 2.8938706
-   R²: 0.8111  (selected index 9/20 by pysr_default)
+2026-11-27 02:33:25,334 - INFO -    Result: 4.0922475 - sqrt((62.67959 / v) / sqrt(m))
+2026-11-27 02:33:25,334 - INFO -    R2 = 0.8032
+2026-11-27 02:33:25,334 - INFO -    [BEST] New eligible candidate!
+2026-11-27 02:33:25,334 - INFO - 
+[SYMBOLIC] Attempt 2/3 (seed=820)
+   ✅ Found: 4.0922475 - sqrt((62.67959 / v) / sqrt(m))
+   R²: 0.8032  (selected index 8/22 by pysr_default)
 
 [DISCOVERY] Starting symbolic regression...
    Variables: m, v
@@ -265,63 +304,810 @@ Equation hint: Kinetic Energy
    [PySR] loss kwarg        = []
    [PySR] define_operators = NOT SET (old PySR path)
    [PySR] PySRRegressor constructed OK
+   [POP-SCALE] populations=30 > baseline=10; niterations 1000 → 333 (keeps total evals ≤ 330,000)
    [MEM] before PySR: RSS=1.08 GB
-   [MEM] after PySR: RSS=1.08 GB
-2026-11-03 09:57:15,823 - INFO -    Result: (v ^ (v ^ -0.22796145)) - (2.5942123 / (m ^ 0.35214233))
-2026-11-03 09:57:15,824 - INFO -    R2 = 0.8070
-2026-11-03 09:57:15,824 - INFO - 
-[SYMBOLIC] Attempt 3/3 (seed=44)
-   ✅ Found: (v ^ (v ^ -0.22796145)) - (2.5942123 / (m ^ 0.35214233))
-   R²: 0.8070  (selected index 10/22 by pysr_default)
-
-[DISCOVERY] Starting symbolic regression...
-   Variables: m, v
-   Samples: 160
-   Iterations: 1000
-   [PySR] unary_operators   = ['sqrt']
-   [PySR] binary_operators  = ['+', '-', '*', '/', 'pow']
-   [PySR] niterations       = 1000
-   [PySR] parsimony         = 0.01
-   [PySR] timeout_in_seconds= 1100
-   [PySR] loss kwarg        = []
-   [PySR] define_operators = NOT SET (old PySR path)
-   [PySR] PySRRegressor constructed OK
-   [MEM] before PySR: RSS=1.08 GB
-   [MEM] after PySR: RSS=1.08 GB
-2026-11-03 09:59:15,340 - INFO -    Result: (-7.9170604 / sqrt(v * sqrt(m))) + 4.092252
-2026-11-03 09:59:15,340 - INFO -    R2 = 0.8032
-2026-11-03 09:59:15,340 - WARNING - 
-[WARNING] SymbolicEngine best R2=0.8111
-2026-11-03 09:59:15,340 - WARNING - [PARTIAL] Returning best result with R2=0.8111. If R2 is very low, check that the right unary operators are enabled.
-2026-11-03 09:59:15,341 - INFO - [NORMALISE] Expression rewritten for validator: '(-4.4625893 / ((1.1181198 ^ sqrt(m)) ^ v)) + 2.8938706' → '(-4.4625893 / ((1.1181198 ** sqrt(m)) ** v)) + 2.8938706'
-   ✅ Found: (-7.9170604 / sqrt(v * sqrt(m))) + 4.092252
+   [MEM] after PySR: RSS=1.07 GB
+2026-11-27 02:38:53,700 - INFO -    Result: 4.0922265 - sqrt((62.680386 / sqrt(m)) / v)
+2026-11-27 02:38:53,700 - INFO -    R2 = 0.8032
+2026-11-27 02:38:53,700 - INFO - 
+[SYMBOLIC] Attempt 3/3 (seed=821)
+   ✅ Found: 4.0922265 - sqrt((62.680386 / sqrt(m)) / v)
    R²: 0.8032  (selected index 8/23 by pysr_default)
 
+[DISCOVERY] Starting symbolic regression...
+   Variables: m, v
+   Samples: 160
+   Iterations: 1000
+   [PySR] unary_operators   = ['sqrt']
+   [PySR] binary_operators  = ['+', '-', '*', '/', 'pow']
+   [PySR] niterations       = 1000
+   [PySR] parsimony         = 0.01
+   [PySR] timeout_in_seconds= 1100
+   [PySR] loss kwarg        = []
+   [PySR] define_operators = NOT SET (old PySR path)
+   [PySR] PySRRegressor constructed OK
+   [POP-SCALE] populations=30 > baseline=10; niterations 1000 → 333 (keeps total evals ≤ 330,000)
+   [MEM] before PySR: RSS=1.07 GB
+   [MEM] after PySR: RSS=1.07 GB
+2026-11-27 02:51:59,144 - INFO -    Result: (((0.8945643 ^ v) ^ sqrt(m)) / -0.22461213) + 2.8925772
+2026-11-27 02:51:59,144 - INFO -    R2 = 0.8111
+2026-11-27 02:51:59,144 - INFO -    [BEST] New eligible candidate!
+2026-11-27 02:51:59,144 - WARNING - 
+[WARNING] SymbolicEngine best R2=0.8111
+2026-11-27 02:51:59,144 - WARNING - [PARTIAL] Returning best result with R2=0.8111. If R2 is very low, check that the right unary operators are enabled.
+2026-11-27 02:51:59,144 - INFO - [NORMALISE] Expression rewritten for validator: '(((0.8945643 ^ v) ^ sqrt(m)) / -0.22461213) + 2.8925772' → '(((0.8945643 ** v) ** sqrt(m)) / -0.22461213) + 2.8925772'
+   ✅ Found: (((0.8945643 ^ v) ^ sqrt(m)) / -0.22461213) + 2.8925772
+   R²: 0.8111  (selected index 9/22 by pysr_default)
+
 [OK] Discovery complete
-   Expression: (-4.4625893 / ((1.1181198 ^ sqrt(m)) ^ v)) + 2.8938706
+   Expression: (((0.8945643 ^ v) ^ sqrt(m)) / -0.22461213) + 2.8925772
    R2 Score: 0.8111
    Engine: symbolic
-   Attempt: 1/3
+   Attempt: 3/3
 
 [VALIDATE] Checking expression quality...
 [OK] Validation complete
-   Score: 91.0/100
+   Score: 74.3/100
 
 ======================================================================
 [OK] WORKFLOW COMPLETE
 ======================================================================
 
-  [hypatia] (-4.4625893 / ((1.1181198 ^ sqrt(m)) ^ v)) + 2.8938706  R²=0.8111  extrap(near=-11.2362 med=-1.5453 far=-17.3325)  354.6s  scale_log=True  llm=none
-  [ 1573.9s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation_seed777/exp1_ablation_checkpoint.json
+  [hypatia] (((0.8945643 ^ v) ^ sqrt(m)) / -0.22461213) + 2.8925772  R²=0.8111  extrap(near=-11.2527 med=-1.5454 far=-17.3328)  1606.6s  scale_log=True  llm=none
+  [ 4012.8s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation_seed777/exp1_ablation_checkpoint_shard3.json
   ✓ hypatia_nollm saved to checkpoint
 
-  ⚠️  FAILURE MODE — Kinetic Energy: HypatiaX R²=0.807 < PySR-only R²=0.997  (Arrhenius pattern — document in §Analysis)
+  ⚠️  FAILURE MODE — Kinetic Energy: HypatiaX R²=0.834 < PySR-only R²=0.997  (Arrhenius pattern — document in §Analysis)
 
 ────────────────────────────────────────────────────────────
 ▶  [07] Gravitational Force  [Physics]
    NOTE: Extreme-scale: features span >6 orders of magnitude. FIX-D log-transform active.
 ────────────────────────────────────────────────────────────
-  [ 1573.9s] run_condition START: Gravitational Force [pysr_only]  seed=826  wall_clock=1400s
-  [ 1573.9s] generate_data: Gravitational Force  N=200  noise=0.05  seed=826
-  [ 1573.9s] generate_data done: X_train=(160, 3)
-  [ 1573.9s] make_pysr: pops=30  iter=1000  timeout=1100s  warm=False
+  [ 4012.8s] run_condition START: Gravitational Force [pysr_only]  seed=826  wall_clock=1400s
+  [ 4012.8s] generate_data: Gravitational Force  N=200  noise=0.05  seed=826
+  [ 4012.8s] generate_data done: X_train=(160, 3)
+  [ 4012.8s] make_pysr: pops=30  iter=1000  timeout=1100s  warm=False
+  [pysr_only] train_R²=0.9824  extrap(near=0.2003 med=0.2511 far=-4.6822)  time=978.7s
+  [ 4991.4s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation_seed777/exp1_ablation_checkpoint_shard3.json
+  ✓ pysr_only saved to checkpoint
+  [ 4991.4s] run_condition START: Gravitational Force [hypatia]  seed=826  wall_clock=3600s
+  [ 4991.4s] generate_data: Gravitational Force  N=200  noise=0.05  seed=826
+  [ 4991.4s] generate_data done: X_train=(160, 3)
+2026-11-27 03:08:17,858 - INFO - ======================================================================
+2026-11-27 03:08:17,858 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
+2026-11-27 03:08:17,858 - INFO - ======================================================================
+2026-11-27 03:08:17,858 - INFO - Domain: physics
+2026-11-27 03:08:17,858 - INFO - Discovery mode: strict
+2026-11-27 03:08:17,858 - INFO - Primary LLM: anthropic
+2026-11-27 03:08:17,858 - INFO - use_llm: True  |  llm_mode: hybrid
+2026-11-27 03:08:17,858 - INFO - Auto-config: True
+2026-11-27 03:08:17,858 - INFO - Max retries: 3
+2026-11-27 03:08:17,858 - INFO - PhysicsAware fallback: False
+2026-11-27 03:08:17,858 - INFO - Complexity threshold: 20
+2026-11-27 03:08:17,858 - INFO - Deterministic PySR: True
+2026-11-27 03:08:17,858 - INFO - ======================================================================
+2026-11-27 03:08:17,858 - INFO - Using provided iterations: 1000
+2026-11-27 03:08:17,858 - INFO - Parsimony: 0.01
+2026-11-27 03:08:17,858 - INFO - Transcendental compositions: False
+2026-11-27 03:08:17,858 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='physics', use_tc=False)
+2026-11-27 03:08:17,862 - INFO - [LLM] SymbolicEngineWithLLM instantiated (mode=hybrid, candidates=3)
+2026-11-27 03:08:17,956 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
+
+2026-11-27 03:08:17,956 - INFO - [FIX-D] Feature 'm1' log10-scaled (range > 4 OOM)
+2026-11-27 03:08:17,956 - INFO - [FIX-D] Feature 'm2' log10-scaled (range > 4 OOM)
+2026-11-27 03:08:17,957 - INFO - [FIX-D] Feature 'r' log10-scaled (range > 4 OOM)
+2026-11-27 03:08:17,957 - INFO - [FIX-D] Target y log10-scaled (extreme output range)
+2026-11-27 03:08:17,957 - INFO - [FIX-D] Extreme-scale log transform applied
+2026-11-27 03:08:17,957 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
+2026-11-27 03:08:17,957 - INFO - 
+[SYMBOLIC] Attempt 1/3 (seed=826)
+2026-11-27 03:08:22,240 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+   ✓ LLM engine initialized (claude-sonnet-4-6)
+   ✓ LLM mode: hybrid
+
+======================================================================
+DISCOVERY WORKFLOW v5.1
+======================================================================
+Description: Gravitational Force
+Domain: PHYSICS
+Samples: 160
+Variables: ['m1', 'm2', 'r']
+LLM mode: hybrid
+Equation hint: Gravitational Force
+======================================================================
+
+[DISCOVER] Running symbolic regression...
+
+[HYBRID MODE] LLM first, PySR refinement...
+   [FIX-D] LLM hypotheses mapped to the log10 fit space before scoring
+   LLM best: (sign((6.674e-11 * (sign(m1)*(10**abs(m1)-1)) * (sign(m2)*(10**abs(m2)-1)) / (sign(r)*(10**abs(r)-1))**2))*log(abs((6.674e-11 * (sign(m1)*(10**abs(m1)-1)) * (sign(m2)*(10**abs(m2)-1)) / (sign(r)*(10**abs(r)-1))**2))+1)/log(10))
+   LLM R²: 0.9741
+   LLM time: 4.28s
+   ⚠ Structural-risk functions ['log']; bypassing pure-LLM acceptance and forcing PySR refinement.
+   → Seeding PySR operator set from LLM candidate: {'binary_operators': ['+', '*', '/', '-'], 'unary_operators': ['log']}
+   → Refining with PySR...
+
+[DISCOVERY] Starting symbolic regression...
+   Variables: m1, m2, r
+   Samples: 160
+   Iterations: 1000
+   [LLM-OPS] injected unary=['log'] binary=[]
+   [PySR] guesses param available — seeding with [] (1 of 1 dropped: unsupported_operator:sign)
+   [PySR] unary_operators   = ['sqrt', 'log']
+   [PySR] binary_operators  = ['+', '-', '*', '/', 'pow']
+   [PySR] niterations       = 1000
+   [PySR] parsimony         = 0.01
+   [PySR] timeout_in_seconds= 1100
+   [PySR] loss kwarg        = []
+   [PySR] define_operators = NOT SET (old PySR path)
+   [PySR] PySRRegressor constructed OK
+   [POP-SCALE] populations=30 > baseline=10; niterations 1000 → 333 (keeps total evals ≤ 330,000)
+   [MEM] before PySR: RSS=1.08 GB
+   [MEM] after PySR: RSS=1.09 GB
+2026-11-27 03:17:05,204 - INFO -    Result: (0.6204724 ^ ((r + (r - m1)) ^ 2.052029)) * (m2 + -10.618174)
+2026-11-27 03:17:05,204 - INFO -    R2 = 0.9720
+2026-11-27 03:17:05,204 - INFO -    LLM mode: hybrid_structural_risk_pysr
+2026-11-27 03:17:05,204 - INFO -    [BEST] New eligible candidate!
+2026-11-27 03:17:05,204 - INFO - 
+[SYMBOLIC] Attempt 2/3 (seed=827)
+2026-11-27 03:17:10,879 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+   ✅ Found: (0.6204724 ^ ((r + (r - m1)) ^ 2.052029)) * (m2 + -10.618174)
+   R²: 0.9720  (selected index 7/15 by pysr_default)
+   PySR time: 522.87s
+   PySR R²: 0.9720
+   ✅ Structural-risk policy selected PySR refinement
+
+[HYBRID MODE] LLM first, PySR refinement...
+   [FIX-D] LLM hypotheses mapped to the log10 fit space before scoring
+   LLM best: (sign((6.674e-11 * (sign(m1)*(10**abs(m1)-1)) * (sign(m2)*(10**abs(m2)-1)) / (sign(r)*(10**abs(r)-1))**2))*log(abs((6.674e-11 * (sign(m1)*(10**abs(m1)-1)) * (sign(m2)*(10**abs(m2)-1)) / (sign(r)*(10**abs(r)-1))**2))+1)/log(10))
+   LLM R²: 0.9741
+   LLM time: 5.68s
+   ⚠ Structural-risk functions ['log']; bypassing pure-LLM acceptance and forcing PySR refinement.
+   → Seeding PySR operator set from LLM candidate: {'binary_operators': ['+', '*', '/', '-'], 'unary_operators': ['log']}
+   → Refining with PySR...
+
+[DISCOVERY] Starting symbolic regression...
+   Variables: m1, m2, r
+   Samples: 160
+   Iterations: 1000
+   [LLM-OPS] injected unary=['log'] binary=[]
+   [PySR] guesses param available — seeding with [] (1 of 1 dropped: unsupported_operator:sign)
+   [PySR] unary_operators   = ['sqrt', 'log']
+   [PySR] binary_operators  = ['+', '-', '*', '/', 'pow']
+   [PySR] niterations       = 1000
+   [PySR] parsimony         = 0.01
+   [PySR] timeout_in_seconds= 1100
+   [PySR] loss kwarg        = []
+   [PySR] define_operators = NOT SET (old PySR path)
+   [PySR] PySRRegressor constructed OK
+   [POP-SCALE] populations=30 > baseline=10; niterations 1000 → 333 (keeps total evals ≤ 330,000)
+   [MEM] before PySR: RSS=1.09 GB
+   [MEM] after PySR: RSS=1.09 GB
+2026-11-27 03:27:18,183 - INFO -    Result: log(m1 * ((m2 * 0.121897295) / r)) ^ (1.5134895 ^ r)
+2026-11-27 03:27:18,183 - INFO -    R2 = 0.9737
+2026-11-27 03:27:18,183 - INFO -    LLM mode: hybrid_structural_risk_pysr
+2026-11-27 03:27:18,183 - INFO -    [BEST] New eligible candidate!
+2026-11-27 03:27:18,183 - INFO - 
+[SYMBOLIC] Attempt 3/3 (seed=828)
+2026-11-27 03:27:23,938 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+   ✅ Found: log(m1 * ((m2 * 0.121897295) / r)) ^ (1.5134895 ^ r)
+   R²: 0.9737  (selected index 9/17 by pysr_default)
+   PySR time: 607.19s
+   PySR R²: 0.9737
+   ✅ Structural-risk policy selected PySR refinement
+
+[HYBRID MODE] LLM first, PySR refinement...
+   [FIX-D] LLM hypotheses mapped to the log10 fit space before scoring
+   LLM best: (sign((6.674e-11 * (sign(m1)*(10**abs(m1)-1)) * (sign(m2)*(10**abs(m2)-1)) / (sign(r)*(10**abs(r)-1))**2))*log(abs((6.674e-11 * (sign(m1)*(10**abs(m1)-1)) * (sign(m2)*(10**abs(m2)-1)) / (sign(r)*(10**abs(r)-1))**2))+1)/log(10))
+   LLM R²: 0.9741
+   LLM time: 5.76s
+   ⚠ Structural-risk functions ['log']; bypassing pure-LLM acceptance and forcing PySR refinement.
+   → Seeding PySR operator set from LLM candidate: {'binary_operators': ['+', '*', '/', '-'], 'unary_operators': ['log']}
+   → Refining with PySR...
+
+[DISCOVERY] Starting symbolic regression...
+   Variables: m1, m2, r
+   Samples: 160
+   Iterations: 1000
+   [LLM-OPS] injected unary=['log'] binary=[]
+   [PySR] guesses param available — seeding with [] (1 of 1 dropped: unsupported_operator:sign)
+   [PySR] unary_operators   = ['sqrt', 'log']
+   [PySR] binary_operators  = ['+', '-', '*', '/', 'pow']
+   [PySR] niterations       = 1000
+   [PySR] parsimony         = 0.01
+   [PySR] timeout_in_seconds= 1100
+   [PySR] loss kwarg        = []
+   [PySR] define_operators = NOT SET (old PySR path)
+   [PySR] PySRRegressor constructed OK
+   [POP-SCALE] populations=30 > baseline=10; niterations 1000 → 333 (keeps total evals ≤ 330,000)
+   [MEM] before PySR: RSS=1.09 GB
+   [MEM] after PySR: RSS=1.09 GB
+2026-11-27 03:36:31,722 - INFO -    Result: log(((m1 * m2) / r) / 8.201202) ^ (1.5139184 ^ r)
+2026-11-27 03:36:31,722 - INFO -    R2 = 0.9737
+2026-11-27 03:36:31,723 - INFO -    LLM mode: hybrid_structural_risk_pysr
+2026-11-27 03:36:31,723 - INFO - 
+[SUCCESS] SymbolicEngine succeeded (R2=0.9737)
+2026-11-27 03:36:31,723 - INFO - [NORMALISE] Expression rewritten for validator: 'log(m1 * ((m2 * 0.121897295) / r)) ^ (1.5134895 ^ r)' → 'log(m1 * ((m2 * 0.121897295) / r)) ** (1.5134895 ** r)'
+   ✅ Found: log(((m1 * m2) / r) / 8.201202) ^ (1.5139184 ^ r)
+   R²: 0.9737  (selected index 9/21 by pysr_default)
+   PySR time: 547.69s
+   PySR R²: 0.9737
+   ✅ Structural-risk policy selected PySR refinement
+
+[OK] Discovery complete
+   Expression: log(m1 * ((m2 * 0.121897295) / r)) ^ (1.5134895 ^ r)
+   R2 Score: 0.9737
+   Engine: symbolic
+   LLM mode used: hybrid_structural_risk_pysr
+   Attempt: 2/3
+
+[VALIDATE] Checking expression quality...
+[OK] Validation complete
+   Score: 72.2/100
+
+======================================================================
+[OK] WORKFLOW COMPLETE
+======================================================================
+
+  [hypatia] log(m1 * ((m2 * 0.121897295) / r)) ^ (1.5134895 ^ r)  R²=0.9737  extrap(near=-4.1383 med=-10.5449 far=-8.5983)  1693.8s  scale_log=True  llm=hybrid_structural_risk_pysr
+  [ 6685.3s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation_seed777/exp1_ablation_checkpoint_shard3.json
+  ✓ hypatia saved to checkpoint
+  [ 6685.3s] run_condition START: Gravitational Force [hypatia_nollm]  seed=826  wall_clock=3600s
+  [ 6685.3s] generate_data: Gravitational Force  N=200  noise=0.05  seed=826
+  [ 6685.3s] generate_data done: X_train=(160, 3)
+2026-11-27 03:36:31,755 - INFO - ======================================================================
+2026-11-27 03:36:31,755 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
+2026-11-27 03:36:31,755 - INFO - ======================================================================
+2026-11-27 03:36:31,755 - INFO - Domain: physics
+2026-11-27 03:36:31,755 - INFO - Discovery mode: strict
+2026-11-27 03:36:31,755 - INFO - Primary LLM: anthropic
+2026-11-27 03:36:31,755 - INFO - use_llm: False  |  llm_mode: none
+2026-11-27 03:36:31,755 - INFO - Auto-config: True
+2026-11-27 03:36:31,755 - INFO - Max retries: 3
+2026-11-27 03:36:31,755 - INFO - PhysicsAware fallback: False
+2026-11-27 03:36:31,755 - INFO - Complexity threshold: 20
+2026-11-27 03:36:31,755 - INFO - Deterministic PySR: True
+2026-11-27 03:36:31,755 - INFO - ======================================================================
+2026-11-27 03:36:31,755 - INFO - Using provided iterations: 1000
+2026-11-27 03:36:31,755 - INFO - Parsimony: 0.01
+2026-11-27 03:36:31,755 - INFO - Transcendental compositions: False
+2026-11-27 03:36:31,755 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='physics', use_tc=False)
+2026-11-27 03:36:31,755 - INFO - [LLM] API key found but use_llm=False — running pure PySR. Pass use_llm=True to enable LLM guidance.
+2026-11-27 03:36:31,845 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
+
+2026-11-27 03:36:31,845 - INFO - [FIX-D] Feature 'm1' log10-scaled (range > 4 OOM)
+2026-11-27 03:36:31,845 - INFO - [FIX-D] Feature 'm2' log10-scaled (range > 4 OOM)
+2026-11-27 03:36:31,845 - INFO - [FIX-D] Feature 'r' log10-scaled (range > 4 OOM)
+2026-11-27 03:36:31,845 - INFO - [FIX-D] Target y log10-scaled (extreme output range)
+2026-11-27 03:36:31,845 - INFO - [FIX-D] Extreme-scale log transform applied
+2026-11-27 03:36:31,845 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
+2026-11-27 03:36:31,845 - INFO - 
+[SYMBOLIC] Attempt 1/3 (seed=826)
+
+======================================================================
+DISCOVERY WORKFLOW v5.1
+======================================================================
+Description: Gravitational Force
+Domain: PHYSICS
+Samples: 160
+Variables: ['m1', 'm2', 'r']
+LLM mode: none
+Equation hint: Gravitational Force
+======================================================================
+
+[DISCOVER] Running symbolic regression...
+
+[DISCOVERY] Starting symbolic regression...
+   Variables: m1, m2, r
+   Samples: 160
+   Iterations: 1000
+   [PySR] unary_operators   = ['sqrt']
+   [PySR] binary_operators  = ['+', '-', '*', '/', 'pow']
+   [PySR] niterations       = 1000
+   [PySR] parsimony         = 0.01
+   [PySR] timeout_in_seconds= 1100
+   [PySR] loss kwarg        = []
+   [PySR] define_operators = NOT SET (old PySR path)
+   [PySR] PySRRegressor constructed OK
+   [POP-SCALE] populations=30 > baseline=10; niterations 1000 → 333 (keeps total evals ≤ 330,000)
+   [MEM] before PySR: RSS=1.09 GB
+   [MEM] after PySR: RSS=1.09 GB
+2026-11-27 03:46:41,948 - INFO -    Result: 0.21821995 ^ (((r + r) + 11.0406885) - (m1 + m2))
+2026-11-27 03:46:41,949 - INFO -    R2 = 0.9682
+2026-11-27 03:46:41,949 - INFO -    [BEST] New eligible candidate!
+2026-11-27 03:46:41,949 - INFO - 
+[SYMBOLIC] Attempt 2/3 (seed=827)
+   ✅ Found: 0.21821995 ^ (((r + r) + 11.0406885) - (m1 + m2))
+   R²: 0.9682  (selected index 7/17 by pysr_default)
+
+[DISCOVERY] Starting symbolic regression...
+   Variables: m1, m2, r
+   Samples: 160
+   Iterations: 1000
+   [PySR] unary_operators   = ['sqrt']
+   [PySR] binary_operators  = ['+', '-', '*', '/', 'pow']
+   [PySR] niterations       = 1000
+   [PySR] parsimony         = 0.01
+   [PySR] timeout_in_seconds= 1100
+   [PySR] loss kwarg        = []
+   [PySR] define_operators = NOT SET (old PySR path)
+   [PySR] PySRRegressor constructed OK
+   [POP-SCALE] populations=30 > baseline=10; niterations 1000 → 333 (keeps total evals ≤ 330,000)
+   [MEM] before PySR: RSS=1.09 GB
+   [MEM] after PySR: RSS=1.07 GB
+2026-11-27 03:57:26,513 - INFO -    Result: m2 * (3.0e-45 ^ sqrt((r / m1) ^ m2))
+2026-11-27 03:57:26,513 - INFO -    R2 = 0.9692
+2026-11-27 03:57:26,513 - INFO -    [BEST] New eligible candidate!
+2026-11-27 03:57:26,513 - INFO - 
+[SYMBOLIC] Attempt 3/3 (seed=828)
+   ✅ Found: m2 * (3.0e-45 ^ sqrt((r / m1) ^ m2))
+   R²: 0.9692  (selected index 7/18 by pysr_default)
+
+[DISCOVERY] Starting symbolic regression...
+   Variables: m1, m2, r
+   Samples: 160
+   Iterations: 1000
+   [PySR] unary_operators   = ['sqrt']
+   [PySR] binary_operators  = ['+', '-', '*', '/', 'pow']
+   [PySR] niterations       = 1000
+   [PySR] parsimony         = 0.01
+   [PySR] timeout_in_seconds= 1100
+   [PySR] loss kwarg        = []
+   [PySR] define_operators = NOT SET (old PySR path)
+   [PySR] PySRRegressor constructed OK
+   [POP-SCALE] populations=30 > baseline=10; niterations 1000 → 333 (keeps total evals ≤ 330,000)
+   [MEM] before PySR: RSS=1.07 GB
+   [MEM] after PySR: RSS=1.08 GB
+2026-11-27 04:10:50,176 - INFO -    Result: ((1.1441844 ^ m2) ^ m1) * (0.05029481 ^ r)
+2026-11-27 04:10:50,176 - INFO -    R2 = 0.9662
+2026-11-27 04:10:50,176 - WARNING - 
+[WARNING] SymbolicEngine best R2=0.9692
+2026-11-27 04:10:50,176 - WARNING - [PARTIAL] Returning best result with R2=0.9692. If R2 is very low, check that the right unary operators are enabled.
+2026-11-27 04:10:50,176 - INFO - [NORMALISE] Expression rewritten for validator: 'm2 * (3.0e-45 ^ sqrt((r / m1) ^ m2))' → 'm2 * (3.0e-45 ** sqrt((r / m1) ** m2))'
+   ✅ Found: ((1.1441844 ^ m2) ^ m1) * (0.05029481 ^ r)
+   R²: 0.9662  (selected index 5/19 by pysr_default)
+
+[OK] Discovery complete
+   Expression: m2 * (3.0e-45 ^ sqrt((r / m1) ^ m2))
+   R2 Score: 0.9692
+   Engine: symbolic
+   Attempt: 2/3
+
+[VALIDATE] Checking expression quality...
+[OK] Validation complete
+   Score: 72.8/100
+
+======================================================================
+[OK] WORKFLOW COMPLETE
+======================================================================
+
+  [hypatia] m2 * (3.0e-45 ^ sqrt((r / m1) ^ m2))  R²=0.9692  extrap(near=-2.4532 med=0.8797 far=-3.8477)  2058.4s  scale_log=True  llm=none
+  [ 8743.8s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation_seed777/exp1_ablation_checkpoint_shard3.json
+  ✓ hypatia_nollm saved to checkpoint
+
+────────────────────────────────────────────────────────────
+▶  [08] Ideal Gas Law  [Physics]
+────────────────────────────────────────────────────────────
+  [ 8743.8s] run_condition START: Ideal Gas Law [pysr_only]  seed=833  wall_clock=1400s
+  [ 8743.8s] generate_data: Ideal Gas Law  N=200  noise=0.05  seed=833
+  [ 8743.8s] generate_data done: X_train=(160, 3)
+  [ 8743.8s] make_pysr: pops=30  iter=1000  timeout=1100s  warm=False
+  [pysr_only] train_R²=0.9976  extrap(near=0.9994 med=0.9999 far=0.9994)  time=1100.9s
+  [ 9844.6s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation_seed777/exp1_ablation_checkpoint_shard3.json
+  ✓ pysr_only saved to checkpoint
+  [ 9844.6s] run_condition START: Ideal Gas Law [hypatia]  seed=833  wall_clock=3600s
+  [ 9844.6s] generate_data: Ideal Gas Law  N=200  noise=0.05  seed=833
+  [ 9844.6s] generate_data done: X_train=(160, 3)
+2026-11-27 04:29:11,065 - INFO - ======================================================================
+2026-11-27 04:29:11,065 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
+2026-11-27 04:29:11,065 - INFO - ======================================================================
+2026-11-27 04:29:11,065 - INFO - Domain: physics
+2026-11-27 04:29:11,065 - INFO - Discovery mode: strict
+2026-11-27 04:29:11,066 - INFO - Primary LLM: anthropic
+2026-11-27 04:29:11,066 - INFO - use_llm: True  |  llm_mode: hybrid
+2026-11-27 04:29:11,066 - INFO - Auto-config: True
+2026-11-27 04:29:11,066 - INFO - Max retries: 3
+2026-11-27 04:29:11,066 - INFO - PhysicsAware fallback: False
+2026-11-27 04:29:11,066 - INFO - Complexity threshold: 20
+2026-11-27 04:29:11,066 - INFO - Deterministic PySR: True
+2026-11-27 04:29:11,066 - INFO - ======================================================================
+2026-11-27 04:29:11,066 - INFO - Using provided iterations: 1000
+2026-11-27 04:29:11,066 - INFO - Parsimony: 0.01
+2026-11-27 04:29:11,066 - INFO - Transcendental compositions: False
+2026-11-27 04:29:11,066 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='physics', use_tc=False)
+2026-11-27 04:29:11,070 - INFO - [LLM] SymbolicEngineWithLLM instantiated (mode=hybrid, candidates=3)
+2026-11-27 04:29:11,166 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
+
+2026-11-27 04:29:11,167 - INFO - [FIX-D] Target y log10-scaled (extreme output range)
+2026-11-27 04:29:11,167 - INFO - [FIX-D] Extreme-scale log transform applied
+2026-11-27 04:29:11,167 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
+2026-11-27 04:29:11,167 - INFO - 
+[SYMBOLIC] Attempt 1/3 (seed=833)
+2026-11-27 04:29:15,531 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+   ✓ LLM engine initialized (claude-sonnet-4-6)
+   ✓ LLM mode: hybrid
+
+======================================================================
+DISCOVERY WORKFLOW v5.1
+======================================================================
+Description: Ideal Gas Law
+Domain: PHYSICS
+Samples: 160
+Variables: ['n', 'T', 'V']
+LLM mode: hybrid
+Equation hint: Ideal Gas Law
+======================================================================
+
+[DISCOVER] Running symbolic regression...
+
+[HYBRID MODE] LLM first, PySR refinement...
+   [FIX-D] LLM hypotheses mapped to the log10 fit space before scoring
+   LLM best: (sign((n * T / V))*log(abs((n * T / V))+1)/log(10))
+   LLM R²: 0.1857
+   LLM time: 4.36s
+   ⚠ Structural-risk functions ['log']; bypassing pure-LLM acceptance and forcing PySR refinement.
+   ⚠ LLM R²=0.186 < 0.5 — discarding LLM prior, running pure PySR
+   → Refining with PySR...
+
+[DISCOVERY] Starting symbolic regression...
+   Variables: n, T, V
+   Samples: 160
+   Iterations: 1000
+   [PySR] unary_operators   = ['sqrt']
+   [PySR] binary_operators  = ['+', '-', '*', '/', 'pow']
+   [PySR] niterations       = 1000
+   [PySR] parsimony         = 0.01
+   [PySR] timeout_in_seconds= 1100
+   [PySR] loss kwarg        = []
+   [PySR] define_operators = NOT SET (old PySR path)
+   [PySR] PySRRegressor constructed OK
+   [POP-SCALE] populations=30 > baseline=10; niterations 1000 → 333 (keeps total evals ≤ 330,000)
+   [MEM] before PySR: RSS=1.08 GB
+   [MEM] after PySR: RSS=1.09 GB
+2026-11-27 04:37:26,412 - INFO -    Result: sqrt(n * 5.4327)
+2026-11-27 04:37:26,412 - INFO -    R2 = 0.1777
+2026-11-27 04:37:26,413 - INFO -    LLM mode: hybrid_structural_risk_pysr
+2026-11-27 04:37:26,413 - INFO -    [BEST] New eligible candidate!
+2026-11-27 04:37:26,413 - INFO - 
+[SYMBOLIC] Attempt 2/3 (seed=834)
+2026-11-27 04:37:30,769 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+   ✅ Found: sqrt(n * 5.4327)
+   R²: 0.1777  (selected index 2/20 by pysr_default)
+   PySR time: 490.77s
+   PySR R²: 0.1777
+   ✅ Structural-risk policy selected PySR refinement
+
+[HYBRID MODE] LLM first, PySR refinement...
+   [FIX-D] LLM hypotheses mapped to the log10 fit space before scoring
+   LLM best: (sign((n * T / V))*log(abs((n * T / V))+1)/log(10))
+   LLM R²: 0.1857
+   LLM time: 4.36s
+   ⚠ Structural-risk functions ['log']; bypassing pure-LLM acceptance and forcing PySR refinement.
+   ⚠ LLM R²=0.186 < 0.5 — discarding LLM prior, running pure PySR
+   → Refining with PySR...
+
+[DISCOVERY] Starting symbolic regression...
+   Variables: n, T, V
+   Samples: 160
+   Iterations: 1000
+   [PySR] unary_operators   = ['sqrt']
+   [PySR] binary_operators  = ['+', '-', '*', '/', 'pow']
+   [PySR] niterations       = 1000
+   [PySR] parsimony         = 0.01
+   [PySR] timeout_in_seconds= 1100
+   [PySR] loss kwarg        = []
+   [PySR] define_operators = NOT SET (old PySR path)
+   [PySR] PySRRegressor constructed OK
+   [POP-SCALE] populations=30 > baseline=10; niterations 1000 → 333 (keeps total evals ≤ 330,000)
+   [MEM] before PySR: RSS=1.09 GB
+   [MEM] after PySR: RSS=1.08 GB
+2026-11-27 04:47:00,743 - INFO -    Result: (-0.09436798 / ((-0.4836279 - V) + n)) + ((0.25342643 ^ sqrt(sqrt(V / n))) * (9.351308 - (0.11482237 / (n + -0.30353624))))
+2026-11-27 04:47:00,743 - INFO -    R2 = 0.4931
+2026-11-27 04:47:00,743 - INFO -    LLM mode: hybrid_structural_risk_pysr
+2026-11-27 04:47:00,743 - WARNING -    [WARNING] Possible overfit
+2026-11-27 04:47:00,743 - WARNING -       High complexity (26) but R2=0.4931
+2026-11-27 04:47:00,743 - WARNING -       Many constants detected (6)
+2026-11-27 04:47:00,743 - INFO -    [BEST FLAGGED] New fallback candidate
+2026-11-27 04:47:00,743 - INFO - 
+[SYMBOLIC] Attempt 3/3 (seed=835)
+2026-11-27 04:47:05,018 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+   ✅ Found: (-0.09436798 / ((-0.4836279 - V) + n)) + ((0.25342643 ^ sqrt(sqrt(V / n))) * (9.351308 - (0.11482237 / (n + -0.30353624))))
+   R²: 0.4931  (selected index 18/23 by pysr_default)
+   PySR time: 569.88s
+   PySR R²: 0.4931
+   ✅ Structural-risk policy selected PySR refinement
+
+[HYBRID MODE] LLM first, PySR refinement...
+   [FIX-D] LLM hypotheses mapped to the log10 fit space before scoring
+   LLM best: (sign((n * T / V))*log(abs((n * T / V))+1)/log(10))
+   LLM R²: 0.1857
+   LLM time: 4.28s
+   ⚠ Structural-risk functions ['log']; bypassing pure-LLM acceptance and forcing PySR refinement.
+   ⚠ LLM R²=0.186 < 0.5 — discarding LLM prior, running pure PySR
+   → Refining with PySR...
+
+[DISCOVERY] Starting symbolic regression...
+   Variables: n, T, V
+   Samples: 160
+   Iterations: 1000
+   [PySR] unary_operators   = ['sqrt']
+   [PySR] binary_operators  = ['+', '-', '*', '/', 'pow']
+   [PySR] niterations       = 1000
+   [PySR] parsimony         = 0.01
+   [PySR] timeout_in_seconds= 1100
+   [PySR] loss kwarg        = []
+   [PySR] define_operators = NOT SET (old PySR path)
+   [PySR] PySRRegressor constructed OK
+   [POP-SCALE] populations=30 > baseline=10; niterations 1000 → 333 (keeps total evals ≤ 330,000)
+   [MEM] before PySR: RSS=1.08 GB
+   [MEM] after PySR: RSS=1.09 GB
+2026-11-27 04:53:18,556 - INFO -    Result: (-0.05085566 / ((V / n) - 0.5137375)) + (3.5899863 / ((((V / (n + -0.32284892)) * 0.082358725) + 0.7117575) + (V / n)))
+2026-11-27 04:53:18,556 - INFO -    R2 = 0.5055
+2026-11-27 04:53:18,556 - INFO -    LLM mode: hybrid_structural_risk_pysr
+2026-11-27 04:53:18,556 - WARNING -    [WARNING] Possible overfit
+2026-11-27 04:53:18,556 - WARNING -       High complexity (25) but R2=0.5055
+2026-11-27 04:53:18,556 - WARNING -       Many constants detected (6)
+2026-11-27 04:53:18,556 - INFO -    [BEST FLAGGED] New fallback candidate
+2026-11-27 04:53:18,557 - WARNING - 
+[WARNING] SymbolicEngine best R2=0.1777
+2026-11-27 04:53:18,557 - WARNING - [PARTIAL] Returning best result with R2=0.1777. If R2 is very low, check that the right unary operators are enabled.
+   ✅ Found: (-0.05085566 / ((V / n) - 0.5137375)) + (3.5899863 / ((((V / (n + -0.32284892)) * 0.082358725) + 0.7117575) + (V / n)))
+   R²: 0.5055  (selected index 18/21 by pysr_default)
+   PySR time: 373.42s
+   PySR R²: 0.5055
+   ✅ Structural-risk policy selected PySR refinement
+
+[OK] Discovery complete
+   Expression: sqrt(n * 5.4327)
+   R2 Score: 0.1777
+   Engine: symbolic
+   LLM mode used: hybrid_structural_risk_pysr
+   Attempt: 1/3
+
+[VALIDATE] Checking expression quality...
+[OK] Validation complete
+   Score: 85.5/100
+
+======================================================================
+[OK] WORKFLOW COMPLETE
+======================================================================
+
+  [hypatia] sqrt(n * 5.4327)  R²=0.1777  extrap(near=N/A med=N/A far=N/A)  1447.4s  scale_log=True  llm=hybrid_structural_risk_pysr
+  [11292.2s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation_seed777/exp1_ablation_checkpoint_shard3.json
+  ✓ hypatia saved to checkpoint
+  [11292.2s] run_condition START: Ideal Gas Law [hypatia_nollm]  seed=833  wall_clock=3600s
+  [11292.2s] generate_data: Ideal Gas Law  N=200  noise=0.05  seed=833
+  [11292.2s] generate_data done: X_train=(160, 3)
+2026-11-27 04:53:18,573 - INFO - ======================================================================
+2026-11-27 04:53:18,573 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
+2026-11-27 04:53:18,573 - INFO - ======================================================================
+2026-11-27 04:53:18,573 - INFO - Domain: physics
+2026-11-27 04:53:18,573 - INFO - Discovery mode: strict
+2026-11-27 04:53:18,573 - INFO - Primary LLM: anthropic
+2026-11-27 04:53:18,573 - INFO - use_llm: False  |  llm_mode: none
+2026-11-27 04:53:18,573 - INFO - Auto-config: True
+2026-11-27 04:53:18,573 - INFO - Max retries: 3
+2026-11-27 04:53:18,573 - INFO - PhysicsAware fallback: False
+2026-11-27 04:53:18,573 - INFO - Complexity threshold: 20
+2026-11-27 04:53:18,573 - INFO - Deterministic PySR: True
+2026-11-27 04:53:18,573 - INFO - ======================================================================
+2026-11-27 04:53:18,573 - INFO - Using provided iterations: 1000
+2026-11-27 04:53:18,573 - INFO - Parsimony: 0.01
+2026-11-27 04:53:18,573 - INFO - Transcendental compositions: False
+2026-11-27 04:53:18,573 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='physics', use_tc=False)
+2026-11-27 04:53:18,573 - INFO - [LLM] API key found but use_llm=False — running pure PySR. Pass use_llm=True to enable LLM guidance.
+2026-11-27 04:53:18,671 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
+
+2026-11-27 04:53:18,671 - INFO - [FIX-D] Target y log10-scaled (extreme output range)
+2026-11-27 04:53:18,671 - INFO - [FIX-D] Extreme-scale log transform applied
+2026-11-27 04:53:18,671 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
+2026-11-27 04:53:18,671 - INFO - 
+[SYMBOLIC] Attempt 1/3 (seed=833)
+
+======================================================================
+DISCOVERY WORKFLOW v5.1
+======================================================================
+Description: Ideal Gas Law
+Domain: PHYSICS
+Samples: 160
+Variables: ['n', 'T', 'V']
+LLM mode: none
+Equation hint: Ideal Gas Law
+======================================================================
+
+[DISCOVER] Running symbolic regression...
+
+[DISCOVERY] Starting symbolic regression...
+   Variables: n, T, V
+   Samples: 160
+   Iterations: 1000
+   [PySR] unary_operators   = ['sqrt']
+   [PySR] binary_operators  = ['+', '-', '*', '/', 'pow']
+   [PySR] niterations       = 1000
+   [PySR] parsimony         = 0.01
+   [PySR] timeout_in_seconds= 1100
+   [PySR] loss kwarg        = []
+   [PySR] define_operators = NOT SET (old PySR path)
+   [PySR] PySRRegressor constructed OK
+   [POP-SCALE] populations=30 > baseline=10; niterations 1000 → 333 (keeps total evals ≤ 330,000)
+   [MEM] before PySR: RSS=1.09 GB
+   [MEM] after PySR: RSS=1.09 GB
+2026-11-27 05:01:36,104 - INFO -    Result: sqrt(n * 5.4327)
+2026-11-27 05:01:36,105 - INFO -    R2 = 0.1777
+2026-11-27 05:01:36,105 - INFO -    [BEST] New eligible candidate!
+2026-11-27 05:01:36,105 - INFO - 
+[SYMBOLIC] Attempt 2/3 (seed=834)
+   ✅ Found: sqrt(n * 5.4327)
+   R²: 0.1777  (selected index 2/20 by pysr_default)
+
+[DISCOVERY] Starting symbolic regression...
+   Variables: n, T, V
+   Samples: 160
+   Iterations: 1000
+   [PySR] unary_operators   = ['sqrt']
+   [PySR] binary_operators  = ['+', '-', '*', '/', 'pow']
+   [PySR] niterations       = 1000
+   [PySR] parsimony         = 0.01
+   [PySR] timeout_in_seconds= 1100
+   [PySR] loss kwarg        = []
+   [PySR] define_operators = NOT SET (old PySR path)
+   [PySR] PySRRegressor constructed OK
+   [POP-SCALE] populations=30 > baseline=10; niterations 1000 → 333 (keeps total evals ≤ 330,000)
+   [MEM] before PySR: RSS=1.09 GB
+   [MEM] after PySR: RSS=1.09 GB
+2026-11-27 05:10:50,578 - INFO -    Result: (-0.09436798 / ((-0.4836279 - V) + n)) + ((0.25342643 ^ sqrt(sqrt(V / n))) * (9.351308 - (0.11482237 / (n + -0.30353624))))
+2026-11-27 05:10:50,578 - INFO -    R2 = 0.4931
+2026-11-27 05:10:50,578 - WARNING -    [WARNING] Possible overfit
+2026-11-27 05:10:50,578 - WARNING -       High complexity (26) but R2=0.4931
+2026-11-27 05:10:50,578 - WARNING -       Many constants detected (6)
+2026-11-27 05:10:50,578 - INFO -    [BEST FLAGGED] New fallback candidate
+2026-11-27 05:10:50,578 - INFO - 
+[SYMBOLIC] Attempt 3/3 (seed=835)
+   ✅ Found: (-0.09436798 / ((-0.4836279 - V) + n)) + ((0.25342643 ^ sqrt(sqrt(V / n))) * (9.351308 - (0.11482237 / (n + -0.30353624))))
+   R²: 0.4931  (selected index 18/23 by pysr_default)
+
+[DISCOVERY] Starting symbolic regression...
+   Variables: n, T, V
+   Samples: 160
+   Iterations: 1000
+   [PySR] unary_operators   = ['sqrt']
+   [PySR] binary_operators  = ['+', '-', '*', '/', 'pow']
+   [PySR] niterations       = 1000
+   [PySR] parsimony         = 0.01
+   [PySR] timeout_in_seconds= 1100
+   [PySR] loss kwarg        = []
+   [PySR] define_operators = NOT SET (old PySR path)
+   [PySR] PySRRegressor constructed OK
+   [POP-SCALE] populations=30 > baseline=10; niterations 1000 → 333 (keeps total evals ≤ 330,000)
+   [MEM] before PySR: RSS=1.09 GB
+   [MEM] after PySR: RSS=1.09 GB
+2026-11-27 05:16:47,026 - INFO -    Result: (-0.05085566 / ((V / n) - 0.5137375)) + (3.5899863 / ((((V / (n + -0.32284892)) * 0.082358725) + 0.7117575) + (V / n)))
+2026-11-27 05:16:47,026 - INFO -    R2 = 0.5055
+2026-11-27 05:16:47,026 - WARNING -    [WARNING] Possible overfit
+2026-11-27 05:16:47,026 - WARNING -       High complexity (25) but R2=0.5055
+2026-11-27 05:16:47,026 - WARNING -       Many constants detected (6)
+2026-11-27 05:16:47,026 - INFO -    [BEST FLAGGED] New fallback candidate
+2026-11-27 05:16:47,026 - WARNING - 
+[WARNING] SymbolicEngine best R2=0.1777
+2026-11-27 05:16:47,026 - WARNING - [PARTIAL] Returning best result with R2=0.1777. If R2 is very low, check that the right unary operators are enabled.
+   ✅ Found: (-0.05085566 / ((V / n) - 0.5137375)) + (3.5899863 / ((((V / (n + -0.32284892)) * 0.082358725) + 0.7117575) + (V / n)))
+   R²: 0.5055  (selected index 18/21 by pysr_default)
+
+[OK] Discovery complete
+   Expression: sqrt(n * 5.4327)
+   R2 Score: 0.1777
+   Engine: symbolic
+   Attempt: 1/3
+
+[VALIDATE] Checking expression quality...
+[OK] Validation complete
+   Score: 85.5/100
+
+======================================================================
+[OK] WORKFLOW COMPLETE
+======================================================================
+
+  [hypatia] sqrt(n * 5.4327)  R²=0.1777  extrap(near=N/A med=N/A far=N/A)  1408.4s  scale_log=True  llm=none
+  [12700.6s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation_seed777/exp1_ablation_checkpoint_shard3.json
+  ✓ hypatia_nollm saved to checkpoint
+
+  ⚠️  FAILURE MODE — Ideal Gas Law: HypatiaX R²=0.178 < PySR-only R²=0.998  (Arrhenius pattern — document in §Analysis)
+
+✅ Results saved → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation_seed777/exp1_ablation_results.json
+   Complete: 3/15 equations (both conditions)
+
+────────────────────────────────────────────────────────────────────────────────
+Eq                          P_near  H_near    P_med   H_med    P_far   H_far    P_time   H_time
+────────────────────────────────────────────────────────────────────────────────
+Arrhenius                      N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
+Henderson-Hasselbalch          N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
+Rate Law                       N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
+Allometric Scaling             N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
+Michaelis-Menten               N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
+Logistic Growth                N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
+Kinetic Energy              1.0000 -5.7361   1.0000 -6.9739   1.0000 -82.1160    1109.7   1296.2
+Gravitational Force         0.2003 -4.1383   0.2511 -10.5449  -4.6822 -8.5983     978.7   1693.8
+Ideal Gas Law               0.9994     N/A   0.9999     N/A   0.9994     N/A    1100.9   1447.4
+Impermanent Loss               N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
+Price Impact                   N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
+Constant Product               N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
+Value at Risk                  N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
+Liquidation Price              N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
+Portfolio Std Dev              N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
+────────────────────────────────────────────────────────────────────────────────
+Mean (far OOD)                                               -0.8943    -inf
+
+Speedup (PySR-time / HypatiaX-time):  mean=0.73×  median=0.76×  n=3
+
+RF-01 pairs: 2  skipped: ['Arrhenius', 'Henderson-Hasselbalch', 'Rate Law', 'Allometric Scaling', 'Michaelis-Menten', 'Logistic Growth', 'Ideal Gas Law', 'Impermanent Loss', 'Price Impact', 'Constant Product', 'Value at Risk', 'Liquidation Price', 'Portfolio Std Dev']
+⚠  Only 2 pair(s) — need ≥ 3 to compute statistics.
+
+LLM-CONTRIBUTION (3-arm far-R2): 2 equation(s) with all arms
+  failures per arm (excluded from tests): P=12, H=13, N=13
+  Need >= 3 complete equations - skipping.
+✅ Table 5 LaTeX → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation_seed777/exp1_ablation_table.tex
+✅ Instability stats → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation_seed777/exp1_instability_stats.json
+✅ Instability CSV   → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation_seed777/instability_extrapolation_v2.csv
+Equation                     Condition       timed_out  excl_timing   wall_s
+────────────────────────────────────────────────────────────────────────────
+  Arrhenius                  pysr_only           False        False      0.0
+  Arrhenius                  hypatia             False        False      0.0
+  Arrhenius                  hypatia_nollm       False        False      0.0
+  Henderson-Hasselbalch      pysr_only           False        False      0.0
+  Henderson-Hasselbalch      hypatia             False        False      0.0
+  Henderson-Hasselbalch      hypatia_nollm       False        False      0.0
+  Rate Law                   pysr_only           False        False      0.0
+  Rate Law                   hypatia             False        False      0.0
+  Rate Law                   hypatia_nollm       False        False      0.0
+  Allometric Scaling         pysr_only           False        False      0.0
+  Allometric Scaling         hypatia             False        False      0.0
+  Allometric Scaling         hypatia_nollm       False        False      0.0
+  Michaelis-Menten           pysr_only           False        False      0.0
+  Michaelis-Menten           hypatia             False        False      0.0
+  Michaelis-Menten           hypatia_nollm       False        False      0.0
+  Logistic Growth            pysr_only           False        False      0.0
+  Logistic Growth            hypatia             False        False      0.0
+  Logistic Growth            hypatia_nollm       False        False      0.0
+  Kinetic Energy             pysr_only           False        False   1109.7
+  Kinetic Energy             hypatia             False        False   1296.2
+  Kinetic Energy             hypatia_nollm       False        False   1606.6
+  Gravitational Force        pysr_only           False        False    978.7
+  Gravitational Force        hypatia             False        False   1693.8
+  Gravitational Force        hypatia_nollm       False        False   2058.4
+  Ideal Gas Law              pysr_only           False        False   1100.9
+  Ideal Gas Law              hypatia             False        False   1447.4
+  Ideal Gas Law              hypatia_nollm       False        False   1408.4
+  Impermanent Loss           pysr_only           False        False      0.0
+  Impermanent Loss           hypatia             False        False      0.0
+  Impermanent Loss           hypatia_nollm       False        False      0.0
+  Price Impact               pysr_only           False        False      0.0
+  Price Impact               hypatia             False        False      0.0
+  Price Impact               hypatia_nollm       False        False      0.0
+  Constant Product           pysr_only           False        False      0.0
+  Constant Product           hypatia             False        False      0.0
+  Constant Product           hypatia_nollm       False        False      0.0
+  Value at Risk              pysr_only           False        False      0.0
+  Value at Risk              hypatia             False        False      0.0
+  Value at Risk              hypatia_nollm       False        False      0.0
+  Liquidation Price          pysr_only           False        False      0.0
+  Liquidation Price          hypatia             False        False      0.0
+  Liquidation Price          hypatia_nollm       False        False      0.0
+  Portfolio Std Dev          pysr_only           False        False      0.0
+  Portfolio Std Dev          hypatia             False        False      0.0
+  Portfolio Std Dev          hypatia_nollm       False        False      0.0
+
+✅ C3: wall_clock_flags.json saved → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation_seed777/wall_clock_flags.json
+  ℹ️  No equations flagged — all completed within wall-clock cap.
+✅ Provenance → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation_seed777/provenance_map_exp1.json
+  ℹ️  C4 Portfolio seed sweep: optional diagnostic not run; --seed-sweep performs 15 additional model fits
+
+======================================================================
+SUBMISSION READINESS — BLOCKER CHECKLIST
+======================================================================
+  ✅  C1 True OOD eval (sympy)             sympy + formula_sympy on all 15 eqs
+  ✅  C2 instability CSV                   shard-local near/far R2 diagnostics present; non-zero instability is checked after all shards are merged
+  ✅  C3 wall-clock dag tags               flags JSON present
+======================================================================
+  🟢  All blockers resolved — proceed to submission.
+
+✅ exp1_ablation.py complete — all outputs written.
