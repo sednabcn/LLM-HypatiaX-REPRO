@@ -1,5 +1,6 @@
 """Regression tests for the scientific failure modes found in Core-15."""
 from hypatiax.experiments.benchmarks.exp1_ablation_contracts import (
+    audit_core15_expression,
     build_core15_discovery_problem,
 )
 from hypatiax.tools.symbolic.discovery_validation import CandidateValidator
@@ -100,3 +101,17 @@ def test_core15_contract_contains_no_held_out_or_far_target_values():
     assert payload["split_protocol"]["held_out_targets_available_to_selector"] is False
     assert payload["split_protocol"]["far_ood_target_data_available_to_selector"] is False
     assert "test_y" not in payload and "far_y" not in payload
+
+
+def test_post_selection_audit_marks_pySR_style_failures_without_rewriting_metrics():
+    equation = {
+        "name": "Ideal Gas Law",
+        "domain": "Physics",
+        "vars": ["n", "T", "V"],
+        "train_range": [(0.1, 5.0), (200.0, 500.0), (0.01, 1.0)],
+    }
+    audit = audit_core15_expression(equation, "sqrt(n*5.4327)", seed=777)
+    assert audit["eligible"] is False
+    assert audit["source"] == "unknown"
+    assert audit["search_strategy"] == "audit_only"
+    assert audit["rejection_reasons"]
