@@ -89,7 +89,7 @@ def test_invalid_ground_truth_expression_is_not_assessable():
 
 def test_log10_uses_base_ten_not_natural_log():
     result = adjudicate_symbolic_equivalence(
-        "def formula(x):\\n    return np.log10(x)",
+        "def formula(x):\n    return np.log10(x)",
         "log(x, 10)", ["x"],
     )
     assert result["status"] == "exact_symbolic_equivalent"
@@ -97,7 +97,7 @@ def test_log10_uses_base_ten_not_natural_log():
 
 def test_duplicate_variable_schema_is_not_assessable():
     result = adjudicate_symbolic_equivalence(
-        "def formula(x, y):\\n    return x + y",
+        "def formula(x, y):\n    return x + y",
         "x + y", ["x", "x"],
     )
     assert result["status"] == "variable_schema_missing"
