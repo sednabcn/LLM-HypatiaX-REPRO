@@ -593,7 +593,13 @@ jobs:
           set -euo pipefail
           # exp1_pca intentionally uses the generic planner/matrix. Dedicated fan-out
           # protocols are excluded here so they cannot also launch a generic shard.
-          if [[ "$EXP" == "exp1b_pca" || "$EXP" == "exp2_feynman_pca" || "$EXP" == "exp1_ablation_seeds" || "$EXP" == "exp1_4060_seeds" ]]; then
+          if [[ "$EXP" == "exp1_4060_seeds" ]]; then
+            # Dedicated five-seed matrix owns this run; disable generic planning without
+            # activating the unrelated PCA runner jobs.
+            echo "is_pca=false"   >> "$GITHUB_OUTPUT"
+            echo "skip_plan=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::${EXP} uses its dedicated five-seed matrix; generic planning is disabled."
+          elif [[ "$EXP" == "exp1b_pca" || "$EXP" == "exp2_feynman_pca" || "$EXP" == "exp1_ablation_seeds" ]]; then
             echo "is_pca=true"    >> "$GITHUB_OUTPUT"
             echo "skip_plan=true" >> "$GITHUB_OUTPUT"
             echo "::notice::${EXP} uses a dedicated workflow path; generic planning is disabled."
