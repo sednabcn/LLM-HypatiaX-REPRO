@@ -62,7 +62,7 @@ Output    : /home/runner/work/_temp/exp1_4060_seed99/hypatiax_defi_benchmark_v3c
 
 [09/74] Long position unrealized PnL  (EASY)
   Split → train=80, test=120
-  neural_network : train=0.9520, test=0.9016
+  neural_network : train=0.9520, test=0.9019
   hybrid         : train=1.0000, test=0.9967 [ensemble]
   💾 Checkpoint saved (9/74)
 
@@ -350,8 +350,8 @@ Output    : /home/runner/work/_temp/exp1_4060_seed99/hypatiax_defi_benchmark_v3c
 
 [57/74] Gamma of option  (HARD)
   Split → train=80, test=120
-  neural_network : train=0.9970, test=0.9950
-  hybrid         : train=0.9970, test=0.9950 [nn]
+  neural_network : train=0.9978, test=0.9958
+  hybrid         : train=0.9978, test=0.9958 [nn]
   💾 Checkpoint saved (57/74)
 
 [58/74] Vega of option  (HARD)
@@ -480,11 +480,11 @@ NOTE: All percentages use FIXED denominator (standard cases only).
   hard   | hybrid        : median=0.9945, >0.99: 57.1%  (n=21)
 
 ── Timing summary (per-case wall time) ──────────────────────────────────
-  Neural Network: total=16.706s, mean=0.226s, median=0.282s (n=74)
-  Hybrid        : total=120.212s, mean=1.624s, median=1.338s (n=74)
-  Hybrid end-to-end components: NN=16.706s, LLM/routing/evaluation=103.506s
-  Hybrid provider request: total=96.939s, mean=1.310s, median=1.048s (n=74)
-  Hybrid LLM token usage: input=12193 (n=74), output=4281 (n=74)
+  Neural Network: total=27.370s, mean=0.370s, median=0.472s (n=74)
+  Hybrid        : total=146.448s, mean=1.979s, median=1.580s (n=74)
+  Hybrid end-to-end components: NN=27.370s, LLM/routing/evaluation=119.078s
+  Hybrid provider request: total=107.715s, mean=1.456s, median=1.046s (n=74)
+  Hybrid LLM token usage: input=12193 (n=74), output=5028 (n=74)
 
 ================================================================================
 
