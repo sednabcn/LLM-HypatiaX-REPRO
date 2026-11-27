@@ -1,0 +1,87 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=24mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern,microtype,xcolor,booktabs,longtable,tabularx,enumitem,amsmath,hyperref,fancyhdr}
+\hypersetup{pdftitle={Research Evolution, Contribution, Expectations, and Reproducibility Considerations for HDS v50_2},pdfauthor={LLM-HypatiaX-REPRO Research Planning},colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!50!black}
+\setlist{nosep,leftmargin=*}
+\setlength{\parskip}{.55em}\setlength{\parindent}{0pt}\setlength{\headheight}{14pt}\emergencystretch=3em
+\pagestyle{fancy}\fancyhf{}\lhead{HDS v50\_2 research evolution}\rhead{Reproducibility decision paper}\cfoot{\thepage}
+\title{Research Evolution, Contribution, Expectations, and Reproducibility Considerations for HDS v50\_2}
+\author{Research planning document for LLM-HypatiaX-REPRO}\date{27 November 2026}
+\begin{document}\maketitle
+\begin{center}\textbf{Status: decision and experimental-design document; not a report of newly executed experiments}\end{center}
+\begin{abstract}
+This paper consolidates the supplied project decision paper into a reproducible research direction. The recommended scientific centre is HybridDiscoverySystem (HDS) v50\_2, with the principal contribution framed as its gating and routing design: deciding when an LLM-generated analytical expression should be accepted, combined with a neural predictor, or displaced by an alternative such as PySR. The claim to test is that these mechanisms improve reliability and control catastrophic failures, not that the hybrid is universally superior. The paper records a reported hardcoded-formula bypass in EHSDeFi, an evaluator guard requiring validation, a two-threshold recovery policy, and a conservative treatment of M3/M4 results. It specifies a paired leave-one-gate-out ablation, expected contributions, reporting requirements, and criteria for interpreting positive, negative, or inconclusive outcomes. No new numerical results are asserted and no proposed experiment is represented as completed.
+\end{abstract}
+\tableofcontents\newpage
+\section{Purpose and evidence boundary}
+The research should evolve from broad system comparisons into a mechanism-level study. Its central question is: \emph{which gates and routing mechanisms improve analytical-expression discovery, under which conditions, and at what computational cost?} This document distinguishes (i) observations reported in the supplied decision paper, (ii) decisions recommended there, (iii) proposed experiments, and (iv) expectations that remain hypotheses. The supplied paper says the pasted noise-sweep output had not been checked against the code; it is therefore not treated here as independently verified evidence.
+\section{System choice and central contribution}
+\subsection{HDS v50\_2 as the core}
+The recommended paper contribution is HDS v50\_2 and its gating/routing architecture. The supplied decision paper identifies it as the only discussed system with a real PySR search and extrapolation results, making it the natural core subject, subject to verification of the underlying runs and provenance. EHSDeFi/HLLMNN and M3/M4 may remain developmental or exploratory context unless controlled, validated evidence establishes a stronger contribution.
+\subsection{Claim to test}
+\begin{quote}A controlled gating and routing architecture can improve the reliability of LLM-guided analytical-expression discovery by selectively accepting, combining, or replacing candidate expressions, and by reducing catastrophic failures relative to an ungated LLM baseline.\end{quote}
+This is a hypothesis, not an established result. The evidence must identify which mechanisms contribute, whether effects generalize across conditions, and whether reliability gains justify additional runtime and complexity. The paper should not claim universal superiority, that every gate helps, or that high predictive $R^2$ proves symbolic identity.
+\section{Threats to validity}
+\subsection{Hardcoded-formula bypass}
+The supplied decision paper reports that EHSDeFi delegates formula generation to \texttt{PureLLMBaseline.generate\_formula}, which attempts hardcoded formulas before any LLM call. It reports identical returned formulas on 11 bypassed rows. For M4, the stored output reportedly contains no formula, so the bypass status cannot be established from that record. This creates an attribution confound: apparent success attributed to an LLM-first gate may partly come from hardcoded formula selection. Disable the bypass for controlled comparisons and persist, per row, whether an LLM request occurred and which component produced the formula.
+\subsection{Evaluator guard}
+The supplied paper flags a Fix 5 evaluator (Supplement A, Listing 8) that retains an absolute \texttt{ss\_tot > 1e-10} guard, described as the same pattern associated with a Newton evaluator bug. Audit this behavior for constant and near-constant targets, multiple target scales, exact and perturbed predictions, non-finite values, and undefined $R^2$. This is a reported issue requiring source-level confirmation, not a claim that the evaluator has been fixed.
+\subsection{M3/M4 status}
+Keep M3/M4 exploratory until bypass attribution and evaluator behavior are validated. If M4 cannot be rerun within the available schedule, drop its headline claims rather than extending the schedule solely to preserve them. Historical values may be retained with explicit qualification, not used as confirmatory evidence.
+\section{Recovery metrics}
+Use two thresholds: (1) primary practical recovery, $R^2\geq0.99$; and (2) strict near-exact predictive recovery, $R^2\geq0.999999$. The supplied decision paper notes that 0.99 may saturate across systems, so it cannot support a superiority claim alone. The stricter threshold is near-exact predictive agreement, not proof of algebraic equivalence.
+\begin{description}
+\item[Predictive threshold pass:] held-out $R^2$ meets the stated threshold.
+\item[Symbolic equivalence:] candidate and target expressions are equivalent under stated assumptions and domain constraints, or explicitly not equivalent/not assessable.
+\item[Numerical equivalence:] candidate and target agree within a declared tolerance on independent evaluation points.
+\item[Availability:] the method produces a valid candidate and prediction under the specified protocol.
+\end{description}
+These outcomes must be kept separate. A formula can fit a finite sample extremely well and still be algebraically wrong; equivalent formulas can also be evaluated incorrectly if domains, constants, units, branches, or numerical stability are mishandled.
+\section{Decisive experiment: paired leave-one-gate-out ablation}
+Run all arms on the same equations, generated samples, splits, seeds, and evaluation points. Disable the hardcoded-formula bypass in every controlled comparison.
+\begin{longtable}{p{.29\textwidth}p{.63\textwidth}}\toprule
+\textbf{Arm}&\textbf{Question answered}\\\midrule
+Pure LLM baseline&Performance without hybrid routing.\\
+Full HDS v50\_2&Performance and cost of the complete system.\\
+Remove LLM acceptance gate&Does acceptance prevent unsafe or incorrect candidates from controlling predictions?\\
+Remove probe gate&Does probing improve route selection?\\
+Remove complexity routing&Does complexity-aware selection matter?\\
+Remove NN augmentation&Does the NN contribute beyond formula and other routes?\\
+Remove blend weight&Does adaptive blending improve on fixed/unweighted blending?\\
+Remove PySR prior&Does the PySR search prior add value?\\\bottomrule\end{longtable}
+Compare each arm using paired per-equation differences against full HDS and Pure LLM. Report confidence intervals or paired resampling. Do not silently change case subsets or denominators between arms.
+\subsection{Outcome families}
+Report practical and strict predictive recovery; symbolic and numerical equivalence; catastrophic failures and invalid expressions; availability and abstention with reason codes; generalisation/extrapolation under a declared protocol; and runtime, model/API calls, token/compute use, and PySR search cost.
+\section{Expected interpretations (hypotheses)}
+\begin{longtable}{p{.29\textwidth}p{.62\textwidth}}\toprule
+\textbf{Possible result}&\textbf{Interpretation and consequence}\\\midrule
+Full HDS improves recovery and reduces catastrophic failures&Supports the whole architecture; ablations must identify which gates account for the gain and quantify cost.\\
+Only some gates help&Contribution is selective; retain useful gates and simplify or redesign neutral/harmful ones.\\
+Prediction improves but symbolic equivalence does not&Hybrid may be a useful predictor without demonstrating symbolic discovery; narrow the claim.\\
+Failures decrease but average score falls&Reliability/accuracy trade-off; quantify risk reduction and define utility.\\
+Pure LLM matches or exceeds HDS&Routing may be unnecessary under those conditions; report the null result.\\
+Effects vary by equation family or data condition&There is no universal best route; build a condition-dependent policy map.\\
+M4 bypass cannot be resolved&Historical attribution remains ambiguous; retain exploratory status or remove headline claims.\\\bottomrule\end{longtable}
+\section{Condition-dependent route map}
+The longer-term goal is to identify when the LLM formula, NN, PySR, blend, or abstention route should be preferred. Candidate explanatory factors include equation family/complexity, training sample count, noise, feature correlation, extrapolation distance, parseability, trust-gate result, probe result, and compute budget. Classify conditions where Hybrid is better, comparable, worse, or unavailable relative to relevant baselines. Availability is not poor predictive quality: deliberate abstention or a missing candidate is not a low-scoring prediction. Report route-level outcomes by condition with uncertainty rather than collapsing them into one average.
+\section{Reproducibility and audit requirements}
+For each case and arm, persist: stable case ID and equation/domain metadata; data-generation settings and independent seed streams; exact train/validation/test and probe partitions; LLM provider/model/version, prompt provenance, decoding settings, call status and retries; hardcoded-bypass status and formula source; evaluator version and symbolic assumptions; every gate result and rejection reason; probe diagnostics, complexity score, PySR configuration, blend weights and final route; final predictor source, metrics, runtime and failure reason. Test labels must not inform prompts, gate calibration, route selection, or hyperparameter tuning. Disclose whether query-batch covariates influence routing (transductive evaluation) or whether prediction uses training-only calibration (inductive evaluation).
+\section{Recommended execution sequence}
+\begin{enumerate}
+\item Audit and disable the hardcoded-formula bypass in the controlled comparison path; verify actual LLM calls and formula provenance.
+\item Validate the evaluator, especially its total-sum-of-squares guard for degenerate and near-constant targets.
+\item Freeze case list, data generation, splits, seeds, thresholds, LLM settings, PySR budget, and output schema.
+\item Run Pure LLM and full HDS v50\_2 on paired conditions.
+\item Run leave-one-gate-out arms, changing one mechanism at a time.
+\item Analyse by equation family, data condition, route, availability, extrapolation, and cost.
+\item Reassess M3/M4; revise the abstract only after validated outputs exist.
+\end{enumerate}
+\section{Limitations and conclusion}
+This paper is based on the supplied decision paper. It does not independently inspect the EHSDeFi implementation, Supplement A Listing 8, M3/M4 raw artifacts, or the pasted noise-sweep output. The bypass and evaluator concerns are reported findings requiring source-level confirmation. It does not claim the bypass has been disabled, the evaluator fixed, or the ablation completed.
+
+The most defensible evolution is to make HDS v50\_2 the core system and test its gates and routes directly. The central contribution should be the conditions under which routing makes analytical-expression discovery more reliable, not a blanket claim that a hybrid always beats an LLM. A paired leave-one-gate-out study with the bypass disabled is the key experiment. Its value is to identify which mechanisms help, which do not, and the conditions and costs associated with each route.
+
+\vspace{1em}\hrule\vspace{.5em}\small\textbf{Reproducibility statement.} This is a research-planning and decision document. No new benchmark, model training, LLM request, or GitHub Actions experiment workflow was launched to prepare it. Expected outcomes are hypotheses; no proposed experiment is represented as completed.
+\end{document}
