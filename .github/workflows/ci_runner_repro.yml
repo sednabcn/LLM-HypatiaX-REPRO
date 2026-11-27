@@ -591,10 +591,8 @@ jobs:
           EXP: ${{ github.event.inputs.experiment }}
         run: |
           set -euo pipefail
-          # exp1_pca is intentionally NOT listed: it goes through plan/worker as a
-          # multi-seed matrix. exp1_ablation_seeds IS listed because its dedicated
-          # dispatcher launches five child exp1_ablation workflows; allowing the parent
-          # planner/matrix to run as well would duplicate the replication workload.
+          # exp1_pca intentionally uses the generic planner/matrix. Dedicated fan-out
+          # protocols are excluded here so they cannot also launch a generic shard.
           if [[ "$EXP" == "exp1b_pca" || "$EXP" == "exp2_feynman_pca" || "$EXP" == "exp1_ablation_seeds" || "$EXP" == "exp1_4060_seeds" ]]; then
             echo "is_pca=true"    >> "$GITHUB_OUTPUT"
             echo "skip_plan=true" >> "$GITHUB_OUTPUT"
