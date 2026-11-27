@@ -119,8 +119,7 @@ Seeds 99 and 777 expose hybrid instability. At seed 99, both hybrid arms average
 \section{Equation-level robustness}
 The following table gives HypatiaX's median test R\textsuperscript{2} across five seeds, worst test R\textsuperscript{2}, and catastrophic far-OOD count.
 
-\begin{center}
-\small
+{\small
 \begin{longtable}{@{}p{0.34\linewidth}rrr@{}}
 \toprule
 Equation & Median test R\textsuperscript{2} & Minimum test R\textsuperscript{2} & Catastrophic far-OOD\\
@@ -142,21 +141,21 @@ Liquidation Price & 0.996845 & 0.995629 & 0/5\\
 Portfolio Std Dev & 0.997102 & 0.995732 & 0/5\\
 \bottomrule
 \end{longtable}
-\end{center}
+}
 
 \subsection{Far-OOD failure concentration}
-Arrhenius and Impermanent Loss each fail catastrophically in all five HypatiaX and noLLM seeds. Ideal Gas Law fails catastrophically at seed 777, with raw far-OOD R\textsuperscript{2} around $-5.81\\times10^{15}$. Kinetic Energy at seed 777 has a finite but very poor far-OOD score of $-82.12$; it is not tagged catastrophic because it is finite. Logistic Growth reaches $-22.15$ at seed 2024. Gravitational Force has multiple negative far-OOD outcomes, reaching $-8.60$ for HypatiaX. Michaelis--Menten reaches $-0.486$ despite strong test accuracy.
+Arrhenius and Impermanent Loss each fail catastrophically in all five HypatiaX and noLLM seeds. Ideal Gas Law fails catastrophically at seed 777, with raw far-OOD R\textsuperscript{2} around $-5.81\times10^{15}$. Kinetic Energy at seed 777 has a finite but very poor far-OOD score of $-82.12$; it is not tagged catastrophic because it is finite. Logistic Growth reaches $-22.15$ at seed 2024. Gravitational Force has multiple negative far-OOD outcomes, reaching $-8.60$ for HypatiaX. Michaelis--Menten reaches $-0.486$ despite strong test accuracy.
 
 The status \texttt{catastrophic} refers to the result JSON's explicit far-OOD status. It is not synonymous with every poor negative R\textsuperscript{2}. A finite negative score remains a serious extrapolation failure even when its status is \texttt{ok}.
 
 \section{Expression-level forensic analysis}
 
 \subsection{Arrhenius: repeatable wrong-form extrapolation}
-The Arrhenius relationship has exponential dependence on reciprocal absolute temperature, conventionally $k=A\\exp(-E_a/(RT))$. HypatiaX instead selects high-power temperature laws, including:
+The Arrhenius relationship has exponential dependence on reciprocal absolute temperature, conventionally $k=A\exp(-E_a/(RT))$. HypatiaX instead selects high-power temperature laws, including:
 \begin{quote}\small
-\texttt{(T / 434.67657) \^{} 12.908299}\\
-\texttt{(T * 0.0022998452) \^{} 12.932167}\\
-\texttt{(T / 435.83212) \^{} 13.172349}
+\texttt{(T / 434.67657) \textasciicircum{} 12.908299}\\
+\texttt{(T * 0.0022998452) \textasciicircum{} 12.932167}\\
+\texttt{(T / 435.83212) \textasciicircum{} 13.172349}
 \end{quote}
 and a nested exponential:
 \begin{quote}\small
@@ -174,20 +173,20 @@ Such a fit can approximate a narrow interval without preserving the target's beh
 \subsection{Ideal Gas Law: missing-variable failure}
 At seed 777, HypatiaX selects:
 \begin{quote}\small \texttt{sqrt(n * 5.4327)} \end{quote}
-This omits temperature and volume. Test R\textsuperscript{2} is 0.1981 and raw far-OOD R\textsuperscript{2} is approximately $-5.81\\times10^{15}$. The LLM proposal was \texttt{n * T / V}, but the selected route was \texttt{hybrid\_structural\_risk\_pysr} and the final expression remained the PySR candidate. A stronger variable-coverage/scientific-structure gate should reject this candidate. This does not prove the LLM proposal was sufficiently calibrated; it demonstrates that the selected candidate should not have passed.
+This omits temperature and volume. Test R\textsuperscript{2} is 0.1981 and raw far-OOD R\textsuperscript{2} is approximately $-5.81\times10^{15}$. The LLM proposal was \texttt{n * T / V}, but the selected route was \texttt{hybrid\_structural\_risk\_pysr} and the final expression remained the PySR candidate. A stronger variable-coverage/scientific-structure gate should reject this candidate. This does not prove the LLM proposal was sufficiently calibrated; it demonstrates that the selected candidate should not have passed.
 
 \subsection{Kinetic Energy: structurally implausible seed-777 expression}
 At seed 777 the selected expression is:
 \begin{quote}\small
 \texttt{log((((v * sqrt(m)) * 0.5100047) + -0.8729826) + (-0.04662489 / (m + -2.0693998)))}
 \end{quote}
-It contains a logarithm and a denominator that can approach a singularity. It does not recover the expected proportional structure $E_k\\propto mv^2$. The LLM proposal \texttt{0.5 * m * v**2} was recorded, but the route selected the PySR path. Test R\textsuperscript{2} is 0.8597 and far-OOD R\textsuperscript{2} is $-82.12$. The noLLM result is also poor (test 0.7061; far-OOD $-17.33$). In seeds 42, 99, 123 and 2024, the LLM-only route selects \texttt{0.5 * m * v**2} and completes in about five seconds with high scores. Route/selection policy is therefore central to the outcome.
+It contains a logarithm and a denominator that can approach a singularity. It does not recover the expected proportional structure $E_k\propto mv^2$. The LLM proposal \texttt{0.5 * m * v**2} was recorded, but the route selected the PySR path. Test R\textsuperscript{2} is 0.8597 and far-OOD R\textsuperscript{2} is $-82.12$. The noLLM result is also poor (test 0.7061; far-OOD $-17.33$). In seeds 42, 99, 123 and 2024, the LLM-only route selects \texttt{0.5 * m * v**2} and completes in about five seconds with high scores. Route/selection policy is therefore central to the outcome.
 
 \subsection{Gravitational Force: weak equation recovery}
 The expected Newtonian structure is $F=Gm_1m_2/r^2$. Selected expressions include variable exponents, logarithms and exponentials of masses or distance. Examples include:
 \begin{quote}\small
-\texttt{log(m1 * ((m2 * 0.121897295) / r)) \^{} (1.5134895 \^{} r)}\\
-\texttt{((m1 * 0.22206146) \^{} m2) / (r \^{} r)}
+\texttt{log(m1 * ((m2 * 0.121897295) / r)) \textasciicircum{} (1.5134895 \textasciicircum{} r)}\\
+\texttt{((m1 * 0.22206146) \textasciicircum{} m2) / (r \textasciicircum{} r)}
 \end{quote}
 These do not plausibly recover the inverse-square law. The median HypatiaX test R\textsuperscript{2} is 0.9470 and the minimum is 0.7014. This should be treated as a scientific-validity failure, not a minor metric fluctuation.
 
