@@ -236,3 +236,101 @@ High predictive R², including a near-perfect held-out score, is not evidence of
 ### Scope and execution boundary
 
 This report update is a documentation-only synthesis of existing workflow records, committed artifacts, the offline 740-record audit, the referenced pull-request descriptions, and the EXP1 redesign document. **No benchmark, training job, LLM request, workflow dispatch, or merge was initiated for this update.**
+
+
+## 11. Additional 17:00 workflow-result review and corrections
+
+This section incorporates the subsequently supplied `nov27-1700-exp1-pca.txt` analysis. It adds a second set of run-level summaries and, importantly, corrects the interpretation of the earlier “exact solve” labels. Where this supplied analysis conflicts with the earlier artifact audit in Sections 2 and 6–7, the discrepancy is retained explicitly rather than silently choosing one denominator or dataset snapshot.
+
+### 11.1 Runs and execution coverage in the supplied 17:00 analysis
+
+| Workflow | Run number in supplied analysis | Reported outcome | Reported coverage |
+|---|---:|---|---:|
+| `exp1_4060_seeds` | #354 | Success | 5 seeds × 74 = 370 |
+| `exp1b_pca` | #345 | Success | 5 seeds × 74 = 370 |
+| `exp1_pca` | #344 | Success | 5 seeds × 74 = 370 |
+
+The supplied analysis says that #354 is the corrected run reference (the initially supplied run ID had one extra trailing digit), and distinguishes it from earlier run #353, which did not actually launch the benchmark. It reports that all five random-split workers launched, processed 74 equations each, passed seed/protocol validation, and passed aggregation. This supports execution completion for that Actions run; it does not validate the scientific correctness of the “exact solve” label.
+
+### 11.2 Correct interpretation of “0/370” and “35/365”
+
+The supplied analysis identifies a concrete measurement error in `scripts/ci/exp1_4060_seed_outputs.py`: the validator reads `results.hybrid.test_r2` and counts a case as a “solve” when that predictive score reaches 0.999999. That is a near-perfect predictive-R² threshold, **not symbolic equivalence**.
+
+Accordingly:
+- The random result previously described as **0/370 exact symbolic solves** must be withdrawn as a symbolic-recovery claim. The defensible description is **zero cases reported at the hybrid held-out R² threshold by that validator**.
+- The supplied source review identifies five intractable IL-breakeven cases excluded from finite R² scoring, so it says the threshold denominator should be **365**, with the five unscored cases reported separately. On that interpretation the result is **0/365 finite cases at the threshold**, not 0/370 symbolic solves.
+- The PCA **35/365 (9.59%)** figure is the same type of near-perfect predictive-R² threshold count, not 35 symbolically equivalent equations. It must not be called an exact solve rate.
+- Symbolic recovery for these historical runs remains **not established / not assessable** unless a separate symbolic-equivalence audit has the required ground truth, generated formula, explicit variable mapping, and valid audit context.
+
+This correction is consistent with the measurement-integrity intent of PRs #424 and #426 and the historical 740-record audit in Section 6: the absence of ground-truth expressions in those records prevents a retrospective symbolic verdict. A successful workflow and a high R² threshold count cannot fill that evidence gap.
+
+### 11.3 Denominator and snapshot inconsistencies requiring reconciliation
+
+The supplied 17:00 analysis states that:
+- Random 40/60 has 365 finite scored cases, with five intractable cases excluded.
+- PCA 40/60 has one undefined Kelly metric per seed, which arithmetically implies 365 finite scores from 370 records.
+- However, its performance table says PCA R² comparisons use **360** valid records, while its symbolic-threshold panel says **35/365**.
+
+The PCA denominator statements are internally inconsistent: five undefined values out of 370 imply 365 finite values, not 360. The earlier audited artifact summary in this report also recorded 365 finite PCA hybrid R² values and 370 finite random values for its inspected snapshot. These differences may reflect distinct run outputs, metric fields, or artifact versions; the available supplied note does not resolve them.
+
+Therefore, the 17:00 table below is preserved as a *reported summary*, not treated as a fully reconciled raw-record recomputation. Before publication, recompute denominators from the exact per-seed JSON files for runs #354 and #345, separately counting raw records, finite values, undefined values, and cases excluded by each metric. Do not mix these with the earlier artifact snapshot without matching run IDs and commit SHAs.
+
+### 11.4 Reported predictive-performance comparison from the 17:00 analysis
+
+The supplied analysis reports the following (its PCA denominator caveat above applies):
+
+| Metric | Random 40/60 | PCA 40/60 |
+|---|---:|---:|
+| NN median test R², average of seed medians | **0.9961** | 0.8826 |
+| Hybrid median test R², average of seed medians | **0.9970** | 0.9686 |
+| NN test R² > 0.90 | 75.62% | 49.44% |
+| Hybrid test R² > 0.90 | 81.64% | 60.83% |
+| Hybrid test R² > 0.99 | 67.67% | 43.61% |
+| Median NN runtime, average of seed medians | 0.340 s | 0.303 s |
+| Median hybrid runtime, average of seed medians | 1.448 s | 1.348 s |
+
+The supplied analysis additionally reports random-split mean test R² of approximately **0.804 for NN** and **0.822 for hybrid**, despite medians near 1. This is an important distributional warning: a strong median can coexist with a substantial catastrophic lower tail because R² is unbounded below.
+
+Within this reported summary:
+- The hybrid's median improvement over NN is small under random 40/60 (0.9961 to 0.9970).
+- The hybrid's median improvement is much larger under PCA 40/60 (0.8826 to 0.9686).
+- Hybrid median runtime is approximately **4.3×** NN under random 40/60 and **4.45×** under PCA 40/60.
+
+These medians and percentages should be read as descriptive summaries from the supplied analysis, not inferential evidence. The full distributions, exact finite denominators, and run/commit provenance need to be reconciled before final publication.
+
+### 11.5 Data-quality and orchestration issues raised by the supplied source review
+
+The supplied analysis flags three implementation/reporting risks:
+
+1. **Stale `exp1_pca_summary.json`:** the checked-in file is reported to have a 2026-09-19 timestamp and a 51/74 figure, whereas run #344's aggregate manifest reportedly validates 370 records. The stale summary must not be used as the metric summary for run #344. Regenerate a summary from the exact run artifacts and retain its provenance.
+2. **Non-standard NaN in random raw JSON:** the supplied review says the 4060 raw result JSON contains NaN values accepted by the aggregate validator but rejected by strict JSON parsers. Normalize non-finite values to a standards-compliant representation (for example, null plus an explicit status) and make the validator enforce strict JSON.
+3. **`run_all.sh` seed contract:** the supplied source review says the `run_all.sh` stage invokes `run_exp1_4060_seeds.sh` without setting `SEED` or looping over the five seeds, while the helper requires one explicit seed. If confirmed against the current branch, this means the local `run_all.sh` stage is not a valid five-seed invocation; a successful GitHub Actions matrix with explicit per-worker seeds does not prove that the `run_all.sh` stage works. The stage should either loop explicitly over the declared seed list or be renamed/documented as a single-seed operation with a required `SEED`.
+
+The run_all.sh finding is recorded here as a source-review finding from the supplied analysis; it should be rechecked against the exact current commit before implementation or release sign-off.
+
+### 11.6 Scientific findings when the new results are read together
+
+The combined evidence supports a more careful, two-axis interpretation:
+
+- **Predictive interpolation/generalisation:** the supplied median summaries favour random 40/60, while the PCA-directed split is harder and has lower NN and hybrid medians. The random mean-versus-median gap warns that its typical case is not representative of its lower tail.
+- **Value of the hybrid:** the reported median gain is marginal on random 40/60 but substantial on PCA 40/60. This suggests the hybrid may be more useful where the NN baseline is weaker, but does not by itself establish that the LLM component caused the gain; the route audit shows that fallback and replacement predictors are common.
+- **Symbolic discovery:** neither 0/365 nor 35/365 is a symbolic-recovery result. They are predictive-R² threshold outcomes. The historical symbolic status remains not assessable where ground truth is missing.
+- **Protocol interpretation:** random and PCA 40/60 should be presented as different generalisation regimes, not as proof that one model is intrinsically superior. Random splitting is closer to same-distribution interpolation; the PCA-directed split is intended as a harder feature-space stress test.
+- **Execution integrity:** run completion and worker coverage are positive operational evidence, but they do not validate metric semantics, denominators, JSON validity, or the separate `run_all.sh` orchestration path.
+
+### 11.7 Required follow-up before publication
+
+1. Recompute all reported metrics from run-ID-pinned raw JSON for #354 and #345, and resolve the 365-versus-360 PCA denominator discrepancy.
+2. Report raw records, finite metric records, undefined metrics, and excluded/intractable cases separately for every metric.
+3. Rename every (R^2 \ge 0.999999) count to **near-perfect predictive-R² threshold count/rate**; remove “exact solve” and “symbolic recovery” labels from those validator outputs.
+4. Run the independent symbolic-equivalence evaluator only on artifacts with persisted ground truth and explicit variable mappings; keep historical missing-ground-truth cases as not assessable.
+5. Verify and fix the `run_all.sh` seed invocation contract against the exact commit; test the orchestration contract without launching expensive benchmark work.
+6. Enforce strict JSON output and regenerate the stale `exp1_pca` summary from run #344 artifacts.
+7. Report median, mean, quantiles, lower-tail failures, and per-seed values together; add paired uncertainty analysis before inferential claims.
+8. Keep hybrid R², selected-predictor R², and symbolic-equivalence outcomes in separate tables with field names and provenance.
+
+**Updated overall conclusion:** the supplied 17:00 results strengthen the evidence that the hybrid can materially improve median predictive performance under the harder PCA-directed split, while random 40/60 has higher reported medians and a severe lower-tail caveat. They do **not** establish symbolic recovery rates. The earlier headline “0/370 exact solves” is invalid as a symbolic claim and should be withdrawn; the PCA “35/365 exact solve rate” is likewise a near-perfect predictive-R² threshold count, not symbolic equivalence. Exact denominators and run snapshots still require reconciliation.
+
+### Scope note for this addendum
+
+This addendum is a documentation synthesis of the user-supplied 17:00 analysis and the earlier report/audit context. It does not claim that the flagged source defects were fixed or that new benchmark data were generated. No benchmark, training job, LLM request, workflow dispatch, or merge was initiated for this update.
