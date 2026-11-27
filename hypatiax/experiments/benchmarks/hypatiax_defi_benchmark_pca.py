@@ -1892,7 +1892,7 @@ def _save_final(
         if isinstance(obj, np.bool_):              return bool(obj)
         if isinstance(obj, np.ndarray):            return obj.tolist()
         raise TypeError(f"Not serialisable: {type(obj)}")
-    FINAL_OUTPUT.write_text(json.dumps(results, indent=2, default=_json_default))
+    FINAL_OUTPUT.write_text(json.dumps(_json_safe(results), indent=2, default=_json_default, allow_nan=False))
     print(f"\n✅ Final results saved → {FINAL_OUTPUT}")
 
 
