@@ -12,73 +12,73 @@ seed        : 123  (source: PYSR_SEED)
     Updating git-repo `https://github.com/MilesCranmer/SymbolicRegression.jl`
     Updating git-repo `https://github.com/MilesCranmer/SymbolicRegression.jl`
    Resolving package versions...
-   Installed Adapt ─────────────────────── v4.8.0
+   Installed Tricks ────────────────────── v0.1.13
    Installed ForwardDiff ───────────────── v1.5.0
-   Installed DiffResults ───────────────── v1.1.0
+   Installed Adapt ─────────────────────── v4.8.0
+   Installed ConstructionBase ──────────── v1.6.1
    Installed MacroTools ────────────────── v0.5.16
    Installed FillArrays ────────────────── v1.19.0
    Installed DataStructures ────────────── v0.19.7
-   Installed ConstructionBase ──────────── v1.6.1
-   Installed Tricks ────────────────────── v0.1.13
-   Installed AliasTables ───────────────── v1.1.3
-   Installed micromamba_jll ────────────── v2.3.1+0
-   Installed IteratorInterfaceExtensions ─ v1.0.0
-   Installed StatsBase ─────────────────── v0.34.14
-   Installed Compat ────────────────────── v4.18.1
    Installed OrderedCollections ────────── v2.0.3
    Installed ArrayInterface ────────────── v7.30.2
+   Installed Compat ────────────────────── v4.18.1
    Installed Optim ─────────────────────── v1.13.3
-   Installed DataAPI ───────────────────── v1.16.0
    Installed PositiveFactorizations ────── v0.2.4
-   Installed StatsAPI ──────────────────── v1.8.0
+   Installed DataAPI ───────────────────── v1.16.0
+   Installed IteratorInterfaceExtensions ─ v1.0.0
    Installed Statistics ────────────────── v1.11.5
-   Installed DataValueInterfaces ───────── v1.0.0
-   Installed UnsafePointers ────────────── v1.0.0
+   Installed StatsBase ─────────────────── v0.34.14
+   Installed DiffResults ───────────────── v1.1.0
    Installed PrecompileTools ───────────── v1.4.0
-   Installed CondaPkg ──────────────────── v0.2.38
-   Installed ProgressMeter ─────────────── v1.11.0
+   Installed AliasTables ───────────────── v1.1.3
+   Installed StatsAPI ──────────────────── v1.8.0
+   Installed UnsafePointers ────────────── v1.0.0
+   Installed DataValueInterfaces ───────── v1.0.0
    Installed CommonSubexpressions ──────── v0.3.1
-   Installed MicroMamba ────────────────── v0.1.15
-   Installed StaticArraysCore ──────────── v1.4.5
+   Installed CondaPkg ──────────────────── v0.2.38
    Installed DispatchDoctor ────────────── v0.4.29
+   Installed MicroMamba ────────────────── v0.1.15
+   Installed ProgressMeter ─────────────── v1.11.0
+   Installed StaticArraysCore ──────────── v1.4.5
+   Installed DynamicDiff ───────────────── v0.3.2
+   Installed micromamba_jll ────────────── v2.3.1+0
+   Installed IrrationalConstants ───────── v0.2.7
+   Installed NaNMath ───────────────────── v1.1.5
    Installed StructUtils ───────────────── v2.12.1
    Installed ChainRulesCore ────────────── v1.26.8
-   Installed DynamicDiff ───────────────── v0.3.2
-   Installed NaNMath ───────────────────── v1.1.5
-   Installed IrrationalConstants ───────── v0.2.7
+   Installed DynamicQuantities ─────────── v1.14.0
    Installed OpenSpecFun_jll ───────────── v0.5.6+0
    Installed LogExpFunctions ───────────── v1.0.6
    Installed DiffRules ─────────────────── v1.18.0
-   Installed DynamicQuantities ─────────── v1.14.0
+   Installed Parsers ───────────────────── v3.0.6
    Installed Interfaces ────────────────── v0.3.2
    Installed JSON ──────────────────────── v1.13.4
    Installed LossFunctions ─────────────── v1.2.2
-   Installed Parsers ───────────────────── v3.0.6
-   Installed PtrArrays ─────────────────── v1.4.0
    Installed FiniteDiff ────────────────── v2.33.0
    Installed Tables ────────────────────── v1.14.0
-   Installed NLSolversBase ─────────────── v7.10.0
-   Installed Scratch ───────────────────── v1.3.0
+   Installed PtrArrays ─────────────────── v1.4.0
    Installed EnumX ─────────────────────── v1.0.7
    Installed Reexport ──────────────────── v1.2.2
+   Installed NLSolversBase ─────────────── v7.10.0
    Installed Setfield ──────────────────── v1.2.0
    Installed Missings ──────────────────── v1.2.1
-   Installed SpecialFunctions ──────────── v2.9.2
-   Installed Preferences ───────────────── v1.6.1
-   Installed pixi_jll ──────────────────── v0.84.2+0
+   Installed Scratch ───────────────────── v1.3.0
    Installed ScientificTypesBase ───────── v3.1.0
+   Installed Preferences ───────────────── v1.6.1
+   Installed SpecialFunctions ──────────── v2.9.2
+   Installed pixi_jll ──────────────────── v0.84.2+0
    Installed TestItems ─────────────────── v1.1.0
-   Installed JLLWrappers ───────────────── v1.8.0
    Installed TableTraits ───────────────── v1.0.1
-   Installed LineSearches ──────────────── v7.5.1
+   Installed JLLWrappers ───────────────── v1.8.0
    Installed StatisticalTraits ─────────── v4.0.0
-   Installed ADTypes ───────────────────── v1.24.0
-   Installed DocStringExtensions ───────── v0.10.2
-   Installed MLJModelInterface ─────────── v1.12.2
-   Installed DifferentiationInterface ──── v0.7.22
+   Installed LineSearches ──────────────── v7.5.1
    Installed SortingAlgorithms ─────────── v1.2.3
-   Installed PythonCall ────────────────── v0.9.28
+   Installed ADTypes ───────────────────── v1.24.0
+   Installed MLJModelInterface ─────────── v1.12.2
+   Installed DocStringExtensions ───────── v0.10.2
+   Installed DifferentiationInterface ──── v0.7.22
    Installed DynamicExpressions ────────── v2.4.1
+   Installed PythonCall ────────────────── v0.9.28
   Installing 1 artifacts
    Installed artifact OpenSpecFun 105.4 KiB
     Updating `~/.julia/environments/pyjuliapkg/Project.toml`
@@ -203,102 +203,102 @@ seed        : 123  (source: PYSR_SEED)
   [3f19e933] + p7zip_jll v17.8.5+0
         Info Packages marked with ⌃ and ⌅ have new versions available. Those with ⌃ may be upgradable, but those with ⌅ are restricted by compatibility constraints from upgrading. To see why use `status --outdated -m`
 Precompiling packages...
-   0.3 s  ✓ Interfaces
+   0.2 s  ✓ TestItems
    0.3 s  ✓ Reexport
-   0.4 s  ✓ TestItems
-   0.4 s  ✓ Adapt
-   0.3 s  ✓ DataAPI
+   0.5 s  ✓ Interfaces
+   0.2 s  ✓ DataAPI
+   0.5 s  ✓ Adapt
    0.4 s  ✓ Statistics
    0.4 s  ✓ PositiveFactorizations
-   0.5 s  ✓ ConstructionBase
    0.3 s  ✓ Tricks
+   0.3 s  ✓ ConstructionBase
    0.3 s  ✓ UnsafePointers
-   0.2 s  ✓ DataValueInterfaces
-   0.3 s  ✓ StatsAPI
-   0.5 s  ✓ StaticArraysCore
-   0.6 s  ✓ OrderedCollections
-   2.2 s  ✓ MacroTools
-   0.4 s  ✓ EnumX
-   1.7 s  ✓ IrrationalConstants
-   1.1 s  ✓ DocStringExtensions
-   0.4 s  ✓ PtrArrays
+   0.4 s  ✓ DataValueInterfaces
+   0.4 s  ✓ StaticArraysCore
+   0.5 s  ✓ StatsAPI
+   1.2 s  ✓ IrrationalConstants
+   0.7 s  ✓ OrderedCollections
+   0.5 s  ✓ EnumX
+   2.4 s  ✓ MacroTools
+   0.4 s  ✓ IteratorInterfaceExtensions
    1.6 s  ✓ ChainRulesCore
-   0.3 s  ✓ IteratorInterfaceExtensions
-   0.3 s  ✓ NaNMath
-   0.6 s  ✓ Scratch
-   1.0 s  ✓ FillArrays
+   0.4 s  ✓ PtrArrays
+   1.2 s  ✓ DocStringExtensions
+   1.2 s  ✓ FillArrays
+   0.4 s  ✓ Scratch
+   0.4 s  ✓ NaNMath
    0.7 s  ✓ ProgressMeter
-   0.3 s  ✓ ScientificTypesBase
-   0.7 s  ✓ Compat
-   0.5 s  ✓ ArrayInterface
+   0.4 s  ✓ Compat
+   0.4 s  ✓ ScientificTypesBase
    0.3 s  ✓ Missings
    0.7 s  ✓ Preferences
-   1.4 s  ✓ StructUtils
-   0.2 s  ✓ ConstructionBase → ConstructionBaseLinearAlgebraExt
-   0.6 s  ✓ Adapt → AdaptSparseArraysExt
+   0.5 s  ✓ ArrayInterface
+   0.3 s  ✓ ConstructionBase → ConstructionBaseLinearAlgebraExt
+   0.7 s  ✓ Adapt → AdaptSparseArraysExt
    0.6 s  ✓ Statistics → SparseArraysExt
-   0.4 s  ✓ CommonSubexpressions
+   1.7 s  ✓ StructUtils
    0.7 s  ✓ LossFunctions
    0.5 s  ✓ DiffResults
+   0.4 s  ✓ CommonSubexpressions
+   0.3 s  ✓ TableTraits
    0.3 s  ✓ AliasTables
-   0.4 s  ✓ TableTraits
-   0.6 s  ✓ LogExpFunctions
    0.5 s  ✓ ChainRulesCore → ChainRulesCoreSparseArraysExt
-   0.5 s  ✓ StatisticalTraits
-   0.5 s  ✓ FillArrays → FillArraysStatisticsExt
-   0.4 s  ✓ Compat → CompatLinearAlgebraExt
-   0.6 s  ✓ FillArrays → FillArraysSparseArraysExt
-   0.3 s  ✓ ArrayInterface → ArrayInterfaceStaticArraysCoreExt
+   0.5 s  ✓ LogExpFunctions
+   0.3 s  ✓ Compat → CompatLinearAlgebraExt
+   0.7 s  ✓ FillArrays → FillArraysSparseArraysExt
+   0.3 s  ✓ StatisticalTraits
+   0.7 s  ✓ FillArrays → FillArraysStatisticsExt
    1.7 s  ✓ DataStructures
    0.4 s  ✓ ArrayInterface → ArrayInterfaceFillArraysExt
-   0.4 s  ✓ ArrayInterface → ArrayInterfaceChainRulesCoreExt
-   0.5 s  ✓ ArrayInterface → ArrayInterfaceSparseArraysExt
-   0.5 s  ✓ PrecompileTools
-   0.5 s  ✓ JLLWrappers
-   0.4 s  ✓ StructUtils → StructUtilsStaticArraysCoreExt
+   0.8 s  ✓ JLLWrappers
+   0.7 s  ✓ PrecompileTools
+   0.3 s  ✓ ArrayInterface → ArrayInterfaceChainRulesCoreExt
+   0.3 s  ✓ ArrayInterface → ArrayInterfaceStaticArraysCoreExt
+   0.7 s  ✓ ArrayInterface → ArrayInterfaceSparseArraysExt
+   0.5 s  ✓ StructUtils → StructUtilsStaticArraysCoreExt
+   1.2 s  ✓ DispatchDoctor
    0.9 s  ✓ Setfield
-   1.1 s  ✓ MLJModelInterface
-   0.6 s  ✓ SortingAlgorithms
+   0.7 s  ✓ SortingAlgorithms
+   1.2 s  ✓ Tables
    1.2 s  ✓ LogExpFunctions → LogExpFunctionsChainRulesCoreExt
-   1.7 s  ✓ DispatchDoctor
-   1.3 s  ✓ Tables
-   0.6 s  ✓ OpenSpecFun_jll
-   0.9 s  ✓ micromamba_jll
-   1.2 s  ✓ ADTypes
-   0.5 s  ✓ FiniteDiff
-   1.3 s  ✓ pixi_jll
-   0.4 s  ✓ DispatchDoctor → DispatchDoctorChainRulesCoreExt
+   1.2 s  ✓ MLJModelInterface
+   0.7 s  ✓ OpenSpecFun_jll
+   1.2 s  ✓ micromamba_jll
+   0.9 s  ✓ ADTypes
+   0.7 s  ✓ DispatchDoctor → DispatchDoctorChainRulesCoreExt
+   1.6 s  ✓ pixi_jll
+   0.7 s  ✓ FiniteDiff
    0.5 s  ✓ StructUtils → StructUtilsTablesExt
  Downloading artifact: micromamba
-   1.8 s  ✓ MicroMamba
-   2.2 s  ✓ SpecialFunctions
-   3.0 s  ✓ StatsBase
-   0.3 s  ✓ ADTypes → ADTypesConstructionBaseExt
+   2.7 s  ✓ StatsBase
+   2.1 s  ✓ MicroMamba
+   0.6 s  ✓ ADTypes → ADTypesConstructionBaseExt
+   3.1 s  ✓ SpecialFunctions
    0.5 s  ✓ ADTypes → ADTypesChainRulesCoreExt
-   0.5 s  ✓ FiniteDiff → FiniteDiffSparseArraysExt
    1.3 s  ✓ DifferentiationInterface
-   0.7 s  ✓ DiffRules
-   1.1 s  ✓ DifferentiationInterface → DifferentiationInterfaceSparseArraysExt
-   2.3 s  ✓ SpecialFunctions → SpecialFunctionsChainRulesCoreExt
-   0.6 s  ✓ DifferentiationInterface → DifferentiationInterfaceFiniteDiffExt
-   0.7 s  ✓ DifferentiationInterface → DifferentiationInterfaceChainRulesCoreExt
-   7.0 s  ✓ DynamicQuantities
-   0.7 s  ✓ DynamicQuantities → DynamicQuantitiesLinearAlgebraExt
-   2.5 s  ✓ ForwardDiff
-   0.6 s  ✓ DifferentiationInterface → DifferentiationInterfaceForwardDiffExt
-   0.7 s  ✓ NLSolversBase
-   0.8 s  ✓ LineSearches
-   2.8 s  ✓ Optim
-  14.1 s  ✓ DynamicExpressions
+   0.9 s  ✓ FiniteDiff → FiniteDiffSparseArraysExt
+   0.6 s  ✓ DiffRules
+   1.8 s  ✓ SpecialFunctions → SpecialFunctionsChainRulesCoreExt
+   0.5 s  ✓ DifferentiationInterface → DifferentiationInterfaceChainRulesCoreExt
+   1.0 s  ✓ DifferentiationInterface → DifferentiationInterfaceSparseArraysExt
+   7.1 s  ✓ DynamicQuantities
+   0.5 s  ✓ DifferentiationInterface → DifferentiationInterfaceFiniteDiffExt
+   0.9 s  ✓ DynamicQuantities → DynamicQuantitiesLinearAlgebraExt
+   2.6 s  ✓ ForwardDiff
+   0.4 s  ✓ DifferentiationInterface → DifferentiationInterfaceForwardDiffExt
+   0.5 s  ✓ NLSolversBase
+   0.6 s  ✓ LineSearches
+   1.8 s  ✓ Optim
+  14.6 s  ✓ DynamicExpressions
    1.1 s  ✓ DynamicExpressions → DynamicExpressionsOptimExt
-   1.8 s  ✓ DynamicDiff
-  21.9 s  ✓ Parsers
-  11.1 s  ✓ JSON
+   1.6 s  ✓ DynamicDiff
+  22.4 s  ✓ Parsers
+  11.3 s  ✓ JSON
    0.4 s  ✓ JSON → JSONSerializationExt
  Downloading artifact: pixi
-   1.8 s  ✓ CondaPkg
-  10.8 s  ✓ PythonCall
-  55.9 s  ✓ SymbolicRegression
+   2.1 s  ✓ CondaPkg
+  11.1 s  ✓ PythonCall
+  55.0 s  ✓ SymbolicRegression
   94 dependencies successfully precompiled in 84 seconds. 38 already precompiled.
 
   2 dependencies had output during precompilation:
@@ -311,8 +311,8 @@ Precompiling packages...
      Project No packages added to or removed from `~/.julia/environments/pyjuliapkg/Project.toml`
     Manifest No packages added to or removed from `~/.julia/environments/pyjuliapkg/Manifest.toml`
 ✅ HybridDiscoverySystem (v5.1) imported from /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/tools/symbolic/hybrid_system_v50_2.py
-[juliapkg] Found dependencies: /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/pysr/juliapkg.json
 [juliapkg] Found dependencies: /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/juliacall/juliapkg.json
+[juliapkg] Found dependencies: /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/pysr/juliapkg.json
 [juliapkg] Found dependencies: /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/juliapkg/juliapkg.json
 [juliapkg] Locating Julia ^1.10.3
 [juliapkg] Querying Julia versions from https://julialang-s3.julialang.org/bin/versions.json
@@ -332,25 +332,25 @@ Precompiling packages...
 [juliapkg] Using Julia project at /home/runner/.julia/environments/pyjuliapkg
 [juliapkg] Writing Project.toml:
            | [deps]
-           | SymbolicRegression = "8254be44-1295-4e6a-a16d-46603ac705cb"
-           | Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
            | PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
            | OpenSSL_jll = "458c3c95-2e84-50aa-8efc-19380b2a3a95"
+           | SymbolicRegression = "8254be44-1295-4e6a-a16d-46603ac705cb"
+           | Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
            | 
            | [compat]
-           | Serialization = "^1"
            | PythonCall = "=0.9.28"
            | OpenSSL_jll = "3.0.0 - 3.5"
+           | Serialization = "^1"
            | 
            | [preferences]
 [juliapkg] Installing packages:
            | import Pkg
            | Pkg.Registry.update()
            | Pkg.add([
-           |   Pkg.PackageSpec(name="SymbolicRegression", uuid="8254be44-1295-4e6a-a16d-46603ac705cb", url=raw"https://github.com/MilesCranmer/SymbolicRegression.jl", rev=raw"v2.0.0-alpha.8"),
-           |   Pkg.PackageSpec(name="Serialization", uuid="9e88b42a-f829-5b0c-bbe9-9e923198166b"),
            |   Pkg.PackageSpec(name="PythonCall", uuid="6099a3de-0909-46bc-b1f4-468b9a2dfc0d"),
            |   Pkg.PackageSpec(name="OpenSSL_jll", uuid="458c3c95-2e84-50aa-8efc-19380b2a3a95"),
+           |   Pkg.PackageSpec(name="SymbolicRegression", uuid="8254be44-1295-4e6a-a16d-46603ac705cb", url=raw"https://github.com/MilesCranmer/SymbolicRegression.jl", rev=raw"v2.0.0-alpha.8"),
+           |   Pkg.PackageSpec(name="Serialization", uuid="9e88b42a-f829-5b0c-bbe9-9e923198166b"),
            | ])
            | Pkg.resolve()
            | Pkg.precompile()
@@ -380,115 +380,115 @@ Precompiling packages...
 ────────────────────────────────────────────────────────────────────────────────
 Eq                          P_near  H_near    P_med   H_med    P_far   H_far    P_time   H_time
 ────────────────────────────────────────────────────────────────────────────────
-Arrhenius                  -1.1970 -7.5444  -0.8941     N/A  -14.3560     N/A    1071.0    330.7
-Henderson-Hasselbalch       0.8634  0.9989   0.9518  1.0000   0.8634  0.9989     925.8    427.7
-Rate Law                    0.9999  0.9999   1.0000  1.0000   0.9999  0.9997    1101.2    334.1
-Allometric Scaling          0.9999  1.0000   1.0000  1.0000   0.9999  1.0000    1055.5      4.7
-Michaelis-Menten            0.9998  0.9996   0.9999  0.9999   0.9958  0.9916    1100.9    704.4
-Logistic Growth             0.9996  0.9996   0.9998  0.9998   0.9996  0.9996    1101.2    350.6
-Kinetic Energy              1.0000  1.0000   1.0000  1.0000   1.0000  1.0000    1114.4      4.4
-Gravitational Force         0.9678  0.9972   0.9972  0.3345   0.9678  0.9963    1101.4   1544.0
-Ideal Gas Law               0.9999  1.0000   1.0000  1.0000   0.9999  1.0000    1101.2      5.1
-Impermanent Loss            0.9200  0.7694  -0.1677 -4.8682  -63.3070     N/A    1112.3    432.5
-Price Impact                1.0000  1.0000   1.0000  1.0000   1.0000  1.0000     941.5      6.8
-Constant Product            0.9988  0.9988   0.9999  0.9999   0.9988  0.9988    1058.5    284.0
-Value at Risk               0.9997  0.9997   1.0000  1.0000   0.9997  0.9997    1051.3    297.7
-Liquidation Price           0.9999  1.0000   1.0000  1.0000   1.0000  1.0000    1101.0    277.3
-Portfolio Std Dev           0.9208  1.0000   0.8290  1.0000   0.1214  1.0000    1015.3      5.7
+Arrhenius                   0.7896  0.9937  -0.4724  0.9874  -14.3567  0.6693    1115.5    769.5
+Henderson-Hasselbalch       0.9120     N/A   0.9921     N/A   0.9120     N/A    1101.3    487.6
+Rate Law                    0.9999  0.9999   1.0000  1.0000   0.9999  0.9997    1101.3    464.1
+Allometric Scaling          0.9999 -8.2726   1.0000  0.1069   0.9999 -8.2726    1112.6      4.2
+Michaelis-Menten           -0.4688  0.9996  -4.0454  0.9998      N/A  0.9902    1101.1    523.5
+Logistic Growth             0.9999  0.9996   1.0000  0.9998   0.9998  0.9996    1101.4    450.5
+Kinetic Energy              0.9999  1.0000   1.0000  1.0000   0.9999  1.0000    1063.4      4.6
+Gravitational Force         0.9953     N/A   0.9996     N/A   0.9953     N/A     965.6   1680.6
+Ideal Gas Law               1.0000     N/A   1.0000     N/A   1.0000     N/A    1047.2      4.7
+Impermanent Loss            0.9201     N/A  -0.1674     N/A  -63.2925     N/A    1104.7   1341.0
+Price Impact                1.0000  1.0000   1.0000  1.0000   1.0000  1.0000     937.0    281.3
+Constant Product            0.9988  0.9988   0.9999  0.9999   0.9988  0.9988     974.5    256.6
+Value at Risk               0.9997  0.9997   1.0000  1.0000   0.9997  0.9997    1116.7    376.5
+Liquidation Price           1.0000  0.9977   1.0000  0.9995   1.0000  0.9944    1101.5    365.6
+Portfolio Std Dev           0.8134  1.0000  -0.6521  1.0000  -78.7525  1.0000    1101.5      6.4
 ────────────────────────────────────────────────────────────────────────────────
-Mean (far OOD)                                                0.9189  0.9988
+Mean (far OOD)                                               -8.5111  0.0389
 
-Speedup (PySR-time / HypatiaX-time):  mean=69.19×  median=3.53×  n=15
+Speedup (PySR-time / HypatiaX-time):  mean=60.81×  median=2.97×  n=15
 
-RF-01 pairs: 13  skipped: ['Arrhenius', 'Impermanent Loss']
+RF-01 pairs: 10  skipped: ['Henderson-Hasselbalch', 'Michaelis-Menten', 'Gravitational Force', 'Ideal Gas Law', 'Impermanent Loss']
 
 ════════════════════════════════════════════════════════════════════════
 AGGREGATE STATISTICAL TESTS  (RF-01)
 ════════════════════════════════════════════════════════════════════════
-  n (paired)                 : 13
-  H Far-R²  median/mean      : +0.9997 / +0.9988
-  P Far-R²  median/mean      : +0.9997 / +0.9189
-  H wins / ties / P wins     : 3 / 10 / 0
-  PRIMARY: Wilcoxon p(H>P)   : 0.1331
-  Mann-Whitney U (H > P)     : U=108,  p=0.1183
-  Mann-Whitney U (two-sided) : U=108,  p=0.2366
-  Wilcoxon signed-rank       : W=24, p(2-sided)=0.2661, p(H>P)=0.1331
-  Paired rank-biserial r      : +0.385
+  n (paired)                 : 10
+  H Far-R²  median/mean      : +0.9997 / +0.0389
+  P Far-R²  median/mean      : +0.9998 / -8.5111
+  H wins / ties / P wins     : 2 / 7 / 1
+  PRIMARY: Wilcoxon p(H>P)   : 0.5898
+  Mann-Whitney U (H > P)     : U=48,  p=0.5900
+  Mann-Whitney U (two-sided) : U=48,  p=0.8794
+  Wilcoxon signed-rank       : W=21, p(2-sided)=0.9102, p(H>P)=0.5898
+  Paired rank-biserial r      : -0.067
   Significant (α=0.05)       : NO ⚠
   Paper targets              : U=126, p=0.295 (Run A / seed=42 / pops=30)
 
   ⚠️  NOT SIGNIFICANT
 
   Across Core-15, HypatiaX does not achieve statistically significant higher
-    far-extrapolation $R^2$ than PySR-only (Wilcoxon signed-rank $W=24$,
-    $p_{H>P}=0.1331$; Mann-Whitney sensitivity $U=108$, $p=0.1183$, $n=13$;
-    paired rank-biserial $r=+0.38$). The directional improvement is concentrated
-    in 3 domain(s) — Chemistry, Physics, DeFi Risk, suggesting benefit is
-    domain-selective.
+    far-extrapolation $R^2$ than PySR-only (Wilcoxon signed-rank $W=21$,
+    $p_{H>P}=0.5898$; Mann-Whitney sensitivity $U=48$, $p=0.5900$, $n=10$;
+    paired rank-biserial $r=-0.07$). The directional improvement is concentrated
+    in 2 domain(s) — Chemistry, DeFi Risk; PySR-only is superior in Biology,
+    indicating HypatiaX's benefit is domain-selective rather than universal.
 
   📄  RF-01 JSON → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation_seed123/exp1_rf01_mannwhitney.json
   📄  RF-01 significance LaTeX → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation_seed123/exp1_rf01_significant.tex
   📄  RF-01 sub-domain LaTeX → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation_seed123/exp1_rf01_subdomain.tex
 
-LLM-CONTRIBUTION (3-arm far-R2): 13 equation(s) with all arms
-  failures per arm (excluded from tests): P=0, H=2, N=2
-  H_vs_P: median +0.9997 vs +0.9997 | W/T/L 3/10/0 | MWU p(>)=0.1982 p(2s)=0.3964 | r_rb=+1.000
-  N_vs_P: median +0.9989 vs +0.9997 | W/T/L 2/9/2 | MWU p(>)=0.5914 p(2s)=0.8573 | r_rb=+0.000
-  H_vs_N: median +0.9997 vs +0.9989 | W/T/L 3/10/0 | MWU p(>)=0.1085 p(2s)=0.2169 | r_rb=+1.000
-  H_vs_P: PRIMARY Wilcoxon p(>)=0.125 Holm-adjusted=0.375  (Mann-Whitney = sensitivity only)
-  N_vs_P: PRIMARY Wilcoxon p(>)=0.5625 Holm-adjusted=0.5625  (Mann-Whitney = sensitivity only)
-  H_vs_N: PRIMARY Wilcoxon p(>)=0.125 Holm-adjusted=0.375  (Mann-Whitney = sensitivity only)
+LLM-CONTRIBUTION (3-arm far-R2): 10 equation(s) with all arms
+  failures per arm (excluded from tests): P=1, H=4, N=2
+  H_vs_P: median +0.9997 vs +0.9998 | W/T/L 2/7/1 | MWU p(>)=0.3382 p(2s)=0.6764 | r_rb=+0.667
+  N_vs_P: median +0.9992 vs +0.9998 | W/T/L 2/7/1 | MWU p(>)=0.4398 p(2s)=0.8795 | r_rb=+0.667
+  H_vs_N: median +0.9997 vs +0.9992 | W/T/L 1/8/1 | MWU p(>)=0.3807 p(2s)=0.7614 | r_rb=-0.333
+  H_vs_P: PRIMARY Wilcoxon p(>)=0.25 Holm-adjusted=0.75  (Mann-Whitney = sensitivity only)
+  N_vs_P: PRIMARY Wilcoxon p(>)=0.25 Holm-adjusted=0.75  (Mann-Whitney = sensitivity only)
+  H_vs_N: PRIMARY Wilcoxon p(>)=0.75 Holm-adjusted=0.75  (Mann-Whitney = sensitivity only)
   📄  LLM-contribution JSON → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation_seed123/exp1_llm_contribution.json
 ✅ Table 5 LaTeX → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation_seed123/exp1_ablation_table.tex
 ✅ Instability stats → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation_seed123/exp1_instability_stats.json
 ✅ Instability CSV   → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation_seed123/instability_extrapolation_v2.csv
 Equation                     Condition       timed_out  excl_timing   wall_s
 ────────────────────────────────────────────────────────────────────────────
-  Arrhenius                  pysr_only           False        False   1071.0
-  Arrhenius                  hypatia             False        False    330.7
-  Arrhenius                  hypatia_nollm       False        False    319.7
-  Henderson-Hasselbalch      pysr_only           False        False    925.8
-  Henderson-Hasselbalch      hypatia             False        False    427.7
-  Henderson-Hasselbalch      hypatia_nollm       False        False    407.3
-  Rate Law                   pysr_only           False        False   1101.2
-  Rate Law                   hypatia             False        False    334.1
-  Rate Law                   hypatia_nollm       False        False    276.7
-  Allometric Scaling         pysr_only           False        False   1055.5
-  Allometric Scaling         hypatia             False        False      4.7
-  Allometric Scaling         hypatia_nollm       False        False    433.6
-  Michaelis-Menten           pysr_only           False        False   1100.9
-  Michaelis-Menten           hypatia             False        False    704.4
-  Michaelis-Menten           hypatia_nollm       False        False    689.6
-  Logistic Growth            pysr_only           False        False   1101.2
-  Logistic Growth            hypatia             False        False    350.6
-  Logistic Growth            hypatia_nollm       False        False    347.7
-  Kinetic Energy             pysr_only           False        False   1114.4
-  Kinetic Energy             hypatia             False        False      4.4
-  Kinetic Energy             hypatia_nollm       False        False    378.8
-  Gravitational Force        pysr_only           False        False   1101.4
-  Gravitational Force        hypatia             False        False   1544.0
-  Gravitational Force        hypatia_nollm       False        False   1408.3
-  Ideal Gas Law              pysr_only           False        False   1101.2
-  Ideal Gas Law              hypatia             False        False      5.1
-  Ideal Gas Law              hypatia_nollm       False        False    298.9
-  Impermanent Loss           pysr_only           False        False   1112.3
-  Impermanent Loss           hypatia             False        False    432.5
-  Impermanent Loss           hypatia_nollm       False        False    438.9
-  Price Impact               pysr_only           False        False    941.5
-  Price Impact               hypatia             False        False      6.8
-  Price Impact               hypatia_nollm       False        False    284.5
-  Constant Product           pysr_only           False        False   1058.5
-  Constant Product           hypatia             False        False    284.0
-  Constant Product           hypatia_nollm       False        False    278.1
-  Value at Risk              pysr_only           False        False   1051.3
-  Value at Risk              hypatia             False        False    297.7
-  Value at Risk              hypatia_nollm       False        False    269.4
-  Liquidation Price          pysr_only           False        False   1101.0
-  Liquidation Price          hypatia             False        False    277.3
-  Liquidation Price          hypatia_nollm       False        False    253.2
-  Portfolio Std Dev          pysr_only           False        False   1015.3
-  Portfolio Std Dev          hypatia             False        False      5.7
-  Portfolio Std Dev          hypatia_nollm       False        False    375.6
+  Arrhenius                  pysr_only           False        False   1115.5
+  Arrhenius                  hypatia             False        False    769.5
+  Arrhenius                  hypatia_nollm       False        False    764.5
+  Henderson-Hasselbalch      pysr_only           False        False   1101.3
+  Henderson-Hasselbalch      hypatia             False        False    487.6
+  Henderson-Hasselbalch      hypatia_nollm       False        False    558.8
+  Rate Law                   pysr_only           False        False   1101.3
+  Rate Law                   hypatia             False        False    464.1
+  Rate Law                   hypatia_nollm       False        False    379.4
+  Allometric Scaling         pysr_only           False        False   1112.6
+  Allometric Scaling         hypatia             False        False      4.2
+  Allometric Scaling         hypatia_nollm       False        False    643.6
+  Michaelis-Menten           pysr_only           False        False   1101.1
+  Michaelis-Menten           hypatia             False        False    523.5
+  Michaelis-Menten           hypatia_nollm       False        False    518.1
+  Logistic Growth            pysr_only           False        False   1101.4
+  Logistic Growth            hypatia             False        False    450.5
+  Logistic Growth            hypatia_nollm       False        False    447.6
+  Kinetic Energy             pysr_only           False        False   1063.4
+  Kinetic Energy             hypatia             False        False      4.6
+  Kinetic Energy             hypatia_nollm       False        False    337.0
+  Gravitational Force        pysr_only           False        False    965.6
+  Gravitational Force        hypatia             False        False   1680.6
+  Gravitational Force        hypatia_nollm       False        False   1883.7
+  Ideal Gas Law              pysr_only           False        False   1047.2
+  Ideal Gas Law              hypatia             False        False      4.7
+  Ideal Gas Law              hypatia_nollm       False        False    328.3
+  Impermanent Loss           pysr_only           False        False   1104.7
+  Impermanent Loss           hypatia             False        False   1341.0
+  Impermanent Loss           hypatia_nollm       False        False   1314.1
+  Price Impact               pysr_only           False        False    937.0
+  Price Impact               hypatia             False        False    281.3
+  Price Impact               hypatia_nollm       False        False    272.2
+  Constant Product           pysr_only           False        False    974.5
+  Constant Product           hypatia             False        False    256.6
+  Constant Product           hypatia_nollm       False        False    259.0
+  Value at Risk              pysr_only           False        False   1116.7
+  Value at Risk              hypatia             False        False    376.5
+  Value at Risk              hypatia_nollm       False        False    422.7
+  Liquidation Price          pysr_only           False        False   1101.5
+  Liquidation Price          hypatia             False        False    365.6
+  Liquidation Price          hypatia_nollm       False        False    361.8
+  Portfolio Std Dev          pysr_only           False        False   1101.5
+  Portfolio Std Dev          hypatia             False        False      6.4
+  Portfolio Std Dev          hypatia_nollm       False        False    254.0
 
 ✅ C3: wall_clock_flags.json saved → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation_seed123/wall_clock_flags.json
   ℹ️  No equations flagged — all completed within wall-clock cap.
