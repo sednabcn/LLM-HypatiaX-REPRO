@@ -67,7 +67,10 @@ class CandidateValidator:
             expression_names = tuple(
                 candidate_variable_names or problem.variable_names
             )
-            parsed = parse_sympy_expression(normalized, list(expression_names))
+            from hypatiax.core.constants import PHYSICAL_CONSTANTS
+            parsed = parse_sympy_expression(
+                normalized, list(expression_names), constants=PHYSICAL_CONSTANTS
+            )
             if parsed is None or parsed.has(sp.zoo, sp.nan, sp.oo, -sp.oo):
                 raise ValueError("expression contains a non-finite symbolic value")
             substitutions = dict(feature_substitutions or {})
@@ -80,7 +83,11 @@ class CandidateValidator:
                 replacements = {}
                 for feature_name, raw_expression in substitutions.items():
                     replacements[sp.Symbol(feature_name, real=True)] = (
-                        parse_sympy_expression(raw_expression, list(problem.variable_names))
+                        parse_sympy_expression(
+                            raw_expression,
+                            list(problem.variable_names),
+                            constants=PHYSICAL_CONSTANTS,
+                        )
                     )
                 parsed = parsed.xreplace(replacements)
                 if parsed.free_symbols - {
@@ -279,14 +286,209 @@ class CandidateValidator:
         expression: Any,
         spec: ConstraintSpec,
     ) -> tuple[str, str, Mapping[str, Any]]:
+        """Evaluate an explicit symbolic or sampled-domain constraint.
+
+        Symbolic requirements are exact AST checks. Numerical checks are
+        deterministic screening only; they are not continuous-domain proofs
+        and never consume held-out or far-OOD target observations.
+        """
         import sympy as sp
 
-        supported = {
+        kind = spec.kind
+        params = dict(spec.parameters or {})
+        free_names = {str(symbol) for symbol in expression.free_symbols}
+        function_nodes = [
+            node for node in sp.preorder_traversal(expression)
+            if isinstance(node, sp.Function)
+        ]
+        function_names = {node.func.__name__.lower() for node in function_nodes}
+
+        if kind == "required_variables":
+            required = tuple(params.get("variables", problem.variable_names))
+            if not required or any(name not in problem.variable_names for name in required):
+                return "unknown", "required_variables must name declared input variables", {}
+            missing = sorted(set(required) - free_names)
+            evidence = {
+                "required_variables": list(required),
+                "present_variables": sorted(set(required) & free_names),
+                "missing_variables": missing,
+            }
+            return (
+                ("fail", f"candidate is missing required input variable(s): {missing}", evidence)
+                if missing else
+                ("pass", "candidate includes every required input variable", evidence)
+            )
+
+        if kind == "required_functions":
+            required = {str(name).lower() for name in params.get("functions", ())}
+            if not required:
+                return "unknown", "required_functions needs a non-empty functions list", {}
+            missing = sorted(required - function_names)
+            evidence = {"required_functions": sorted(required), "observed_functions": sorted(function_names)}
+            return (
+                ("fail", f"candidate omits required function(s): {missing}", evidence)
+                if missing else
+                ("pass", "candidate contains all required function families", evidence)
+            )
+
+        if kind == "forbidden_functions":
+            forbidden = {str(name).lower() for name in params.get("functions", ())}
+            if not forbidden:
+                return "unknown", "forbidden_functions needs a non-empty functions list", {}
+            observed = sorted(forbidden & function_names)
+            evidence = {"forbidden_functions": sorted(forbidden), "observed_forbidden_functions": observed}
+            return (
+                ("fail", f"candidate uses forbidden function(s): {observed}", evidence)
+                if observed else
+                ("pass", "candidate avoids all forbidden function families", evidence)
+            )
+
+        if kind == "variable_in_denominator":
+            variable = params.get("variable")
+            if variable not in problem.variable_names:
+                return "unknown", "variable_in_denominator requires a declared variable", {}
+            denominator = sp.denom(sp.together(expression))
+            present = str(variable) in {str(symbol) for symbol in denominator.free_symbols}
+            evidence = {
+                "variable": variable,
+                "denominator": sp.sstr(denominator),
+                "variable_present_in_denominator": present,
+            }
+            return (
+                ("pass", f"candidate denominator depends on {variable}", evidence)
+                if present else
+                ("fail", f"candidate denominator does not depend on {variable}", evidence)
+            )
+
+        if kind == "no_variable_exponents":
+            offenders = [
+                sp.sstr(node) for node in sp.preorder_traversal(expression)
+                if isinstance(node, sp.Pow) and bool(node.exp.free_symbols)
+            ]
+            evidence = {"variable_exponent_count": len(offenders), "offending_powers": offenders[:20]}
+            return (
+                ("fail", "candidate contains variable-dependent exponent(s)", evidence)
+                if offenders else
+                ("pass", "all candidate exponents are constant", evidence)
+            )
+
+        if kind == "required_power":
+            variable = params.get("variable")
+            exponent = params.get("exponent")
+            if variable not in problem.variable_names or isinstance(exponent, bool):
+                return "unknown", "required_power needs a declared variable and numeric exponent", {}
+            try:
+                expected = float(exponent)
+            except (TypeError, ValueError, OverflowError):
+                return "unknown", "required_power exponent must be finite", {}
+            if not math.isfinite(expected):
+                return "unknown", "required_power exponent must be finite", {}
+            exponent_tolerance = float(params.get("tolerance", 1e-12))
+            if not math.isfinite(exponent_tolerance) or exponent_tolerance < 0:
+                return "unknown", "required_power tolerance must be finite and non-negative", {}
+            expanded_for_power_check = sp.expand(expression, deep=False)
+            variable_powers = [
+                node for node in sp.preorder_traversal(expanded_for_power_check)
+                if isinstance(node, sp.Pow) and str(node.base) == str(variable)
+            ]
+            if math.isclose(expected, 1.0, rel_tol=0.0, abs_tol=1e-12):
+                matches = (
+                    [str(variable)] if variable in free_names and all(
+                        node.exp.is_number
+                        and math.isclose(float(node.exp), 1.0, rel_tol=0.0, abs_tol=1e-12)
+                        for node in variable_powers
+                    ) else []
+                )
+            else:
+                matches = []
+                for node in sp.preorder_traversal(expanded_for_power_check):
+                    if not isinstance(node, sp.Pow) or not node.exp.is_number:
+                        continue
+                    if str(node.base) == str(variable):
+                        effective_exponent = float(node.exp)
+                    elif expected < 0.0 and str(variable) in {
+                        str(symbol) for symbol in node.base.free_symbols
+                    }:
+                        try:
+                            degree = sp.degree(
+                                node.base, sp.Symbol(str(variable), real=True)
+                            )
+                            if degree in (sp.S.NegativeInfinity, sp.S.ComplexInfinity):
+                                continue
+                            effective_exponent = float(node.exp) * float(degree)
+                        except Exception:
+                            continue
+                    else:
+                        continue
+                    if math.isclose(
+                        effective_exponent, expected,
+                        rel_tol=0.0, abs_tol=exponent_tolerance,
+                    ):
+                        matches.append(sp.sstr(node))
+            evidence = {
+                "variable": variable, "required_exponent": expected,
+                "exponent_tolerance": exponent_tolerance,
+                "matching_powers": matches,
+            }
+            return (
+                ("fail", f"candidate does not contain {variable}**{expected:g}", evidence)
+                if not matches else
+                ("pass", f"candidate contains the required {variable} power", evidence)
+            )
+
+        if kind == "no_nested_functions":
+            selected = {str(name).lower() for name in params.get("functions", ())}
+            nested = []
+            for node in function_nodes:
+                name = node.func.__name__.lower()
+                if name not in selected:
+                    continue
+                if any(
+                    isinstance(child, sp.Function)
+                    and child.func.__name__.lower() in selected
+                    for arg in node.args for child in sp.preorder_traversal(arg)
+                ):
+                    nested.append(sp.sstr(node))
+            evidence = {"functions_checked": sorted(selected), "nested_function_calls": nested[:20]}
+            return (
+                ("fail", "candidate contains nested use of a restricted function", evidence)
+                if nested else
+                ("pass", "candidate has no nested restricted-function calls", evidence)
+            )
+
+        if kind == "required_inverse_inside_function":
+            variable = params.get("variable")
+            function_name = str(params.get("function", "")).lower()
+            if variable not in problem.variable_names or not function_name:
+                return "unknown", "required_inverse_inside_function needs a declared variable and function", {}
+            matches = []
+            for node in function_nodes:
+                if node.func.__name__.lower() != function_name:
+                    continue
+                if any(
+                    isinstance(child, sp.Pow)
+                    and child.exp.is_number
+                    and float(child.exp) < 0.0
+                    and str(variable) in {str(symbol) for symbol in child.base.free_symbols}
+                    for arg in node.args for child in sp.preorder_traversal(arg)
+                ):
+                    matches.append(sp.sstr(node))
+            evidence = {
+                "function": function_name, "variable": variable,
+                "matching_function_calls": matches,
+            }
+            return (
+                ("fail", f"{function_name} argument must depend on reciprocal {variable}", evidence)
+                if not matches else
+                ("pass", f"{function_name} contains the required reciprocal dependence", evidence)
+            )
+
+        if kind not in {
             "positive_output", "nonnegative_output", "finite_output",
-            "even_in", "odd_in",
-        }
-        if spec.kind not in supported:
-            return "unknown", f"unsupported declared constraint kind: {spec.kind}", {}
+            "finite_output_screen", "positive_output_screen", "nonpositive_output_screen", "even_in", "odd_in", "reciprocal_even_in", "monotone_concave_in",
+        }:
+            return "unknown", f"unsupported declared constraint kind: {kind}", {}
+
         if not all(
             name in problem.variable_domains
             and "minimum" in problem.variable_domains[name]
@@ -295,25 +497,128 @@ class CandidateValidator:
         ):
             return "unknown", "complete finite variable bounds are required for sampling", {}
 
+        bounds = {}
         axes = []
         for name in problem.variable_names:
-            bounds = problem.variable_domains[name]
-            low, high = float(bounds["minimum"]), float(bounds["maximum"])
+            spec_bounds = problem.variable_domains[name]
+            low, high = float(spec_bounds["minimum"]), float(spec_bounds["maximum"])
             if not math.isfinite(low) or not math.isfinite(high) or low > high:
                 return "unknown", f"invalid finite bounds for variable {name}", {}
-            axes.append((low, (low + high) / 2.0, high))
+            bounds[name] = (low, high)
+            if kind == "finite_output_screen":
+                axis = tuple(low + (high - low) * i / 4.0 for i in range(5))
+            else:
+                axis = (low, (low + high) / 2.0, high)
+            axes.append(axis)
         points = list(itertools.product(*axes))
         if len(points) > self.sample_limit:
             stride = max(1, math.ceil(len(points) / self.sample_limit))
             points = points[::stride][:self.sample_limit]
 
-        symbols = {
-            name: sp.Symbol(name, real=True) for name in problem.variable_names
-        }
+        symbols = {name: sp.Symbol(name, real=True) for name in problem.variable_names}
         fn = sp.lambdify(
             [symbols[name] for name in problem.variable_names],
             expression, modules=[{"sign": lambda value: (value > 0) - (value < 0)}, "math"],
         )
+
+        if kind == "monotone_concave_in":
+            variable = params.get("variable")
+            if variable not in problem.variable_names:
+                return "unknown", "monotone_concave_in requires a declared variable", {}
+            index = problem.variable_names.index(variable)
+            low, high = bounds[variable]
+            other_midpoints = [(lo + hi) / 2.0 for lo, hi in bounds.values()]
+            samples = [low + (high - low) * i / 8.0 for i in range(9)]
+            values = []
+            for value in samples:
+                point = list(other_midpoints)
+                point[index] = value
+                try:
+                    values.append(float(fn(*point)))
+                except Exception:
+                    values.append(float("nan"))
+            finite_values = all(math.isfinite(value) for value in values)
+            scale = max(1.0, *(abs(value) for value in values if math.isfinite(value)))
+            differences = [right - left for left, right in zip(values, values[1:])]
+            second_differences = [
+                right - 2.0 * middle + left
+                for left, middle, right in zip(values, values[1:], values[2:])
+            ]
+            monotone = finite_values and all(
+                difference >= -self.tolerance * scale for difference in differences
+            )
+            concave = finite_values and all(
+                difference <= self.tolerance * scale for difference in second_differences
+            )
+            passed = monotone and concave
+            violations = (
+                sum(difference < -self.tolerance * scale for difference in differences)
+                + sum(difference > self.tolerance * scale for difference in second_differences)
+                + (0 if finite_values else sum(not math.isfinite(value) for value in values))
+            )
+            evidence = {
+                "variable": variable,
+                "sample_count": len(values),
+                "finite": finite_values,
+                "monotone_non_decreasing": monotone,
+                "concave_down": concave,
+                "first_differences": differences,
+                "second_differences": second_differences,
+                "violation_count": int(violations),
+                "sampling": "deterministic_9_point_training_domain_screen",
+                "proof_scope": "finite_sample_shape_screening_only",
+                "grid_is_exhaustive": False,
+            }
+            return (
+                ("pass", "candidate passed sampled monotone-concave shape screen", evidence)
+                if passed else
+                ("fail", "candidate violates sampled monotone-concave shape requirements", evidence)
+            )
+
+        if kind == "reciprocal_even_in":
+            variable = params.get("variable")
+            if variable not in problem.variable_names:
+                return "unknown", "reciprocal_even_in requires a declared variable", {}
+            low, high = bounds[variable]
+            if low <= 0 or high <= 0 or low > 1.0 or high < 1.0:
+                return "unknown", "reciprocal symmetry requires a positive domain containing 1", {}
+            index = problem.variable_names.index(variable)
+            other_midpoints = [(lo + hi) / 2.0 for lo, hi in bounds.values()]
+            samples = [low + (high - low) * i / 8.0 for i in range(9)]
+            comparisons = []
+            for value in samples:
+                reciprocal = 1.0 / value
+                if reciprocal < low - self.tolerance or reciprocal > high + self.tolerance:
+                    continue
+                point = list(other_midpoints)
+                mirrored = list(other_midpoints)
+                point[index] = value
+                mirrored[index] = reciprocal
+                try:
+                    left, right = float(fn(*point)), float(fn(*mirrored))
+                except Exception:
+                    left = right = float("nan")
+                comparisons.append(
+                    math.isfinite(left) and math.isfinite(right)
+                    and abs(left - right) <= self.tolerance * max(1.0, abs(left), abs(right))
+                )
+            if not comparisons:
+                return "unknown", "no reciprocal pairs were available inside the declared domain", {}
+            violations = sum(not item for item in comparisons)
+            evidence = {
+                "variable": variable, "sample_count": len(comparisons),
+                "violation_count": violations,
+                "violation_fraction": violations / len(comparisons),
+                "sampling": "deterministic_reciprocal_pairs_inside_training_domain",
+                "proof_scope": "finite_sample_screening_only",
+                "grid_is_exhaustive": False,
+            }
+            return (
+                ("fail", "candidate violates declared reciprocal symmetry on training-domain samples", evidence)
+                if violations else
+                ("pass", "candidate satisfies reciprocal symmetry on sampled training-domain pairs", evidence)
+            )
+
         values = []
         for point in points:
             try:
@@ -323,27 +628,38 @@ class CandidateValidator:
             values.append(value)
 
         finite = all(math.isfinite(value) for value in values)
-        evaluation_count = len(points)
-        if spec.kind == "finite_output":
-            violation_count = sum(not math.isfinite(value) for value in values)
-            passed = violation_count == 0
+        if kind in {"finite_output", "finite_output_screen"}:
+            violations = sum(not math.isfinite(value) for value in values)
+            passed = violations == 0
+        elif kind == "positive_output_screen":
+            violations = sum(
+                (not math.isfinite(value)) or value <= self.tolerance
+                for value in values
+            )
+            passed = violations == 0
+        elif kind == "nonpositive_output_screen":
+            violations = sum(
+                (not math.isfinite(value)) or value > self.tolerance
+                for value in values
+            )
+            passed = violations == 0
         elif not finite:
-            violation_count = sum(
+            violations = sum(
                 (not math.isfinite(value)) or (
-                    value <= self.tolerance if spec.kind == "positive_output"
+                    value <= self.tolerance if kind == "positive_output"
                     else value < -self.tolerance
                 )
                 for value in values
             )
             passed = False
-        elif spec.kind == "positive_output":
-            violation_count = sum(value <= self.tolerance for value in values)
-            passed = violation_count == 0
-        elif spec.kind == "nonnegative_output":
-            violation_count = sum(value < -self.tolerance for value in values)
-            passed = violation_count == 0
+        elif kind == "positive_output":
+            violations = sum(value <= self.tolerance for value in values)
+            passed = violations == 0
+        elif kind == "nonnegative_output":
+            violations = sum(value < -self.tolerance for value in values)
+            passed = violations == 0
         else:
-            variable = spec.parameters.get("variable")
+            variable = params.get("variable")
             if variable not in problem.variable_names:
                 return "unknown", "symmetry constraint requires a declared 'variable' parameter", {}
             index = problem.variable_names.index(variable)
@@ -355,43 +671,43 @@ class CandidateValidator:
                 mirrored = list(point)
                 mirrored[index] = -mirrored[index]
                 try:
-                    left = float(fn(*point))
-                    right = float(fn(*mirrored))
+                    left, right = float(fn(*point)), float(fn(*mirrored))
                 except Exception:
-                    return "unknown", "symmetry evaluation failed on mirrored domain", {}
-                expected = right if spec.kind == "even_in" else -right
+                    left = right = float("nan")
+                expected = right if kind == "even_in" else -right
                 comparisons.append(
                     math.isfinite(left) and math.isfinite(right)
                     and abs(left - expected) <= self.tolerance * max(1.0, abs(left), abs(expected))
                 )
-            evaluation_count = len(comparisons)
-            violation_count = sum(not passed_pair for passed_pair in comparisons)
-            passed = violation_count == 0
-        expected_grid_size = 3 ** len(axes)
+            violations = sum(not item for item in comparisons)
+            passed = violations == 0
+
         evidence = {
             "sample_count": len(points),
-            "expected_grid_size": expected_grid_size,
-            "grid_is_exhaustive": len(points) == expected_grid_size,
+            "expected_grid_size": (5 if kind == "finite_output_screen" else 3) ** len(axes),
             "finite_sample_count": sum(math.isfinite(value) for value in values),
             "sample_min": min((value for value in values if math.isfinite(value)), default=None),
             "sample_max": max((value for value in values if math.isfinite(value)), default=None),
-            "evaluation_count": evaluation_count,
-            "violation_count": int(violation_count),
-            "violation_fraction": (
-                float(violation_count / evaluation_count) if evaluation_count else None
+            "evaluation_count": len(points),
+            "violation_count": int(violations),
+            "violation_fraction": float(violations / len(points)) if points else None,
+            "sampling": (
+                "deterministic_5_point_cartesian_domain_screen"
+                if kind == "finite_output_screen"
+                else "deterministic_cartesian_bounds_grid"
             ),
-            "sampling": "deterministic_cartesian_bounds_grid",
             "sampled_screening_status": "pass" if passed else "fail",
             "proof_scope": "finite_sample_screening_only_not_continuous_domain_proof",
             "continuous_domain_proof_established": False,
+            "grid_is_exhaustive": True,
         }
         if not passed:
-            return (
-                "fail", "declared constraint failed on deterministic domain samples", evidence
-            )
+            return "fail", f"declared {kind} constraint failed on deterministic domain samples", evidence
+        if kind in {"finite_output_screen", "positive_output_screen", "nonpositive_output_screen"}:
+            return "pass", f"candidate passed the sampled {kind} screen", evidence
         return (
             "unknown",
-            "deterministic domain samples passed, but finite-grid screening does not prove the constraint over the continuous declared domain",
+            "deterministic symmetry samples passed, but finite-grid screening does not prove the property over the continuous domain",
             evidence,
         )
 
