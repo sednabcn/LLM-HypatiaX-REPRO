@@ -84,18 +84,32 @@ import time
 
 M5_FAILURES: list = []  # audit M5: one entry per swallowed fit/predict/metric failure; exclude these runs from statistics
 
+def _json_safe(value):
+    """Recursively normalize NumPy values and non-finite floats to strict JSON."""
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, np.ndarray):
+        return _json_safe(value.tolist())
+    if isinstance(value, np.integer):
+        return int(value)
+    if isinstance(value, np.bool_):
+        return bool(value)
+    if isinstance(value, (np.floating, float)):
+        number = float(value)
+        return number if _math.isfinite(number) else None
+    return value
+
+
 def _json_default(obj):
-    """Serialize NumPy values and non-finite floats in benchmark JSON artifacts."""
+    """Serialize remaining supported NumPy scalar values."""
     if isinstance(obj, np.integer):
         return int(obj)
-    if isinstance(obj, (np.floating, float)):
-        if np.isnan(obj) or np.isinf(obj):
-            return None
-        return float(obj)
     if isinstance(obj, np.bool_):
         return bool(obj)
     if isinstance(obj, np.ndarray):
-        return obj.tolist()
+        return _json_safe(obj.tolist())
     raise TypeError(f"Not serialisable: {type(obj)}")
 
 
@@ -1853,7 +1867,7 @@ def _load_checkpoint() -> tuple[list, int]:
 
 def _save_checkpoint(results: list):
     _validate_result_records(results)
-    CHECKPOINT_FILE.write_text(json.dumps(results, indent=2, default=_json_default))
+    CHECKPOINT_FILE.write_text(json.dumps(_json_safe(results), indent=2, default=_json_default, allow_nan=False))
 
 
 def _save_final(
@@ -1878,7 +1892,7 @@ def _save_final(
         if isinstance(obj, np.bool_):              return bool(obj)
         if isinstance(obj, np.ndarray):            return obj.tolist()
         raise TypeError(f"Not serialisable: {type(obj)}")
-    FINAL_OUTPUT.write_text(json.dumps(results, indent=2, default=_json_default))
+    FINAL_OUTPUT.write_text(json.dumps(_json_safe(results), indent=2, default=_json_default, allow_nan=False))
     print(f"\n✅ Final results saved → {FINAL_OUTPUT}")
 
 
@@ -2506,7 +2520,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
         },
     }
     _disclosure_path = RESULTS_DIR / "split_protocol_disclosure.json"
-    _disclosure_path.write_text(json.dumps(_disclosure, indent=2, default=_json_default))
+    _disclosure_path.write_text(json.dumps(_json_safe(_disclosure), indent=2, default=_json_default, allow_nan=False))
     print(f"📋 PCA split disclosure written → {_disclosure_path}")
 
     # Remove checkpoint on clean completion (not on verify-fix5 partial run)

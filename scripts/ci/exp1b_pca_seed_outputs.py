@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate and summarize isolated exp1b_pca five-seed benchmark outputs."""
+"""Validate and summarize isolated all-74 exp1b_pca five-seed benchmark outputs."""
 from __future__ import annotations
 
 import argparse
@@ -39,6 +39,22 @@ def load_and_validate(path: Path, seed: int) -> list[dict]:
     return rows
 
 
+def metric_undefined_reason(case: dict, arm: str) -> str | None:
+    """Return the explicit reason an arm has no finite held-out R² score."""
+    result = ((case.get("results") or {}).get(arm) or {})
+    value = result.get("test_r2")
+    if value is None:
+        return str(result.get("test_r2_status") or result.get("failure_reason")
+                   or "missing_test_r2")
+    try:
+        score = float(value)
+    except (TypeError, ValueError):
+        return str(result.get("test_r2_status") or "non_numeric_test_r2")
+    if not math.isfinite(score):
+        return str(result.get("test_r2_status") or "nonfinite_test_r2")
+    return None
+
+
 def finite_r2(case: dict) -> float | None:
     result = (case.get("results") or {}).get("hybrid") or {}
     value = result.get("test_r2")
@@ -69,7 +85,9 @@ def finalize(args: argparse.Namespace) -> None:
     per_seed: dict[str, dict] = {}
     source_files: list[str] = []
     total_pass = total_valid = 0
-    fingerprint_hits: list[tuple[str, int, str]] = []
+    nn_undefined_metrics: list[dict] = []
+    hybrid_undefined_metrics: list[dict] = []
+    feature_mismatch_records: list[dict] = []
     scanned = 0
 
     for seed in SEEDS:
@@ -83,13 +101,23 @@ def finalize(args: argparse.Namespace) -> None:
                 seed_valid += 1
                 if score >= THRESHOLD:
                     seed_pass += 1
-            nn = ((case.get("results") or {}).get("neural_network") or {})
-            error = nn.get("error") or ""
-            nn_r2 = nn.get("test_r2")
-            if ("StandardScaler is expecting" in error or "features, but" in error
-                    or nn_r2 is None):
-                fingerprint_hits.append((str(case.get("equation_id")), seed,
-                                         error or "(missing NN test_r2)"))
+            equation_id = str(case.get("equation_id"))
+            nn_reason = metric_undefined_reason(case, "neural_network")
+            if nn_reason:
+                nn_undefined_metrics.append({
+                    "equation_id": equation_id, "seed": seed, "reason": nn_reason,
+                })
+                nn = ((case.get("results") or {}).get("neural_network") or {})
+                detail = str(nn.get("error") or nn.get("failure_reason") or "")
+                if "feature" in detail.lower() or "standardscaler" in detail.lower():
+                    feature_mismatch_records.append({
+                        "equation_id": equation_id, "seed": seed, "detail": detail,
+                    })
+            hybrid_reason = metric_undefined_reason(case, "hybrid")
+            if hybrid_reason:
+                hybrid_undefined_metrics.append({
+                    "equation_id": equation_id, "seed": seed, "reason": hybrid_reason,
+                })
             scanned += 1
         per_seed[str(seed)] = {
             "n_pass": seed_pass,
@@ -101,11 +129,11 @@ def finalize(args: argparse.Namespace) -> None:
 
     summary = {
         "fixc3_step": "exp1b_pca",
-        "description": "DeFi PCA portfolio seed sweep — PCA-directed 40/60 split",
+        "description": "DeFi all-74 equation seed sweep — PCA-directed 40/60 split",
         "split_protocol": "pca_40_60",
         "test_size": 0.6,
         "train_size": 0.4,
-        "task_filter": "portfolio",
+        "task_filter": "all_74_equations",
         "n_pass": total_pass,
         "n_total": total_valid,
         "solve_rate": total_pass / total_valid if total_valid else None,
@@ -116,6 +144,9 @@ def finalize(args: argparse.Namespace) -> None:
         "validated_case_records": EXPECTED_CASES * len(SEEDS),
         "per_seed": per_seed,
         "source_files": source_files,
+        "nn_undefined_metrics": nn_undefined_metrics,
+        "hybrid_undefined_metrics": hybrid_undefined_metrics,
+        "nn_feature_mismatch_records": feature_mismatch_records,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
     (directory / "exp1b_pca_summary.json").write_text(
@@ -144,9 +175,11 @@ def finalize(args: argparse.Namespace) -> None:
     print(f"PCA solve rate: {total_pass}/{total_valid}" if total_valid else
           "PCA solve rate: no finite hybrid test-R2 records")
     print(f"Summary: {directory / 'exp1b_pca_summary.json'}")
-    print(f"NN feature-mismatch fingerprint records: {len(fingerprint_hits)}")
-    for hit in fingerprint_hits[:20]:
-        print("  ", hit)
+    print(f"NN undefined test-R2 metrics: {len(nn_undefined_metrics)}")
+    print(f"Hybrid undefined test-R2 metrics: {len(hybrid_undefined_metrics)}")
+    print(f"Confirmed NN feature-mismatch records: {len(feature_mismatch_records)}")
+    for item in nn_undefined_metrics[:20]:
+        print("  NN undefined:", item)
 
 
 def main() -> None:
