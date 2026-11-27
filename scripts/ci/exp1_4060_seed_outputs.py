@@ -100,7 +100,7 @@ def finalize(args):
         "split_function": "_random_split_random_40_60",
         "split_level": "outer_loop",
         "train_size": 0.4, "test_size": 0.6,
-        "random_split_used": True, "random_state_policy": "one deterministic permutation per seed and equation",
+        "random_split_used": True, "random_state_policy": "one seeded permutation per benchmark seed; reused across cases with matching row counts",
         "force_fresh": True, "script": "hypatiax_defi_benchmark_v3c_4060.py",
         "seeds": list(SEEDS),
         "generated_by": "run_all.sh exp1_4060_seeds isolated five-seed runner",
