@@ -400,14 +400,31 @@ class CandidateValidator:
                     ) else []
                 )
             else:
-                matches = [
-                    sp.sstr(node) for node in variable_powers
-                    if node.exp.is_number
-                    and math.isclose(
-                        float(node.exp), expected,
+                matches = []
+                for node in sp.preorder_traversal(expanded_for_power_check):
+                    if not isinstance(node, sp.Pow) or not node.exp.is_number:
+                        continue
+                    if str(node.base) == str(variable):
+                        effective_exponent = float(node.exp)
+                    elif expected < 0.0 and str(variable) in {
+                        str(symbol) for symbol in node.base.free_symbols
+                    }:
+                        try:
+                            degree = sp.degree(
+                                node.base, sp.Symbol(str(variable), real=True)
+                            )
+                            if degree in (sp.S.NegativeInfinity, sp.S.ComplexInfinity):
+                                continue
+                            effective_exponent = float(node.exp) * float(degree)
+                        except Exception:
+                            continue
+                    else:
+                        continue
+                    if math.isclose(
+                        effective_exponent, expected,
                         rel_tol=0.0, abs_tol=exponent_tolerance,
-                    )
-                ]
+                    ):
+                        matches.append(sp.sstr(node))
             evidence = {
                 "variable": variable, "required_exponent": expected,
                 "exponent_tolerance": exponent_tolerance,
