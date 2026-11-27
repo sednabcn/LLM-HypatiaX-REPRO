@@ -1429,16 +1429,16 @@ from pathlib import Path
 
 path = Path(sys.argv[1])
 expected_seed = int(sys.argv[2])
-rows = json.loads(path.read_text(encoding="utf-8"))
+rows = json.loads(path.read_text(encoding='utf-8'))
 if not isinstance(rows, list) or len(rows) != 74:
-    raise SystemExit(f"FAIL: seed {expected_seed} expected 74 case records; got {len(rows) if isinstance(rows, list) else type(rows).__name__}")
-seeds = {row.get("seed") for row in rows if isinstance(row, dict)}
-equations = [row.get("equation_id") for row in rows if isinstance(row, dict)]
+    raise SystemExit(f'FAIL: seed {expected_seed} expected 74 case records; got {len(rows) if isinstance(rows, list) else type(rows).__name__}')
+seeds = {row.get('seed') for row in rows if isinstance(row, dict)}
+equations = [row.get('equation_id') for row in rows if isinstance(row, dict)]
 if seeds != {expected_seed}:
-    raise SystemExit(f"FAIL: seed {expected_seed} output contains seed values {sorted(str(x) for x in seeds)}")
+    raise SystemExit(f'FAIL: seed {expected_seed} output contains seed values {sorted(str(x) for x in seeds)}')
 if len(equations) != 74 or len(set(equations)) != 74 or any(not x for x in equations):
-    raise SystemExit(f"FAIL: seed {expected_seed} output does not contain 74 unique equation IDs")
-print(f"PASS: seed {expected_seed}: 74 unique equations, seed provenance verified")
+    raise SystemExit(f'FAIL: seed {expected_seed} output does not contain 74 unique equation IDs')
+print(f'PASS: seed {expected_seed}: 74 unique equations, seed provenance verified')
 PYEOF_VALIDATE_SEED
 
     cp "\${_SEED_SOURCE}" "\${_SEED_DEST}"
