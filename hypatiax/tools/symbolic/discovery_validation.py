@@ -67,7 +67,10 @@ class CandidateValidator:
             expression_names = tuple(
                 candidate_variable_names or problem.variable_names
             )
-            parsed = parse_sympy_expression(normalized, list(expression_names))
+            from hypatiax.core.constants import PHYSICAL_CONSTANTS
+            parsed = parse_sympy_expression(
+                normalized, list(expression_names), constants=PHYSICAL_CONSTANTS
+            )
             if parsed is None or parsed.has(sp.zoo, sp.nan, sp.oo, -sp.oo):
                 raise ValueError("expression contains a non-finite symbolic value")
             substitutions = dict(feature_substitutions or {})
@@ -80,7 +83,11 @@ class CandidateValidator:
                 replacements = {}
                 for feature_name, raw_expression in substitutions.items():
                     replacements[sp.Symbol(feature_name, real=True)] = (
-                        parse_sympy_expression(raw_expression, list(problem.variable_names))
+                        parse_sympy_expression(
+                            raw_expression,
+                            list(problem.variable_names),
+                            constants=PHYSICAL_CONSTANTS,
+                        )
                     )
                 parsed = parsed.xreplace(replacements)
                 if parsed.free_symbols - {
