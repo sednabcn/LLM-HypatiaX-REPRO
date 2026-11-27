@@ -2595,6 +2595,12 @@ class HybridDiscoverySystem:
                 "nrmse": nrmse,   # RC-4: NRMSE = RMSE / std(y_true); nan if undefined
                 "training_only_search_selection": self._training_only_search_selection,
                 "discovery_report": getattr(self, "_last_discovery_report", None),
+                # Preserve the exact candidate-level scientific gate outcome
+                # (including transform reconstruction) for benchmark auditing.
+                "candidate_validation": discovery.get("candidate_validation"),
+                "candidate_validation_status": discovery.get(
+                    "candidate_validation_status", "not_configured"
+                ),
                 "strategy": discovery.get("discovery_engine", "symbolic"),
                 # FIX: a later pure-PySR retry can win the attempt loop and carries no
                 # llm_mode, which used to hide that the LLM WAS called in attempt 1
