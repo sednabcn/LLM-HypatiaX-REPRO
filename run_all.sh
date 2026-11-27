@@ -1386,7 +1386,7 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
   _PCA_SCRATCH_ROOT="\${RUNNER_TEMP:-/tmp}/exp1b_pca_seed_workers"
   rm -rf "\${_PCA_SCRATCH_ROOT}"
   mkdir -p "\${_PCA_SCRATCH_ROOT}"
-  : > '\${RESULTS_DIR}/exp1b_pca_run.log'
+  : > '${RESULTS_DIR}/exp1b_pca_run.log'
 
   for _SEED in "\${_PCA_SEEDS[@]}"; do
     _SEED_SCRATCH="\${_PCA_SCRATCH_ROOT}/seed\${_SEED}"
@@ -1396,10 +1396,10 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
     PYSR_SEED="\${_SEED}" \
     EXPERIMENT_SEED="\${_SEED}" \
     NN_SEED="\${_SEED}" \
-      python3 '\${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_pca.py' \
+      python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_pca.py' \
         --output-dir "\${_SEED_SCRATCH}" \
         --force-fresh \
-        2>&1 | tee -a '\${RESULTS_DIR}/exp1b_pca_run.log'
+        2>&1 | tee -a '${RESULTS_DIR}/exp1b_pca_run.log'
 
     if [[ "\${_SEED}" == "42" ]]; then
       _SEED_SOURCE="\${_SEED_SCRATCH}/hypatiax_defi_benchmark_pca_results.json"
