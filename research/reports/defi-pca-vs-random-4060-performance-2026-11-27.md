@@ -334,3 +334,41 @@ The combined evidence supports a more careful, two-axis interpretation:
 ### Scope note for this addendum
 
 This addendum is a documentation synthesis of the user-supplied 17:00 analysis and the earlier report/audit context. It does not claim that the flagged source defects were fixed or that new benchmark data were generated. No benchmark, training job, LLM request, workflow dispatch, or merge was initiated for this update.
+
+
+---
+
+## 12. Symbolic evaluator hardening and historical-audit coverage
+
+A source-level hardening pass was applied to the symbolic evaluator and its offline audit report.
+
+### 12.1 Evaluator correction
+
+The allowlisted `log10` function previously mapped to SymPy's natural logarithm, `log(x)`. This is mathematically incorrect: base-10 logarithm must be represented as `log(x, 10)`. The evaluator now uses an explicit base-10 helper. The input schema also rejects duplicate variable names rather than allowing an ambiguous variable-to-parameter mapping.
+
+Regression tests were added for:
+- `np.log10(x)` matching the base-10 ground-truth expression `log(x, 10)`;
+- duplicate variable names being classified as `variable_schema_missing`.
+
+### 12.2 Historical coverage reporting
+
+The offline audit output schema is now version 4 and reports, alongside symbolic status counts:
+- records with persisted ground-truth expressions;
+- records with variable schemas;
+- records with a saved LLM formula;
+- records retaining audit arrays;
+- identified and unique equation/seed pairs, including duplicate-pair counts;
+- symbolic assessable versus not-assessable counts;
+- record counts by split-protocol name.
+
+This is coverage accounting, not a symbolic success-rate shortcut. Only `exact_symbolic_equivalent` and `not_symbolically_equivalent` are assessable outcomes. Missing answer keys, absent formulas, invalid schemas, and parser failures remain separate statuses and are not silently counted as symbolic failures.
+
+### 12.3 Historical-data limitation
+
+The current repository search surfaced aggregate summaries, manifests, and run logs for the reported experiments, but did not surface the per-seed raw case JSON files needed as input to `scripts/analysis/audit_4060_symbolic_routes.py`. The supplied 17:00 analysis text is not a substitute for those record-level JSON artifacts. Consequently, this change does **not** claim a new historical symbolic audit or a reconciled symbolic denominator.
+
+To complete that audit, provide or restore the exact run-pinned raw JSON artifacts for random run #354 and PCA run #345 (including all five seed files per workflow), with their source commit/run provenance. Then run the audit offline and compare the resulting record/answer-key coverage against the aggregate manifests. If historical ground truth is absent from a record and cannot be linked to an authoritative, versioned protocol answer key, preserve `ground_truth_missing` / `not_assessable`; do not reconstruct it by guesswork.
+
+### 12.4 Verification and scope
+
+Regression tests were added or extended for the evaluator and coverage summary. They have **not been executed in this work session**, so this is a source change awaiting test verification, not a test-passing claim. No benchmark, model training, LLM request, workflow dispatch, or merge was performed.
