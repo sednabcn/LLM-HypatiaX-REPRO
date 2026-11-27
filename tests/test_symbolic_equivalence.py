@@ -55,3 +55,16 @@ def test_missing_llm_and_answer_key_are_separate_states():
     assert adjudicate_symbolic_equivalence(
         "def formula(x):\n    return x", None, ["x"]
     )["status"] == "ground_truth_missing"
+
+
+def test_common_piecewise_and_distribution_helpers_are_supported():
+    clipped = adjudicate_symbolic_equivalence(
+        "def formula(x):\n    return np.clip(x, 0, 1)",
+        "clip(x, 0, 1)", ["x"],
+    )
+    assert clipped["status"] == "exact_symbolic_equivalent"
+    cdf = adjudicate_symbolic_equivalence(
+        "def formula(x):\n    return norm_cdf(x)",
+        "(1 + erf(x / sqrt(2))) / 2", ["x"],
+    )
+    assert cdf["status"] == "exact_symbolic_equivalent"
