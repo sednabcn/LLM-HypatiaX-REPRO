@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate and summarize isolated exp1b_pca five-seed benchmark outputs."""
+"""Validate and summarize isolated all-74 exp1b_pca five-seed benchmark outputs."""
 from __future__ import annotations
 
 import argparse
@@ -129,7 +129,7 @@ def finalize(args: argparse.Namespace) -> None:
 
     summary = {
         "fixc3_step": "exp1b_pca",
-        "description": "DeFi PCA portfolio seed sweep — PCA-directed 40/60 split",
+        "description": "DeFi all-74 equation seed sweep — PCA-directed 40/60 split",
         "split_protocol": "pca_40_60",
         "test_size": 0.6,
         "train_size": 0.4,
