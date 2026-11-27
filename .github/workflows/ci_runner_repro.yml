@@ -148,7 +148,7 @@ on:
         default: "false"
 
       force_rerun:
-        description: "exp2_feynman_pca: clear stale exp2_pca_4060/*.json; exp1b_pca: bypass the existing-results guard and rerun the full PCA portfolio seed sweep; exp1_4060_seeds: rerun the random 40/60 five-seed DeFi benchmark (run_all.sh uses --force-fresh). Use after pipeline fixes to force clean regeneration (true/false)."
+        description: "exp2_feynman_pca: clear stale exp2_pca_4060/*.json; exp1b_pca: bypass the existing-results guard and rerun the full PCA portfolio seed sweep; exp1_4060_seeds: bypass the existing-results guard and regenerate the random 40/60 five-seed DeFi benchmark in isolated fresh scratch directories. Use after pipeline fixes to force clean regeneration (true/false)."
         required: false
         default: "false"
 
@@ -5077,7 +5077,8 @@ jobs:
 
   pca_run_exp1b:
     name: "C5c-2 · Run exp1b_pca (DeFi portfolio seed sweep, PCA 40/60)"
-    # Selected directly by its dispatch input; keep it independent of the PCA jobs.
+    # This runner is selected directly by its dispatch input; the PCA gate is
+    # informational only and must not be a dependency for scheduling this job.
     needs: [credential_preflight]
     if: ${{ always() && github.event.inputs.experiment == 'exp1b_pca' && needs.credential_preflight.result == 'success' }}
     runs-on: ubuntu-latest
@@ -5106,7 +5107,7 @@ jobs:
           fi
           if [[ "$FORCE_RERUN" == "true" ]]; then
             echo "already_done=false" >> "$GITHUB_OUTPUT"
-            echo "[run] force_rerun=true — bypassing existing-results guard; run_all.sh will use --force-fresh."
+            echo "[run] force_rerun=true — bypassing existing-results guard; the runner regenerates all five seeds in fresh isolated scratch directories."
             exit 0
           fi
           PCA15_DIR="${RESULTS_DIR}/comparison_results/noise-noiseless/15_pca"
@@ -5262,8 +5263,7 @@ jobs:
 
   random_run_exp1_4060:
     name: "C5c-3 · Run exp1_4060_seeds (DeFi all-74 random 40/60 seed sweep)"
-    # This runner is selected directly by its dispatch input; the PCA gate is
-    # informational only and must not be a dependency for scheduling this job.
+    # Selected directly by its dispatch input; keep it independent of the PCA jobs.
     needs: [credential_preflight]
     if: ${{ always() && github.event.inputs.experiment == 'exp1_4060_seeds' && needs.credential_preflight.result == 'success' }}
     runs-on: ubuntu-latest
