@@ -211,8 +211,25 @@ check_protocol_override POPULATIONS "$_CFG_POPULATIONS"
 check_protocol_override PYSR_POPULATIONS "$_CFG_POPULATIONS"
 check_protocol_override PYSR_POPULATION "$_CFG_POPULATION_SIZE"
 check_protocol_override PYSR_POPULATION_SIZE "$_CFG_POPULATION_SIZE"
-check_protocol_override PYSR_SEED "$_CFG_PYSR_SEED"
-check_protocol_override HYPATIAX_ENGINE_SEED "$_CFG_PYSR_SEED"
+# exp1_ablation is explicitly multi-seed: the YAML seed is its default, not
+# a restriction. The workflow marks these runs with EXP1_ABLATION_SEED_IN_DIR
+# and supplies the selected seed through PYSR_SEED. Keep all other experiments
+# pinned to the configured protocol seed.
+_ABLATION_SEED_OVERRIDE=false
+if [[ "${EXP1_ABLATION_SEED_IN_DIR:-0}" == "1" || -n "${ABLATION_SUBDIR:-}" ]]; then
+  _ABLATION_SEED_OVERRIDE=true
+  if [[ ! "${PYSR_SEED:-}" =~ ^[0-9]+$ ]]; then
+    echo "ABORT: exp1_ablation requires a non-negative numeric PYSR_SEED (got '${PYSR_SEED:-}')." >&2
+    exit 1
+  fi
+  if [[ -n "${HYPATIAX_ENGINE_SEED:-}" && "${HYPATIAX_ENGINE_SEED}" != "${PYSR_SEED}" ]]; then
+    echo "ABORT: HYPATIAX_ENGINE_SEED=${HYPATIAX_ENGINE_SEED} must match exp1_ablation PYSR_SEED=${PYSR_SEED}." >&2
+    exit 1
+  fi
+else
+  check_protocol_override PYSR_SEED "$_CFG_PYSR_SEED"
+  check_protocol_override HYPATIAX_ENGINE_SEED "$_CFG_PYSR_SEED"
+fi
 check_protocol_override METHOD_TIMEOUT "$_CFG_METHOD_TIMEOUT"
 check_protocol_override PYSR_TIMEOUT "$_CFG_PYSR_TIMEOUT"
 check_protocol_override PYSR_FIT_WALL_TIMEOUT "$_CFG_FIT_WALL_TIMEOUT"
@@ -238,8 +255,14 @@ export POPULATIONS="$_CFG_POPULATIONS"
 export PYSR_POPULATIONS="$_CFG_POPULATIONS"
 export PYSR_POPULATION="$_CFG_POPULATION_SIZE"
 export PYSR_POPULATION_SIZE="$_CFG_POPULATION_SIZE"
-export PYSR_SEED="$_CFG_PYSR_SEED"
-export HYPATIAX_ENGINE_SEED="$_CFG_PYSR_SEED"
+if [[ "$_ABLATION_SEED_OVERRIDE" == true ]]; then
+  # Preserve the requested replication seed instead of resetting it to YAML's
+  # default (42); both engines must receive the same seed.
+  export HYPATIAX_ENGINE_SEED="$PYSR_SEED"
+else
+  export PYSR_SEED="$_CFG_PYSR_SEED"
+  export HYPATIAX_ENGINE_SEED="$_CFG_PYSR_SEED"
+fi
 export METHOD_TIMEOUT="$_CFG_METHOD_TIMEOUT"
 export PYSR_TIMEOUT="$_CFG_PYSR_TIMEOUT"
 export PYSR_FIT_WALL_TIMEOUT="$_CFG_FIT_WALL_TIMEOUT"
