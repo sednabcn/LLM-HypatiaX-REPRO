@@ -314,7 +314,7 @@ class CandidateValidator:
                 "missing_variables": missing,
             }
             return (
-                ("fail", f"candidate omits required input variable(s): {missing}", evidence)
+                ("fail", f"candidate is missing required input variable(s): {missing}", evidence)
                 if missing else
                 ("pass", "candidate includes every required input variable", evidence)
             )
@@ -485,7 +485,7 @@ class CandidateValidator:
 
         if kind not in {
             "positive_output", "nonnegative_output", "finite_output",
-            "finite_output_screen", "positive_output_screen", "even_in", "odd_in", "reciprocal_even_in", "monotone_concave_in",
+            "finite_output_screen", "positive_output_screen", "nonpositive_output_screen", "even_in", "odd_in", "reciprocal_even_in", "monotone_concave_in",
         }:
             return "unknown", f"unsupported declared constraint kind: {kind}", {}
 
@@ -697,6 +697,7 @@ class CandidateValidator:
             "sampled_screening_status": "pass" if passed else "fail",
             "proof_scope": "finite_sample_screening_only_not_continuous_domain_proof",
             "continuous_domain_proof_established": False,
+            "grid_is_exhaustive": False,
         }
         if not passed:
             return "fail", f"declared {kind} constraint failed on deterministic domain samples", evidence
