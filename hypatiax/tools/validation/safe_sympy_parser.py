@@ -1,6 +1,7 @@
 """Restricted AST-to-SymPy parser for untrusted mathematical expressions."""
 
 import ast
+import math
 
 
 ALLOWED_UNARY_FUNCTIONS = frozenset({
@@ -53,7 +54,7 @@ def _insert_implicit_multiplication(source):
     return tokenize.untokenize(output)
 
 
-def parse_sympy_expression(source, variable_names=None):
+def parse_sympy_expression(source, variable_names=None, constants=None):
     """Parse arithmetic and approved math calls without sympify or eval."""
     import sympy as sp
 
@@ -86,7 +87,21 @@ def parse_sympy_expression(source, variable_names=None):
     }
     if frozenset(functions) != ALLOWED_UNARY_FUNCTIONS:
         raise RuntimeError("restricted parser unary-function allowlist is inconsistent")
-    constants = {"pi": sp.pi, "E": sp.E}
+    constant_values = {"pi": sp.pi, "E": sp.E}
+    for constant_name, constant_value in dict(constants or {}).items():
+        if (
+            not isinstance(constant_name, str)
+            or not constant_name.isidentifier()
+            or constant_name.startswith("_")
+            or constant_name in functions
+            or isinstance(constant_value, bool)
+            or not isinstance(constant_value, (int, float))
+            or not math.isfinite(float(constant_value))
+        ):
+            raise ValueError(f"Invalid declared numeric constant: {constant_name!r}")
+        constant_values[constant_name] = sp.Integer(constant_value) if isinstance(
+            constant_value, int
+        ) else sp.Float(constant_value)
     declared = set(variable_names or [])
 
     for name in declared:
@@ -111,8 +126,8 @@ def parse_sympy_expression(source, variable_names=None):
                 if name not in symbols:
                     symbols[name] = sp.Symbol(name, real=True)
                 return symbols[name]
-            if name in constants:
-                return constants[name]
+            if name in constant_values:
+                return constant_values[name]
             if variable_names is not None:
                 raise ValueError(f"Undeclared variable: {name}")
             if name not in symbols:
