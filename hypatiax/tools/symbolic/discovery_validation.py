@@ -567,6 +567,7 @@ class CandidateValidator:
                 "violation_count": int(violations),
                 "sampling": "deterministic_9_point_training_domain_screen",
                 "proof_scope": "finite_sample_shape_screening_only",
+                "grid_is_exhaustive": False,
             }
             return (
                 ("pass", "candidate passed sampled monotone-concave shape screen", evidence)
@@ -610,6 +611,7 @@ class CandidateValidator:
                 "violation_fraction": violations / len(comparisons),
                 "sampling": "deterministic_reciprocal_pairs_inside_training_domain",
                 "proof_scope": "finite_sample_screening_only",
+                "grid_is_exhaustive": False,
             }
             return (
                 ("fail", "candidate violates declared reciprocal symmetry on training-domain samples", evidence)
