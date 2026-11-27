@@ -53,7 +53,7 @@ def audit_record(record: dict[str, Any]) -> dict[str, Any]:
             "nn_abstained": hybrid.get("nn_abstained"),
             "nn_edge_r2": hybrid.get("nn_edge_r2"),
             "ridge_edge_r2": hybrid.get("ridge_edge_r2"),
-            "signed_ridge_edge_r2": hybrid.get("signed_ridge_edge_r2"),
+            "signed_ridge_edge_r2": hybrid.get("signed_ridge_edge_r2"),\n            "signed_ridge_eligible": hybrid.get("signed_ridge_eligible"),\n            "physical_bounds_applied": hybrid.get("physical_bounds_applied"),
             "nn_prediction_validation": hybrid.get("nn_prediction_validation"),
             "final_predictor_source": hybrid.get("selected_predictor_source"),
         },
@@ -67,7 +67,7 @@ def audit_record(record: dict[str, Any]) -> dict[str, Any]:
             "hybrid_test_r2": hybrid.get("test_r2"),
         },
         "audit_scope": {
-            "formula_compared": (
+            "route_field_note": (\n                "The saved case record includes route decision/reason, trust gate, NN probe, OOD diagnostic, blend weights, and selected NN model. It does not serialize a separate LLM degradation estimate; the saved degradation_probe is NN-derived."\n            ),\n            "formula_compared": (
                 "saved results.hybrid.formula (serialized from hybrid llm_code), "
                 "not final selected predictor"
             ),
