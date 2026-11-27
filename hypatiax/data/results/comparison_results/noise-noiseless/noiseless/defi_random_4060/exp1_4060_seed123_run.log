@@ -339,7 +339,7 @@ Output    : /home/runner/work/_temp/exp1_4060_seed123/hypatiax_defi_benchmark_v3
 [55/74] Black-Scholes Put Price  (HARD)
   Split → train=80, test=120
   neural_network : train=0.9970, test=0.9946
-  hybrid         : train=1.0000, test=0.9987 [ensemble]
+  hybrid         : train=0.9970, test=0.9946 [nn]
   💾 Checkpoint saved (55/74)
 
 [56/74] Component ES  (HARD)
@@ -466,7 +466,7 @@ Total cases run : 74
 NOTE: All percentages use FIXED denominator (standard cases only).
       NaN / failure counts as 0 toward the denominator.\n
   Neural Network: median=0.9947, mean(clip-10)=0.7873, >0.9: 75.3%, >0.99: 60.3%  (catastrophic R²<-10.0: 0)
-  Hybrid: median=0.9969, mean(clip-10)=0.8055, >0.9: 79.5%, >0.99: 68.5%  (catastrophic R²<-10.0: 0)
+  Hybrid: median=0.9966, mean(clip-10)=0.8055, >0.9: 79.5%, >0.99: 68.5%  (catastrophic R²<-10.0: 0)
 
 ── Intractable cases (1) ─────────────────────────────────────
   Impermanent loss breakeven fee rate         Neural Network=-0.0011 | Hybrid=-0.0011
@@ -480,11 +480,11 @@ NOTE: All percentages use FIXED denominator (standard cases only).
   hard   | hybrid        : median=0.9908, >0.99: 52.4%  (n=21)
 
 ── Timing summary (per-case wall time) ──────────────────────────────────
-  Neural Network: total=26.866s, mean=0.363s, median=0.469s (n=74)
-  Hybrid        : total=141.438s, mean=1.911s, median=1.562s (n=74)
-  Hybrid end-to-end components: NN=26.866s, LLM/routing/evaluation=114.572s
-  Hybrid provider request: total=104.712s, mean=1.415s, median=1.086s (n=74)
-  Hybrid LLM token usage: input=12193 (n=74), output=4582 (n=74)
+  Neural Network: total=18.406s, mean=0.249s, median=0.326s (n=74)
+  Hybrid        : total=132.858s, mean=1.795s, median=1.357s (n=74)
+  Hybrid end-to-end components: NN=18.406s, LLM/routing/evaluation=114.452s
+  Hybrid provider request: total=107.617s, mean=1.454s, median=1.047s (n=74)
+  Hybrid LLM token usage: input=12193 (n=74), output=4887 (n=74)
 
 ================================================================================
 
