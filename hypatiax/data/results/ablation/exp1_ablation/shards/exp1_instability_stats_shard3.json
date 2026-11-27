@@ -52,15 +52,15 @@
     {
       "equation": "Gravitational Force",
       "domain": "Physics",
-      "extrap_r2_near": -3.438534038298995,
-      "extrap_r2_far": -7.423416600367711,
-      "instability_index": 3.984882562068716
+      "extrap_r2_near": null,
+      "extrap_r2_far": null,
+      "instability_index": null
     },
     {
       "equation": "Ideal Gas Law",
       "domain": "Physics",
-      "extrap_r2_near": 0.9999999046806634,
-      "extrap_r2_far": 0.9999999046806634,
+      "extrap_r2_near": 0.9999849908834161,
+      "extrap_r2_far": 0.9999849908834161,
       "instability_index": 0.0
     },
     {
