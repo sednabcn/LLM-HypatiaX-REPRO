@@ -167,7 +167,7 @@ All five HypatiaX and noLLM far-OOD outcomes are catastrophic despite test R\tex
 \subsection{Impermanent Loss: stable interpolation, unstable extrapolation}
 All five HypatiaX and noLLM seeds have catastrophic far-OOD status while test R\textsuperscript{2} remains around 0.9954--0.9975. Selected expressions include inverse and linear terms in the price ratio $r$, for example:
 \begin{quote}\small
-\texttt{((-11.67686 / r) + (r * -11.67686)) + 23.330292}
+\texttt{((r * -11.67686) + (-11.684317 / r)) - -23.330292}
 \end{quote}
 Such a fit can approximate a narrow interval without preserving the target's behaviour outside that interval. PySR-only also has very poor finite far-OOD scores (roughly $-58$ to $-68$), so this family is difficult for all methods; hybrid raw scores are more negative and are flagged catastrophic.
 
