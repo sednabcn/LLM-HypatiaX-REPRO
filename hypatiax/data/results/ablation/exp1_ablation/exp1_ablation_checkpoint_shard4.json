@@ -11,36 +11,154 @@
       "success": true,
       "timed_out": false,
       "excluded_from_timing": false,
-      "train_r2": 0.99746916003875,
-      "train_rmse": 0.07999603156316608,
-      "test_r2": 0.9975887205383803,
-      "test_rmse": 0.08342380877542642,
-      "test_mae": 0.06577164229503117,
+      "train_r2": 0.9974691621584093,
+      "train_rmse": 0.07999599806354396,
+      "test_r2": 0.997587820717226,
+      "test_rmse": 0.08343937302404263,
+      "test_mae": 0.06579190189451897,
       "test_scope": "untouched_outer_test",
-      "extrap_r2_near": 0.9085933765707653,
-      "extrap_r2_medium": -0.3179294148451466,
-      "extrap_r2_far": -62.8785251878626,
+      "extrap_r2_near": 0.9085442253986743,
+      "extrap_r2_medium": -0.31809121927453665,
+      "extrap_r2_far": -62.88512935839672,
       "extrap_r2_raw": {
-        "near": 0.9085933765707653,
-        "medium": -0.3179294148451466,
-        "far": -62.8785251878626
+        "near": 0.9085442253986743,
+        "medium": -0.31809121927453665,
+        "far": -62.88512935839672
       },
       "extrap_r2_status": {
         "near": "ok",
         "medium": "ok",
         "far": "ok"
       },
-      "extrap_rmse_near": 0.6853436311085055,
-      "extrap_rmse_medium": 12.129417739727621,
-      "extrap_rmse_far": 22.334391148441313,
-      "extrap_mae_near": 0.5967641390386565,
-      "extrap_mae_medium": 10.071026298190764,
-      "extrap_mae_far": 22.010572205223426,
-      "sr_time_s": 1112.887170791626,
+      "extrap_rmse_near": 0.6855278678430728,
+      "extrap_rmse_medium": 12.130162291469189,
+      "extrap_rmse_far": 22.335545654711662,
+      "extrap_mae_near": 0.5969497412046292,
+      "extrap_mae_medium": 10.07172051426192,
+      "extrap_mae_far": 22.011723496506942,
+      "sr_time_s": 1111.9767496585846,
       "llm_time_s": 0.0,
-      "total_time_s": 1112.9204549789429,
-      "best_expression": "-12.11108*log(r)**2",
+      "total_time_s": 1112.0070383548737,
+      "best_expression": "-12.111296*log(r)**2",
       "formula_pathology_reasons": [],
+      "scientific_validation": {
+        "candidate_id": "21f20a080a3b18157c87",
+        "expression": "-12.111296*log(r)**2",
+        "normalized_expression": "-12.111296*log(r)**2",
+        "source": "unknown",
+        "search_strategy": "audit_only",
+        "seed": 105,
+        "constraint_outcomes": [
+          {
+            "constraint_id": "builtin.symbolic_validity",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "Expression parsed with the restricted mathematical grammar",
+            "evidence": {
+              "free_variables": [
+                "r"
+              ]
+            }
+          },
+          {
+            "constraint_id": "builtin.dimensional_consistency",
+            "status": "not_applicable",
+            "severity": "hard",
+            "reason": "No units were declared; dimensional consistency was not inferred",
+            "evidence": {}
+          },
+          {
+            "constraint_id": "core15.required_variables",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "candidate includes every required input variable",
+            "evidence": {
+              "required_variables": [
+                "r"
+              ],
+              "present_variables": [
+                "r"
+              ],
+              "missing_variables": []
+            }
+          },
+          {
+            "constraint_id": "core15.finite_training_domain",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "candidate passed the sampled finite_output_screen screen",
+            "evidence": {
+              "sample_count": 5,
+              "expected_grid_size": 5,
+              "finite_sample_count": 5,
+              "sample_min": -5.8189086656554565,
+              "sample_max": -0.21595207190484972,
+              "evaluation_count": 5,
+              "violation_count": 0,
+              "violation_fraction": 0.0,
+              "sampling": "deterministic_5_point_cartesian_domain_screen",
+              "sampled_screening_status": "pass",
+              "proof_scope": "finite_sample_screening_only_not_continuous_domain_proof",
+              "continuous_domain_proof_established": false,
+              "grid_is_exhaustive": true
+            }
+          },
+          {
+            "constraint_id": "core15.impermanent_loss_nonpositive",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "candidate passed the sampled nonpositive_output_screen screen",
+            "evidence": {
+              "sample_count": 3,
+              "expected_grid_size": 3,
+              "finite_sample_count": 3,
+              "sample_min": -5.8189086656554565,
+              "sample_max": -0.6030583005973144,
+              "evaluation_count": 3,
+              "violation_count": 0,
+              "violation_fraction": 0.0,
+              "sampling": "deterministic_cartesian_bounds_grid",
+              "sampled_screening_status": "pass",
+              "proof_scope": "finite_sample_screening_only_not_continuous_domain_proof",
+              "continuous_domain_proof_established": false,
+              "grid_is_exhaustive": true
+            }
+          },
+          {
+            "constraint_id": "core15.impermanent_loss_square_root",
+            "status": "fail",
+            "severity": "hard",
+            "reason": "candidate does not contain r**0.5",
+            "evidence": {
+              "variable": "r",
+              "required_exponent": 0.5,
+              "exponent_tolerance": 1e-12,
+              "matching_powers": []
+            }
+          },
+          {
+            "constraint_id": "core15.impermanent_loss_reciprocal_symmetry",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "candidate satisfies reciprocal symmetry on sampled training-domain pairs",
+            "evidence": {
+              "variable": "r",
+              "sample_count": 9,
+              "violation_count": 0,
+              "violation_fraction": 0.0,
+              "sampling": "deterministic_reciprocal_pairs_inside_training_domain",
+              "proof_scope": "finite_sample_screening_only",
+              "grid_is_exhaustive": false
+            }
+          }
+        ],
+        "metrics": {},
+        "rejection_reasons": [
+          "core15.impermanent_loss_square_root: candidate does not contain r**0.5"
+        ],
+        "eligible": false
+      },
+      "scientific_status": "failed",
       "complexity": 7,
       "llm_expression": null,
       "llm_confidence": null,
@@ -52,53 +170,52 @@
     "hypatia": {
       "condition": "hypatia",
       "completed": true,
-      "fit_status": "success",
-      "evaluation_status": "success",
-      "evaluation_error": null,
-      "success": true,
+      "fit_status": "failed",
+      "evaluation_status": "failed",
+      "evaluation_error": "predictor build failed: TypeError: unsupported operand type(s) for /: 'function' and 'Symbol'",
+      "success": false,
       "timed_out": false,
       "excluded_from_timing": false,
-      "train_r2": 0.9971173487375885,
-      "train_rmse": 0.0853752825897293,
-      "test_r2": 0.9973668402739759,
-      "test_rmse": 0.08717758670424305,
-      "test_mae": 0.06826855418497615,
+      "train_r2": null,
+      "train_rmse": null,
+      "test_r2": null,
+      "test_rmse": null,
+      "test_mae": null,
       "test_scope": "untouched_outer_test",
-      "extrap_r2_near": 0.7160086184848446,
-      "extrap_r2_medium": -5.899098712321477,
+      "extrap_r2_near": null,
+      "extrap_r2_medium": null,
       "extrap_r2_far": null,
-      "extrap_r2_far_nonfinite": "-inf",
       "extrap_r2_raw": {
-        "near": 0.7160086184848446,
-        "medium": -5.899098712321477,
-        "far": -377.04909836578526
+        "near": null,
+        "medium": null,
+        "far": null
       },
       "extrap_r2_status": {
-        "near": "ok",
-        "medium": "ok",
-        "far": "catastrophic"
+        "near": null,
+        "medium": null,
+        "far": null
       },
-      "extrap_rmse_near": 1.2080144472573582,
-      "extrap_rmse_medium": 27.751729734281575,
-      "extrap_rmse_far": 54.333887694415864,
-      "extrap_mae_near": 1.0382474345232486,
-      "extrap_mae_medium": 22.520631800663367,
-      "extrap_mae_far": 53.24390237682045,
-      "sr_time_s": 519.1300346851349,
-      "llm_time_s": 5.461536884307861,
-      "total_time_s": 519.1300346851349,
-      "best_expression": "((r * -11.67686) + (-11.684317 / r)) - -23.330292",
-      "complexity": 49,
-      "llm_expression": "2 * (r**0.5 - 1) / (r + 1) - 1",
+      "extrap_rmse_near": null,
+      "extrap_rmse_medium": null,
+      "extrap_rmse_far": null,
+      "extrap_mae_near": null,
+      "extrap_mae_medium": null,
+      "extrap_mae_far": null,
+      "sr_time_s": 1073.4812648296356,
+      "llm_time_s": 5.570464849472046,
+      "total_time_s": 1073.4812648296356,
+      "best_expression": "N/A",
+      "complexity": null,
+      "llm_expression": "-0.5 * (r - 1)**2 / r",
       "llm_confidence": 0.4,
       "engine_version": "5.4",
       "scale_log": false,
-      "rmse_original_units": 0.0853752825897293,
+      "rmse_original_units": null,
       "llm_mode_used": "hybrid_pysr_better",
       "structural_risk_flag": false,
       "structural_risk_tokens": [],
-      "complexity_routing_enabled": true,
-      "routing_reason": "ordinary_llm_acceptance_policy",
+      "complexity_routing_enabled": false,
+      "routing_reason": "discovery_failed",
       "llm_attempted": true,
       "llm_called": true,
       "llm_proposal_generated": true,
@@ -106,13 +223,13 @@
       "llm_attempt_info": [
         {
           "llm_mode": "hybrid_pysr_better",
-          "llm_time": 5.461536884307861,
-          "llm_best_expression": "2 * (r**0.5 - 1) / (r + 1) - 1",
-          "llm_best_r2": -0.3297677327565376,
+          "llm_time": 5.570464849472046,
+          "llm_best_expression": "-0.5 * (r - 1)**2 / r",
+          "llm_best_r2": -1.0287060095087948,
           "llm_confidence": 0.4,
           "llm_hypotheses_raw": [
-            "2 * (r**0.5 - 1) / (r + 1) - 1",
-            "-1.5 * (1 - r**0.5)**2 / r",
+            "-0.5 * (r - 1)**2 / r",
+            "2 * (r**0.5) - r - 1",
             "-1.0 * (1 - r) / r"
           ],
           "llm_error": null,
@@ -122,6 +239,36 @@
           "llm_response_replayed": false,
           "llm_temperature_requested": 0.25,
           "llm_temperature_sent": true
+        },
+        {
+          "llm_mode": "hybrid_llm_failed",
+          "llm_time": 0.0013995170593261719,
+          "llm_best_expression": null,
+          "llm_best_r2": null,
+          "llm_confidence": null,
+          "llm_hypotheses_raw": null,
+          "llm_error": "discovery_budget_exhausted:llm_call_or_token_or_wall_time",
+          "llm_attempted": false,
+          "llm_called": false,
+          "llm_proposal_generated": false,
+          "llm_response_replayed": false,
+          "llm_temperature_requested": null,
+          "llm_temperature_sent": null
+        },
+        {
+          "llm_mode": "hybrid_llm_failed",
+          "llm_time": 0.0012621879577636719,
+          "llm_best_expression": null,
+          "llm_best_r2": null,
+          "llm_confidence": null,
+          "llm_hypotheses_raw": null,
+          "llm_error": "discovery_budget_exhausted:llm_call_or_token_or_wall_time",
+          "llm_attempted": false,
+          "llm_called": false,
+          "llm_proposal_generated": false,
+          "llm_response_replayed": false,
+          "llm_temperature_requested": null,
+          "llm_temperature_sent": null
         }
       ],
       "bypass_kind": "live",
@@ -133,61 +280,83 @@
       "llm_temperature_sent": true,
       "wall_clock_budget_s": 3600,
       "pysr_attempts_allowed": 3,
-      "validation_score": 84.0,
-      "ood_predictor_note": null,
+      "validation_score": null,
+      "ood_predictor_note": "predictor build failed: TypeError: unsupported operand type(s) for /: 'function' and 'Symbol'",
       "sanitized_vars": {},
-      "formula_pathology_reasons": []
+      "formula_pathology_reasons": [],
+      "scientific_validation": {
+        "candidate_id": "1641c56cf867b02abb1a",
+        "expression": "N/A",
+        "normalized_expression": "N/A",
+        "source": "unknown",
+        "search_strategy": "audit_only",
+        "seed": 105,
+        "constraint_outcomes": [
+          {
+            "constraint_id": "builtin.symbolic_validity",
+            "status": "fail",
+            "severity": "hard",
+            "reason": "symbolic validation failed: Could not parse mathematical expression: Undeclared variable: N",
+            "evidence": {}
+          }
+        ],
+        "metrics": {},
+        "rejection_reasons": [
+          "symbolic validation failed: Could not parse mathematical expression: Undeclared variable: N"
+        ],
+        "eligible": false
+      },
+      "scientific_status": "failed"
     },
     "hypatia_nollm": {
       "condition": "hypatia_nollm",
       "completed": true,
-      "fit_status": "success",
-      "evaluation_status": "success",
-      "evaluation_error": null,
-      "success": true,
+      "fit_status": "failed",
+      "evaluation_status": "failed",
+      "evaluation_error": "predictor build failed: TypeError: unsupported operand type(s) for /: 'function' and 'Symbol'",
+      "success": false,
       "timed_out": false,
       "excluded_from_timing": false,
-      "train_r2": 0.9971173487375885,
-      "train_rmse": 0.0853752825897293,
-      "test_r2": 0.9973668402739759,
-      "test_rmse": 0.08717758670424305,
-      "test_mae": 0.06826855418497615,
+      "train_r2": null,
+      "train_rmse": null,
+      "test_r2": null,
+      "test_rmse": null,
+      "test_mae": null,
       "test_scope": "untouched_outer_test",
-      "extrap_r2_near": 0.7160086184848446,
-      "extrap_r2_medium": -5.899098712321477,
+      "extrap_r2_near": null,
+      "extrap_r2_medium": null,
       "extrap_r2_far": null,
-      "extrap_r2_far_nonfinite": "-inf",
       "extrap_r2_raw": {
-        "near": 0.7160086184848446,
-        "medium": -5.899098712321477,
-        "far": -377.04909836578526
+        "near": null,
+        "medium": null,
+        "far": null
       },
       "extrap_r2_status": {
-        "near": "ok",
-        "medium": "ok",
-        "far": "catastrophic"
+        "near": null,
+        "medium": null,
+        "far": null
       },
-      "extrap_rmse_near": 1.2080144472573582,
-      "extrap_rmse_medium": 27.751729734281575,
-      "extrap_rmse_far": 54.333887694415864,
-      "extrap_mae_near": 1.0382474345232486,
-      "extrap_mae_medium": 22.520631800663367,
-      "extrap_mae_far": 53.24390237682045,
-      "sr_time_s": 507.0937716960907,
+      "extrap_rmse_near": null,
+      "extrap_rmse_medium": null,
+      "extrap_rmse_far": null,
+      "extrap_mae_near": null,
+      "extrap_mae_medium": null,
+      "extrap_mae_far": null,
+      "sr_time_s": 1019.6487402915955,
       "llm_time_s": 0.0,
-      "total_time_s": 507.0937716960907,
-      "best_expression": "((r * -11.67686) + (-11.684317 / r)) - -23.330292",
-      "complexity": 49,
+      "total_time_s": 1019.6487402915955,
+      "best_expression": "N/A",
+      "complexity": null,
       "llm_expression": null,
       "llm_confidence": null,
       "engine_version": "5.4",
       "scale_log": false,
-      "rmse_original_units": 0.0853752825897293,
+      "rmse_original_units": null,
       "llm_mode_used": "none",
       "structural_risk_flag": false,
       "structural_risk_tokens": [],
-      "complexity_routing_enabled": true,
-      "routing_reason": null,
+      "complexity_routing_enabled": false,
+      "routing_reason": "discovery_failed",
       "llm_attempted": false,
       "llm_called": false,
       "llm_proposal_generated": false,
@@ -202,10 +371,33 @@
       "llm_temperature_sent": false,
       "wall_clock_budget_s": 3600,
       "pysr_attempts_allowed": 3,
-      "validation_score": 84.0,
-      "ood_predictor_note": null,
+      "validation_score": null,
+      "ood_predictor_note": "predictor build failed: TypeError: unsupported operand type(s) for /: 'function' and 'Symbol'",
       "sanitized_vars": {},
-      "formula_pathology_reasons": []
+      "formula_pathology_reasons": [],
+      "scientific_validation": {
+        "candidate_id": "1641c56cf867b02abb1a",
+        "expression": "N/A",
+        "normalized_expression": "N/A",
+        "source": "unknown",
+        "search_strategy": "audit_only",
+        "seed": 105,
+        "constraint_outcomes": [
+          {
+            "constraint_id": "builtin.symbolic_validity",
+            "status": "fail",
+            "severity": "hard",
+            "reason": "symbolic validation failed: Could not parse mathematical expression: Undeclared variable: N",
+            "evidence": {}
+          }
+        ],
+        "metrics": {},
+        "rejection_reasons": [
+          "symbolic validation failed: Could not parse mathematical expression: Undeclared variable: N"
+        ],
+        "eligible": false
+      },
+      "scientific_status": "failed"
     }
   },
   "10": {
@@ -245,11 +437,103 @@
       "extrap_mae_near": 0.0,
       "extrap_mae_medium": 0.0,
       "extrap_mae_far": 0.0,
-      "sr_time_s": 1101.244047164917,
+      "sr_time_s": 951.3391027450562,
       "llm_time_s": 0.0,
-      "total_time_s": 1101.2641758918762,
+      "total_time_s": 951.3592448234558,
       "best_expression": "dx/(dx + x)",
       "formula_pathology_reasons": [],
+      "scientific_validation": {
+        "candidate_id": "68889eab362be2dd31e9",
+        "expression": "dx/(dx + x)",
+        "normalized_expression": "dx/(dx + x)",
+        "source": "unknown",
+        "search_strategy": "audit_only",
+        "seed": 112,
+        "constraint_outcomes": [
+          {
+            "constraint_id": "builtin.symbolic_validity",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "Expression parsed with the restricted mathematical grammar",
+            "evidence": {
+              "free_variables": [
+                "dx",
+                "x"
+              ]
+            }
+          },
+          {
+            "constraint_id": "builtin.dimensional_consistency",
+            "status": "not_applicable",
+            "severity": "hard",
+            "reason": "No units were declared; dimensional consistency was not inferred",
+            "evidence": {}
+          },
+          {
+            "constraint_id": "core15.required_variables",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "candidate includes every required input variable",
+            "evidence": {
+              "required_variables": [
+                "dx",
+                "x"
+              ],
+              "present_variables": [
+                "dx",
+                "x"
+              ],
+              "missing_variables": []
+            }
+          },
+          {
+            "constraint_id": "core15.finite_training_domain",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "candidate passed the sampled finite_output_screen screen",
+            "evidence": {
+              "sample_count": 25,
+              "expected_grid_size": 25,
+              "finite_sample_count": 25,
+              "sample_min": 9.99990000099999e-06,
+              "sample_max": 0.09090909090909091,
+              "evaluation_count": 25,
+              "violation_count": 0,
+              "violation_fraction": 0.0,
+              "sampling": "deterministic_5_point_cartesian_domain_screen",
+              "sampled_screening_status": "pass",
+              "proof_scope": "finite_sample_screening_only_not_continuous_domain_proof",
+              "continuous_domain_proof_established": false,
+              "grid_is_exhaustive": true
+            }
+          },
+          {
+            "constraint_id": "core15.core15_positive_output",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "candidate passed the sampled positive_output_screen screen",
+            "evidence": {
+              "sample_count": 9,
+              "expected_grid_size": 9,
+              "finite_sample_count": 9,
+              "sample_min": 9.99990000099999e-06,
+              "sample_max": 0.09090909090909091,
+              "evaluation_count": 9,
+              "violation_count": 0,
+              "violation_fraction": 0.0,
+              "sampling": "deterministic_cartesian_bounds_grid",
+              "sampled_screening_status": "pass",
+              "proof_scope": "finite_sample_screening_only_not_continuous_domain_proof",
+              "continuous_domain_proof_established": false,
+              "grid_is_exhaustive": true
+            }
+          }
+        ],
+        "metrics": {},
+        "rejection_reasons": [],
+        "eligible": true
+      },
+      "scientific_status": "pass",
       "complexity": 5,
       "llm_expression": null,
       "llm_confidence": null,
@@ -292,11 +576,11 @@
       "extrap_mae_near": 0.0,
       "extrap_mae_medium": 0.0,
       "extrap_mae_far": 0.0,
-      "sr_time_s": 6.005990982055664,
-      "llm_time_s": 5.896517276763916,
-      "total_time_s": 6.005990982055664,
-      "best_expression": "dx / (x + dx)",
-      "complexity": 13,
+      "sr_time_s": 6.190049409866333,
+      "llm_time_s": 6.032475471496582,
+      "total_time_s": 6.190049409866333,
+      "best_expression": "(1*(dx / (x + dx)))",
+      "complexity": 19,
       "llm_expression": "dx / (x + dx)",
       "llm_confidence": 0.65,
       "engine_version": "5.4",
@@ -314,14 +598,14 @@
       "llm_attempt_info": [
         {
           "llm_mode": "hybrid_llm_only",
-          "llm_time": 5.896517276763916,
+          "llm_time": 6.032475471496582,
           "llm_best_expression": "dx / (x + dx)",
           "llm_best_r2": 0.9975748882943846,
           "llm_confidence": 0.65,
           "llm_hypotheses_raw": [
             "dx / (x + dx)",
             "dx / x",
-            "dx ** 2 / (x * (x + dx))"
+            "(dx ** 2) / (x * (x + dx))"
           ],
           "llm_error": null,
           "llm_attempted": true,
@@ -344,7 +628,99 @@
       "validation_score": 71.0,
       "ood_predictor_note": null,
       "sanitized_vars": {},
-      "formula_pathology_reasons": []
+      "formula_pathology_reasons": [],
+      "scientific_validation": {
+        "candidate_id": "6397e181618414570b60",
+        "expression": "dx/(dx/1 + x/1)",
+        "normalized_expression": "dx/(dx/1 + x/1)",
+        "source": "llm_proposal",
+        "search_strategy": "llm_hypothesis",
+        "seed": 112,
+        "constraint_outcomes": [
+          {
+            "constraint_id": "builtin.symbolic_validity",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "Expression parsed with the restricted mathematical grammar",
+            "evidence": {
+              "free_variables": [
+                "dx",
+                "x"
+              ]
+            }
+          },
+          {
+            "constraint_id": "builtin.dimensional_consistency",
+            "status": "not_applicable",
+            "severity": "hard",
+            "reason": "No units were declared; dimensional consistency was not inferred",
+            "evidence": {}
+          },
+          {
+            "constraint_id": "core15.required_variables",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "candidate includes every required input variable",
+            "evidence": {
+              "required_variables": [
+                "dx",
+                "x"
+              ],
+              "present_variables": [
+                "dx",
+                "x"
+              ],
+              "missing_variables": []
+            }
+          },
+          {
+            "constraint_id": "core15.finite_training_domain",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "candidate passed the sampled finite_output_screen screen",
+            "evidence": {
+              "sample_count": 25,
+              "expected_grid_size": 25,
+              "finite_sample_count": 25,
+              "sample_min": 9.99990000099999e-06,
+              "sample_max": 0.09090909090909091,
+              "evaluation_count": 25,
+              "violation_count": 0,
+              "violation_fraction": 0.0,
+              "sampling": "deterministic_5_point_cartesian_domain_screen",
+              "sampled_screening_status": "pass",
+              "proof_scope": "finite_sample_screening_only_not_continuous_domain_proof",
+              "continuous_domain_proof_established": false,
+              "grid_is_exhaustive": true
+            }
+          },
+          {
+            "constraint_id": "core15.core15_positive_output",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "candidate passed the sampled positive_output_screen screen",
+            "evidence": {
+              "sample_count": 9,
+              "expected_grid_size": 9,
+              "finite_sample_count": 9,
+              "sample_min": 9.99990000099999e-06,
+              "sample_max": 0.09090909090909091,
+              "evaluation_count": 9,
+              "violation_count": 0,
+              "violation_fraction": 0.0,
+              "sampling": "deterministic_cartesian_bounds_grid",
+              "sampled_screening_status": "pass",
+              "proof_scope": "finite_sample_screening_only_not_continuous_domain_proof",
+              "continuous_domain_proof_established": false,
+              "grid_is_exhaustive": true
+            }
+          }
+        ],
+        "metrics": {},
+        "rejection_reasons": [],
+        "eligible": true
+      },
+      "scientific_status": "pass"
     },
     "hypatia_nollm": {
       "condition": "hypatia_nollm",
@@ -380,9 +756,9 @@
       "extrap_mae_near": 0.0,
       "extrap_mae_medium": 0.0,
       "extrap_mae_far": 0.0,
-      "sr_time_s": 340.41351318359375,
+      "sr_time_s": 215.44069528579712,
       "llm_time_s": 0.0,
-      "total_time_s": 340.41351318359375,
+      "total_time_s": 215.44069528579712,
       "best_expression": "dx / (x + dx)",
       "complexity": 13,
       "llm_expression": null,
@@ -412,7 +788,99 @@
       "validation_score": 71.0,
       "ood_predictor_note": null,
       "sanitized_vars": {},
-      "formula_pathology_reasons": []
+      "formula_pathology_reasons": [],
+      "scientific_validation": {
+        "candidate_id": "d83a7b620b5d9c70349b",
+        "expression": "dx/(dx/1 + x/1)",
+        "normalized_expression": "dx/(dx/1 + x/1)",
+        "source": "pysr_search",
+        "search_strategy": "retry_search",
+        "seed": 112,
+        "constraint_outcomes": [
+          {
+            "constraint_id": "builtin.symbolic_validity",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "Expression parsed with the restricted mathematical grammar",
+            "evidence": {
+              "free_variables": [
+                "dx",
+                "x"
+              ]
+            }
+          },
+          {
+            "constraint_id": "builtin.dimensional_consistency",
+            "status": "not_applicable",
+            "severity": "hard",
+            "reason": "No units were declared; dimensional consistency was not inferred",
+            "evidence": {}
+          },
+          {
+            "constraint_id": "core15.required_variables",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "candidate includes every required input variable",
+            "evidence": {
+              "required_variables": [
+                "dx",
+                "x"
+              ],
+              "present_variables": [
+                "dx",
+                "x"
+              ],
+              "missing_variables": []
+            }
+          },
+          {
+            "constraint_id": "core15.finite_training_domain",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "candidate passed the sampled finite_output_screen screen",
+            "evidence": {
+              "sample_count": 25,
+              "expected_grid_size": 25,
+              "finite_sample_count": 25,
+              "sample_min": 9.99990000099999e-06,
+              "sample_max": 0.09090909090909091,
+              "evaluation_count": 25,
+              "violation_count": 0,
+              "violation_fraction": 0.0,
+              "sampling": "deterministic_5_point_cartesian_domain_screen",
+              "sampled_screening_status": "pass",
+              "proof_scope": "finite_sample_screening_only_not_continuous_domain_proof",
+              "continuous_domain_proof_established": false,
+              "grid_is_exhaustive": true
+            }
+          },
+          {
+            "constraint_id": "core15.core15_positive_output",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "candidate passed the sampled positive_output_screen screen",
+            "evidence": {
+              "sample_count": 9,
+              "expected_grid_size": 9,
+              "finite_sample_count": 9,
+              "sample_min": 9.99990000099999e-06,
+              "sample_max": 0.09090909090909091,
+              "evaluation_count": 9,
+              "violation_count": 0,
+              "violation_fraction": 0.0,
+              "sampling": "deterministic_cartesian_bounds_grid",
+              "sampled_screening_status": "pass",
+              "proof_scope": "finite_sample_screening_only_not_continuous_domain_proof",
+              "continuous_domain_proof_established": false,
+              "grid_is_exhaustive": true
+            }
+          }
+        ],
+        "metrics": {},
+        "rejection_reasons": [],
+        "eligible": true
+      },
+      "scientific_status": "pass"
     }
   },
   "11": {
@@ -427,36 +895,125 @@
       "success": true,
       "timed_out": false,
       "excluded_from_timing": false,
-      "train_r2": 0.9982280305263143,
-      "train_rmse": 45.13540888104723,
-      "test_r2": 0.9714028886414002,
-      "test_rmse": 51.42250428315031,
-      "test_mae": 41.590065188275595,
+      "train_r2": 0.998228031230104,
+      "train_rmse": 45.135399917620205,
+      "test_r2": 0.971402770605074,
+      "test_rmse": 51.42261040780662,
+      "test_mae": 41.58980555948413,
       "test_scope": "untouched_outer_test",
-      "extrap_r2_near": 0.9995518336809729,
-      "extrap_r2_medium": 0.9999688928664486,
-      "extrap_r2_far": 0.9995518336809729,
+      "extrap_r2_near": 0.9995542893320024,
+      "extrap_r2_medium": 0.9999690633126899,
+      "extrap_r2_far": 0.9995542893320024,
       "extrap_r2_raw": {
-        "near": 0.9995518336809729,
-        "medium": 0.9999688928664486,
-        "far": 0.9995518336809729
+        "near": 0.9995542893320024,
+        "medium": 0.9999690633126899,
+        "far": 0.9995542893320024
       },
       "extrap_r2_status": {
         "near": "ok",
         "medium": "ok",
         "far": "ok"
       },
-      "extrap_rmse_near": 0.20056293159437463,
-      "extrap_rmse_medium": 0.11182169730521818,
-      "extrap_rmse_far": 0.05014073289859366,
-      "extrap_mae_near": 0.1992238837040871,
-      "extrap_mae_medium": 0.10053165693812918,
-      "extrap_mae_far": 0.04980597092602178,
-      "sr_time_s": 1101.0732939243317,
+      "extrap_rmse_near": 0.20001270162070284,
+      "extrap_rmse_medium": 0.11151492252348215,
+      "extrap_rmse_far": 0.05000317540517571,
+      "extrap_mae_near": 0.19867732731196683,
+      "extrap_mae_medium": 0.10025585556989774,
+      "extrap_mae_far": 0.04966933182799171,
+      "sr_time_s": 1023.3411328792572,
       "llm_time_s": 0.0,
-      "total_time_s": 1101.0933136940002,
-      "best_expression": "9975.578/x",
+      "total_time_s": 1023.3595139980316,
+      "best_expression": "9975.645/x",
       "formula_pathology_reasons": [],
+      "scientific_validation": {
+        "candidate_id": "0500f25ee9776ebb438d",
+        "expression": "9975.645/x",
+        "normalized_expression": "9975.645/x",
+        "source": "unknown",
+        "search_strategy": "audit_only",
+        "seed": 119,
+        "constraint_outcomes": [
+          {
+            "constraint_id": "builtin.symbolic_validity",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "Expression parsed with the restricted mathematical grammar",
+            "evidence": {
+              "free_variables": [
+                "x"
+              ]
+            }
+          },
+          {
+            "constraint_id": "builtin.dimensional_consistency",
+            "status": "not_applicable",
+            "severity": "hard",
+            "reason": "No units were declared; dimensional consistency was not inferred",
+            "evidence": {}
+          },
+          {
+            "constraint_id": "core15.required_variables",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "candidate includes every required input variable",
+            "evidence": {
+              "required_variables": [
+                "x"
+              ],
+              "present_variables": [
+                "x"
+              ],
+              "missing_variables": []
+            }
+          },
+          {
+            "constraint_id": "core15.finite_training_domain",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "candidate passed the sampled finite_output_screen screen",
+            "evidence": {
+              "sample_count": 5,
+              "expected_grid_size": 5,
+              "finite_sample_count": 5,
+              "sample_min": 99.75645,
+              "sample_max": 9975.645,
+              "evaluation_count": 5,
+              "violation_count": 0,
+              "violation_fraction": 0.0,
+              "sampling": "deterministic_5_point_cartesian_domain_screen",
+              "sampled_screening_status": "pass",
+              "proof_scope": "finite_sample_screening_only_not_continuous_domain_proof",
+              "continuous_domain_proof_established": false,
+              "grid_is_exhaustive": true
+            }
+          },
+          {
+            "constraint_id": "core15.core15_positive_output",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "candidate passed the sampled positive_output_screen screen",
+            "evidence": {
+              "sample_count": 3,
+              "expected_grid_size": 3,
+              "finite_sample_count": 3,
+              "sample_min": 99.75645,
+              "sample_max": 9975.645,
+              "evaluation_count": 3,
+              "violation_count": 0,
+              "violation_fraction": 0.0,
+              "sampling": "deterministic_cartesian_bounds_grid",
+              "sampled_screening_status": "pass",
+              "proof_scope": "finite_sample_screening_only_not_continuous_domain_proof",
+              "continuous_domain_proof_established": false,
+              "grid_is_exhaustive": true
+            }
+          }
+        ],
+        "metrics": {},
+        "rejection_reasons": [],
+        "eligible": true
+      },
+      "scientific_status": "pass",
       "complexity": 3,
       "llm_expression": null,
       "llm_confidence": null,
@@ -474,41 +1031,41 @@
       "success": true,
       "timed_out": false,
       "excluded_from_timing": false,
-      "train_r2": 0.9982280327851779,
-      "train_rmse": 45.13538011227745,
-      "test_r2": 0.9714023711191218,
-      "test_rmse": 51.42296957789367,
-      "test_mae": 41.58892979669503,
+      "train_r2": 0.9982280330220622,
+      "train_rmse": 45.13537709532947,
+      "test_r2": 0.9714022380917108,
+      "test_rmse": 51.42308917970719,
+      "test_mae": 41.58863916745084,
       "test_scope": "untouched_outer_test",
-      "extrap_r2_near": 0.9995625228159449,
-      "extrap_r2_medium": 0.999969634797145,
-      "extrap_r2_far": 0.9995625228159449,
+      "extrap_r2_near": 0.9995652382037383,
+      "extrap_r2_medium": 0.9999698232716624,
+      "extrap_r2_far": 0.9995652382037383,
       "extrap_r2_raw": {
-        "near": 0.9995625228159449,
-        "medium": 0.999969634797145,
-        "far": 0.9995625228159449
+        "near": 0.9995652382037383,
+        "medium": 0.9999698232716624,
+        "far": 0.9995652382037383
       },
       "extrap_r2_status": {
         "near": "ok",
         "medium": "ok",
         "far": "ok"
       },
-      "extrap_rmse_near": 0.19815670200805433,
-      "extrap_rmse_medium": 0.11048012997615403,
-      "extrap_rmse_far": 0.04953917550201358,
-      "extrap_mae_near": 0.19683371918335751,
-      "extrap_mae_medium": 0.09932554050692584,
-      "extrap_mae_far": 0.04920842979583938,
-      "sr_time_s": 387.9875235557556,
-      "llm_time_s": 5.432241439819336,
-      "total_time_s": 387.9875235557556,
-      "best_expression": "9975.871 / x",
-      "complexity": 12,
+      "extrap_rmse_near": 0.19754077293305186,
+      "extrap_rmse_medium": 0.11013672536973501,
+      "extrap_rmse_far": 0.049385193233262965,
+      "extrap_mae_near": 0.19622190232650966,
+      "extrap_mae_medium": 0.09901680763204147,
+      "extrap_mae_far": 0.049055475581627414,
+      "sr_time_s": 300.60695815086365,
+      "llm_time_s": 5.191497802734375,
+      "total_time_s": 300.60695815086365,
+      "best_expression": "(1*(9975.946 / x))",
+      "complexity": 18,
       "llm_expression": "(1 - x) / (x * (1 - x + x**2))",
       "llm_confidence": 0.3,
       "engine_version": "5.4",
       "scale_log": false,
-      "rmse_original_units": 45.13538011227745,
+      "rmse_original_units": 45.13537709532947,
       "llm_mode_used": "hybrid_pysr_better",
       "structural_risk_flag": false,
       "structural_risk_tokens": [],
@@ -521,14 +1078,14 @@
       "llm_attempt_info": [
         {
           "llm_mode": "hybrid_pysr_better",
-          "llm_time": 5.432241439819336,
+          "llm_time": 5.191497802734375,
           "llm_best_expression": "(1 - x) / (x * (1 - x + x**2))",
           "llm_best_r2": -0.23257939940221295,
           "llm_confidence": 0.3,
           "llm_hypotheses_raw": [
             "(1 - x) / (x * (1 - x + x**2))",
             "1 / x - x",
-            "1 / x**2 - x"
+            "x**(-2) - x**2"
           ],
           "llm_error": null,
           "llm_attempted": true,
@@ -551,7 +1108,96 @@
       "validation_score": 84.6,
       "ood_predictor_note": null,
       "sanitized_vars": {},
-      "formula_pathology_reasons": []
+      "formula_pathology_reasons": [],
+      "scientific_validation": {
+        "candidate_id": "7734f0fb71f402618b73",
+        "expression": "9975.946/x",
+        "normalized_expression": "9975.946/x",
+        "source": "pysr_search",
+        "search_strategy": "pysr_refinement",
+        "seed": 119,
+        "constraint_outcomes": [
+          {
+            "constraint_id": "builtin.symbolic_validity",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "Expression parsed with the restricted mathematical grammar",
+            "evidence": {
+              "free_variables": [
+                "x"
+              ]
+            }
+          },
+          {
+            "constraint_id": "builtin.dimensional_consistency",
+            "status": "not_applicable",
+            "severity": "hard",
+            "reason": "No units were declared; dimensional consistency was not inferred",
+            "evidence": {}
+          },
+          {
+            "constraint_id": "core15.required_variables",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "candidate includes every required input variable",
+            "evidence": {
+              "required_variables": [
+                "x"
+              ],
+              "present_variables": [
+                "x"
+              ],
+              "missing_variables": []
+            }
+          },
+          {
+            "constraint_id": "core15.finite_training_domain",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "candidate passed the sampled finite_output_screen screen",
+            "evidence": {
+              "sample_count": 5,
+              "expected_grid_size": 5,
+              "finite_sample_count": 5,
+              "sample_min": 99.75946,
+              "sample_max": 9975.946,
+              "evaluation_count": 5,
+              "violation_count": 0,
+              "violation_fraction": 0.0,
+              "sampling": "deterministic_5_point_cartesian_domain_screen",
+              "sampled_screening_status": "pass",
+              "proof_scope": "finite_sample_screening_only_not_continuous_domain_proof",
+              "continuous_domain_proof_established": false,
+              "grid_is_exhaustive": true
+            }
+          },
+          {
+            "constraint_id": "core15.core15_positive_output",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "candidate passed the sampled positive_output_screen screen",
+            "evidence": {
+              "sample_count": 3,
+              "expected_grid_size": 3,
+              "finite_sample_count": 3,
+              "sample_min": 99.75946,
+              "sample_max": 9975.946,
+              "evaluation_count": 3,
+              "violation_count": 0,
+              "violation_fraction": 0.0,
+              "sampling": "deterministic_cartesian_bounds_grid",
+              "sampled_screening_status": "pass",
+              "proof_scope": "finite_sample_screening_only_not_continuous_domain_proof",
+              "continuous_domain_proof_established": false,
+              "grid_is_exhaustive": true
+            }
+          }
+        ],
+        "metrics": {},
+        "rejection_reasons": [],
+        "eligible": true
+      },
+      "scientific_status": "pass"
     },
     "hypatia_nollm": {
       "condition": "hypatia_nollm",
@@ -562,41 +1208,41 @@
       "success": true,
       "timed_out": false,
       "excluded_from_timing": false,
-      "train_r2": 0.9982280327851779,
-      "train_rmse": 45.13538011227745,
-      "test_r2": 0.9714023711191218,
-      "test_rmse": 51.42296957789367,
-      "test_mae": 41.58892979669503,
+      "train_r2": 0.9982280330220622,
+      "train_rmse": 45.13537709532947,
+      "test_r2": 0.9714022380917108,
+      "test_rmse": 51.42308917970719,
+      "test_mae": 41.58863916745084,
       "test_scope": "untouched_outer_test",
-      "extrap_r2_near": 0.9995625228159449,
-      "extrap_r2_medium": 0.999969634797145,
-      "extrap_r2_far": 0.9995625228159449,
+      "extrap_r2_near": 0.9995652382037383,
+      "extrap_r2_medium": 0.9999698232716624,
+      "extrap_r2_far": 0.9995652382037383,
       "extrap_r2_raw": {
-        "near": 0.9995625228159449,
-        "medium": 0.999969634797145,
-        "far": 0.9995625228159449
+        "near": 0.9995652382037383,
+        "medium": 0.9999698232716624,
+        "far": 0.9995652382037383
       },
       "extrap_r2_status": {
         "near": "ok",
         "medium": "ok",
         "far": "ok"
       },
-      "extrap_rmse_near": 0.19815670200805433,
-      "extrap_rmse_medium": 0.11048012997615403,
-      "extrap_rmse_far": 0.04953917550201358,
-      "extrap_mae_near": 0.19683371918335751,
-      "extrap_mae_medium": 0.09932554050692584,
-      "extrap_mae_far": 0.04920842979583938,
-      "sr_time_s": 394.1786832809448,
+      "extrap_rmse_near": 0.19754077293305186,
+      "extrap_rmse_medium": 0.11013672536973501,
+      "extrap_rmse_far": 0.049385193233262965,
+      "extrap_mae_near": 0.19622190232650966,
+      "extrap_mae_medium": 0.09901680763204147,
+      "extrap_mae_far": 0.049055475581627414,
+      "sr_time_s": 294.36937952041626,
       "llm_time_s": 0.0,
-      "total_time_s": 394.1786832809448,
-      "best_expression": "9975.871 / x",
+      "total_time_s": 294.36937952041626,
+      "best_expression": "9975.946 / x",
       "complexity": 12,
       "llm_expression": null,
       "llm_confidence": null,
       "engine_version": "5.4",
       "scale_log": false,
-      "rmse_original_units": 45.13538011227745,
+      "rmse_original_units": 45.13537709532947,
       "llm_mode_used": "none",
       "structural_risk_flag": false,
       "structural_risk_tokens": [],
@@ -619,7 +1265,96 @@
       "validation_score": 84.6,
       "ood_predictor_note": null,
       "sanitized_vars": {},
-      "formula_pathology_reasons": []
+      "formula_pathology_reasons": [],
+      "scientific_validation": {
+        "candidate_id": "c0c50e73a6948b89d12c",
+        "expression": "9975.946/x",
+        "normalized_expression": "9975.946/x",
+        "source": "pysr_search",
+        "search_strategy": "retry_search",
+        "seed": 119,
+        "constraint_outcomes": [
+          {
+            "constraint_id": "builtin.symbolic_validity",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "Expression parsed with the restricted mathematical grammar",
+            "evidence": {
+              "free_variables": [
+                "x"
+              ]
+            }
+          },
+          {
+            "constraint_id": "builtin.dimensional_consistency",
+            "status": "not_applicable",
+            "severity": "hard",
+            "reason": "No units were declared; dimensional consistency was not inferred",
+            "evidence": {}
+          },
+          {
+            "constraint_id": "core15.required_variables",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "candidate includes every required input variable",
+            "evidence": {
+              "required_variables": [
+                "x"
+              ],
+              "present_variables": [
+                "x"
+              ],
+              "missing_variables": []
+            }
+          },
+          {
+            "constraint_id": "core15.finite_training_domain",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "candidate passed the sampled finite_output_screen screen",
+            "evidence": {
+              "sample_count": 5,
+              "expected_grid_size": 5,
+              "finite_sample_count": 5,
+              "sample_min": 99.75946,
+              "sample_max": 9975.946,
+              "evaluation_count": 5,
+              "violation_count": 0,
+              "violation_fraction": 0.0,
+              "sampling": "deterministic_5_point_cartesian_domain_screen",
+              "sampled_screening_status": "pass",
+              "proof_scope": "finite_sample_screening_only_not_continuous_domain_proof",
+              "continuous_domain_proof_established": false,
+              "grid_is_exhaustive": true
+            }
+          },
+          {
+            "constraint_id": "core15.core15_positive_output",
+            "status": "pass",
+            "severity": "hard",
+            "reason": "candidate passed the sampled positive_output_screen screen",
+            "evidence": {
+              "sample_count": 3,
+              "expected_grid_size": 3,
+              "finite_sample_count": 3,
+              "sample_min": 99.75946,
+              "sample_max": 9975.946,
+              "evaluation_count": 3,
+              "violation_count": 0,
+              "violation_fraction": 0.0,
+              "sampling": "deterministic_cartesian_bounds_grid",
+              "sampled_screening_status": "pass",
+              "proof_scope": "finite_sample_screening_only_not_continuous_domain_proof",
+              "continuous_domain_proof_established": false,
+              "grid_is_exhaustive": true
+            }
+          }
+        ],
+        "metrics": {},
+        "rejection_reasons": [],
+        "eligible": true
+      },
+      "scientific_status": "pass"
     }
   }
 }

@@ -66,7 +66,7 @@
     {
       "equation": "Impermanent Loss",
       "domain": "DeFi AMM",
-      "extrap_r2_near": 0.7160086184848446,
+      "extrap_r2_near": null,
       "extrap_r2_far": null,
       "instability_index": null
     },
@@ -80,8 +80,8 @@
     {
       "equation": "Constant Product",
       "domain": "DeFi AMM",
-      "extrap_r2_near": 0.9995625228159449,
-      "extrap_r2_far": 0.9995625228159449,
+      "extrap_r2_near": 0.9995652382037383,
+      "extrap_r2_far": 0.9995652382037383,
       "instability_index": 0.0
     },
     {
