@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -82,6 +83,16 @@ def build_audit(records: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _json_safe(value: Any) -> Any:
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    if isinstance(value, dict):
+        return {key: _json_safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_json_safe(item) for item in value]
+    return value
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", type=Path, help="saved benchmark results JSON")
@@ -92,7 +103,7 @@ def main() -> None:
         raise SystemExit("input must be a JSON list of benchmark records")
     report = build_audit(records)
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(report, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+    args.output.write_text(json.dumps(_json_safe(report), indent=2, allow_nan=False) + "\n", encoding="utf-8")
     print(f"Audited {report['case_count']} cases; symbolic statuses={report['symbolic_status_counts']}")
 
 
