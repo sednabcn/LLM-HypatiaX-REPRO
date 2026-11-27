@@ -383,16 +383,34 @@ class CandidateValidator:
                 return "unknown", "required_power exponent must be finite", {}
             if not math.isfinite(expected):
                 return "unknown", "required_power exponent must be finite", {}
+            exponent_tolerance = float(params.get("tolerance", 1e-12))
+            if not math.isfinite(exponent_tolerance) or exponent_tolerance < 0:
+                return "unknown", "required_power tolerance must be finite and non-negative", {}
             expanded_for_power_check = sp.expand(expression, deep=False)
-            matches = [
-                sp.sstr(node) for node in sp.preorder_traversal(expanded_for_power_check)
-                if isinstance(node, sp.Pow)
-                and str(node.base) == str(variable)
-                and node.exp.is_number
-                and math.isclose(float(node.exp), expected, rel_tol=0.0, abs_tol=1e-12)
+            variable_powers = [
+                node for node in sp.preorder_traversal(expanded_for_power_check)
+                if isinstance(node, sp.Pow) and str(node.base) == str(variable)
             ]
+            if math.isclose(expected, 1.0, rel_tol=0.0, abs_tol=1e-12):
+                matches = (
+                    [str(variable)] if variable in free_names and all(
+                        node.exp.is_number
+                        and math.isclose(float(node.exp), 1.0, rel_tol=0.0, abs_tol=1e-12)
+                        for node in variable_powers
+                    ) else []
+                )
+            else:
+                matches = [
+                    sp.sstr(node) for node in variable_powers
+                    if node.exp.is_number
+                    and math.isclose(
+                        float(node.exp), expected,
+                        rel_tol=0.0, abs_tol=exponent_tolerance,
+                    )
+                ]
             evidence = {
                 "variable": variable, "required_exponent": expected,
+                "exponent_tolerance": exponent_tolerance,
                 "matching_powers": matches,
             }
             return (
