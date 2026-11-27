@@ -3,8 +3,8 @@ Arrhenius,Chemistry,,,
 Henderson-Hasselbalch,Chemistry,,,
 Rate Law,Chemistry,,,
 Allometric Scaling,Biology,1.0,1.0,0.0
-Michaelis-Menten,Biology,0.9804089844592981,0.1809689408174201,0.799440043641878
-Logistic Growth,Biology,0.9998239603252416,0.999707230432164,0.00011672989307753845
+Michaelis-Menten,Biology,0.9804889862565633,0.18398674975851803,0.7965022364980453
+Logistic Growth,Biology,0.9998290988766526,0.9997133827322253,0.00011571614442729139
 Kinetic Energy,Physics,,,
 Gravitational Force,Physics,,,
 Ideal Gas Law,Physics,,,
