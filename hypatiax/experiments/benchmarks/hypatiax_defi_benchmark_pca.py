@@ -2461,6 +2461,12 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 "formula_context": {
                     "variable_names": list(var_names),
                     "constants": metadata.get("constants") or {},
+                    # Retain the protocol answer key for offline symbolic audit.
+                    # _generate_llm_formula deliberately excludes this field
+                    # from the prompt (FIX-GT-LEAK).
+                    "ground_truth_expression": metadata.get("ground_truth"),
+                    "ground_truth_source": "protocol_metadata",
+                    "ground_truth_excluded_from_prompt": True,
                     "llm_model": LLM_MODEL,
                 },
                 "llm_comparison_protocol": {
