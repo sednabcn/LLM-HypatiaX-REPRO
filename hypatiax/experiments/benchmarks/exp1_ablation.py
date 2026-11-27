@@ -831,6 +831,17 @@ def run_condition(eq, condition, seed=42, niterations=None,
             "discovery_problem":      build_core15_discovery_problem(
                 eq, safe_var_names, eq_seed
             ),
+            # Select among all gated LLM/PySR proposals using training-only
+            # folds, without launching a separate PySR configuration sweep.
+            "training_only_search_validation": {
+                "n_splits": 2,
+                "validation_fraction": 0.2,
+                "minimum_valid_folds": 2,
+                "minimum_candidate_pool_size": 1,
+                "coefficient_max_nfev": 500,
+                "fold_strategy": "repeated_random",
+                "select_search_configuration": False,
+            },
         }
         t0 = time.time()
         try:
