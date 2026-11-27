@@ -1210,38 +1210,38 @@ run exp1_pca "DeFi benchmark: all 74 cases with PCA 40/60 split (mirrors exp1 wi
   EXP1_PCA_VALIDATION_SEEDS=\"\${_SEEDS_CSV}\" python3 - <<'PYEOF_VALIDATE'
 import json, os, pathlib, sys
 root = pathlib.Path('${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi_pca')
-expected = [int(x) for x in os.environ["EXP1_PCA_VALIDATION_SEEDS"].split(",") if x.strip()]
+expected = [int(x) for x in os.environ['EXP1_PCA_VALIDATION_SEEDS'].split(',') if x.strip()]
 errors = []
 for seed in expected:
-    path = root / ("hypatiax_defi_benchmark_pca_results.json" if seed == 42
-                   else f"hypatiax_defi_benchmark_pca_results_seed{seed}.json")
+    path = root / ('hypatiax_defi_benchmark_pca_results.json' if seed == 42
+                   else f'hypatiax_defi_benchmark_pca_results_seed{seed}.json')
     if not path.is_file():
-        errors.append(f"seed {seed}: missing expected file {path.name}")
+        errors.append(f'seed {seed}: missing expected file {path.name}')
         continue
     try:
         data = json.loads(path.read_text())
     except Exception as exc:
-        errors.append(f"seed {seed}: invalid JSON ({exc})")
+        errors.append(f'seed {seed}: invalid JSON ({exc})')
         continue
-    cases = data if isinstance(data, list) else data.get("results", [data])
+    cases = data if isinstance(data, list) else data.get('results', [data])
     rows = [c for c in cases if isinstance(c, dict)]
-    ids = [c.get("equation_id") for c in rows]
+    ids = [c.get('equation_id') for c in rows]
     if len(rows) != 74:
-        errors.append(f"seed {seed}: expected 74 records, found {len(rows)}")
+        errors.append(f'seed {seed}: expected 74 records, found {len(rows)}')
     if any(x is None for x in ids) or len(set(ids)) != 74:
-        errors.append(f"seed {seed}: expected 74 non-empty unique equation_id values")
+        errors.append(f'seed {seed}: expected 74 non-empty unique equation_id values')
     for row in rows:
-        row_seed = row.get("seed")
+        row_seed = row.get('seed')
         if row_seed is not None and int(row_seed) != seed:
-            errors.append(f"seed {seed}: file contains record tagged seed {row_seed}")
+            errors.append(f'seed {seed}: file contains record tagged seed {row_seed}')
             break
 if len(set(expected)) != len(expected):
-    errors.append("EXP1_PCA_SEEDS contains duplicate seed values")
+    errors.append('EXP1_PCA_SEEDS contains duplicate seed values')
 if errors:
-    print("::error::exp1_pca output validation failed:")
-    for error in errors: print(" - " + error)
+    print('::error::exp1_pca output validation failed:')
+    for error in errors: print(' - ' + error)
     sys.exit(1)
-print(f"[exp1_pca] Validated {len(expected)} seed files × 74 unique equations = {len(expected)*74} records.")
+print(f'[exp1_pca] Validated {len(expected)} seed files × 74 unique equations = {len(expected)*74} records.')
 PYEOF_VALIDATE
 
   python3 - <<'PYEOF'
