@@ -91,6 +91,8 @@ def audit_record(record: dict[str, Any]) -> dict[str, Any]:
                 "not final selected predictor"
             ),
             "ground_truth_source": context.get("ground_truth_source"),
+            "ground_truth_present": bool(context.get("ground_truth_expression")),
+            "variable_schema_present": bool(context.get("variable_names")),
             "ground_truth_excluded_from_prompt": context.get("ground_truth_excluded_from_prompt"),
             "constants_used": constants or {},
             "route_field_note": (
@@ -98,6 +100,8 @@ def audit_record(record: dict[str, Any]) -> dict[str, Any]:
                 "is persisted in this case record"
             ),
             "split_protocol": record.get("split_protocol"),
+            "split_protocol_name": (record.get("split_protocol") or {}).get("name")
+                if isinstance(record.get("split_protocol"), dict) else None,
             "audit_data_present": bool(record.get("audit_data")),
             "audit_data_shapes": _audit_data_shapes(record.get("audit_data")),
         },
@@ -107,16 +111,49 @@ def audit_record(record: dict[str, Any]) -> dict[str, Any]:
 def build_audit(records: list[dict[str, Any]]) -> dict[str, Any]:
     cases = [audit_record(record) for record in records]
     counts: dict[str, int] = {}
+    protocol_counts: dict[str, int] = {}
+    identified_pairs: list[tuple[Any, Any]] = []
     for case in cases:
         status = case["symbolic_equivalence"]["status"]
         counts[status] = counts.get(status, 0) + 1
+        protocol = case["audit_scope"]["split_protocol_name"] or "unspecified"
+        protocol_counts[protocol] = protocol_counts.get(protocol, 0) + 1
+        if case["equation_id"] is not None and case["seed"] is not None:
+            identified_pairs.append((case["equation_id"], case["seed"]))
+
+    unique_pairs = set(identified_pairs)
+    assessable = counts.get("exact_symbolic_equivalent", 0) + counts.get(
+        "not_symbolically_equivalent", 0
+    )
+    total = len(cases)
+    coverage = {
+        "ground_truth_present": sum(
+            case["audit_scope"]["ground_truth_present"] for case in cases
+        ),
+        "variable_schema_present": sum(
+            case["audit_scope"]["variable_schema_present"] for case in cases
+        ),
+        "llm_formula_present": sum(
+            case["llm_call_status"]["formula_present"] for case in cases
+        ),
+        "audit_data_present": sum(
+            case["audit_scope"]["audit_data_present"] for case in cases
+        ),
+        "identified_equation_seed_pairs": len(identified_pairs),
+        "unique_equation_seed_pairs": len(unique_pairs),
+        "duplicate_equation_seed_pairs": len(identified_pairs) - len(unique_pairs),
+        "symbolically_assessable": assessable,
+        "symbolically_not_assessable": total - assessable,
+        "split_protocol_counts": protocol_counts,
+    }
     return {
-        "schema_version": 3,
+        "schema_version": 4,
         "metric_definition": (
             "Exact symbolic identity after safe AST-to-SymPy conversion with explicit "
             "variable aliases and protocol constants. Predictive R2 is separate."
         ),
-        "case_count": len(cases),
+        "case_count": total,
+        "coverage": coverage,
         "symbolic_status_counts": counts,
         "cases": cases,
     }
