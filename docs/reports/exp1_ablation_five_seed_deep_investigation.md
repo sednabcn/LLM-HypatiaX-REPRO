@@ -146,7 +146,7 @@ All five HypatiaX and noLLM far-OOD scores are catastrophic, despite test R² va
 
 Across all five seeds, HypatiaX and noLLM have catastrophic far-OOD status while test R² remains approximately 0.9954–0.9975. Selected formulas include combinations of inverse and linear terms in the price ratio (r), for example:
 
-`((-11.67686 / r) + (r * -11.67686)) + 23.330292`
+`((r * -11.67686) + (-11.684317 / r)) - -23.330292`
 
 The coefficients and form can approximate a narrow training interval, but the results do not extrapolate reliably. PySR-only also has very poor finite far-OOD scores for this family (roughly -58 to -68), so this is not a problem unique to the hybrid method. The hybrid's raw scores are worse in magnitude and become marked catastrophic.
 
