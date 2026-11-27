@@ -66,15 +66,15 @@
     {
       "equation": "Impermanent Loss",
       "domain": "DeFi AMM",
-      "extrap_r2_near": 0.781051237656435,
+      "extrap_r2_near": null,
       "extrap_r2_far": null,
       "instability_index": null
     },
     {
       "equation": "Price Impact",
       "domain": "DeFi AMM",
-      "extrap_r2_near": 0.9987865568791255,
-      "extrap_r2_far": 0.9987865568791255,
+      "extrap_r2_near": -63.160340872314606,
+      "extrap_r2_far": -63.160340872314606,
       "instability_index": 0.0
     },
     {

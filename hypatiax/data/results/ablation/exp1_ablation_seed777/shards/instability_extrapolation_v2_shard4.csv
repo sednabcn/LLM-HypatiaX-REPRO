@@ -8,8 +8,8 @@ Logistic Growth,Biology,,,
 Kinetic Energy,Physics,,,
 Gravitational Force,Physics,,,
 Ideal Gas Law,Physics,,,
-Impermanent Loss,DeFi AMM,0.781051237656435,,
-Price Impact,DeFi AMM,0.9987865568791255,0.9987865568791255,0.0
+Impermanent Loss,DeFi AMM,,,
+Price Impact,DeFi AMM,-63.160340872314606,-63.160340872314606,0.0
 Constant Product,DeFi AMM,0.9979457643992529,0.9979457643992529,0.0
 Value at Risk,DeFi Risk,,,
 Liquidation Price,DeFi Risk,,,
