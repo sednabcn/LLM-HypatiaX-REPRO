@@ -34,10 +34,12 @@ def test_ideal_gas_candidate_cannot_omit_temperature_and_volume():
     )
     bad = _validate(problem, "sqrt(n * 5.4327)")
     good = _validate(problem, "n * T / V")
+    negative = _validate(problem, "-n*T/V")
     assert not bad.eligible
     assert "missing" in _reasons(bad)
     assert "'T'" in _reasons(bad) and "'V'" in _reasons(bad)
     assert good.eligible
+    assert not negative.eligible
 
 
 def test_arrhenius_requires_exponential_reciprocal_temperature_and_no_nesting():
@@ -54,7 +56,9 @@ def test_impermanent_loss_requires_square_root_and_reciprocal_symmetry():
     problem = _problem("Impermanent Loss", ["r"], [(0.5, 2.0)])
     wrong_linear_inverse_fit = _validate(problem, "-11.67*r - 11.68/r + 23.33")
     correct_family = _validate(problem, "2*sqrt(r)/(1+r)-1")
+    positive_shift = _validate(problem, "2*sqrt(r)/(1+r)")
     assert not wrong_linear_inverse_fit.eligible
+    assert not positive_shift.eligible
     assert correct_family.eligible
 
 
