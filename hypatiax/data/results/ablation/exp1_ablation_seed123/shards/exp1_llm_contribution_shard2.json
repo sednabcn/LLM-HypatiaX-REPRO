@@ -7,23 +7,23 @@
   ],
   "H_far": [
     1.0,
-    0.9924457881175066,
-    0.999556332019296
+    0.9916082492302718,
+    0.99959260519228
   ],
   "N_far": [
-    0.9978018760687766,
-    0.9924457881175066,
-    0.999556332019296
+    0.9976581606376589,
+    0.9916082492302718,
+    0.99959260519228
   ],
   "P_far": [
-    0.9999084249445696,
-    0.9996061626553614,
-    0.9996917760820492
+    0.99990212523261,
+    0.9957529454354828,
+    0.9996325941147288
   ],
   "tests": {
     "H_vs_P": {
-      "median_a": 0.999556332019296,
-      "median_b": 0.9996917760820492,
+      "median_a": 0.99959260519228,
+      "median_b": 0.9996325941147288,
       "wins": 0,
       "ties": 3,
       "losses": 0,
@@ -31,13 +31,15 @@
       "p_greater": 0.5902615116112394,
       "p_two_sided": 1.0,
       "rank_biserial_r": 0.0,
+      "rank_biserial_method": "paired_signed_rank",
       "n_tied": 3,
       "tie_tol": 0.01,
-      "wilcoxon_note": "all paired differences within tolerance (all ties)"
+      "wilcoxon_note": "all paired differences within tolerance (all ties)",
+      "wilcoxon_p_greater_holm": null
     },
     "N_vs_P": {
-      "median_a": 0.9978018760687766,
-      "median_b": 0.9996917760820492,
+      "median_a": 0.9976581606376589,
+      "median_b": 0.9996325941147288,
       "wins": 0,
       "ties": 3,
       "losses": 0,
@@ -45,13 +47,15 @@
       "p_greater": 0.5902615116112394,
       "p_two_sided": 1.0,
       "rank_biserial_r": 0.0,
+      "rank_biserial_method": "paired_signed_rank",
       "n_tied": 3,
       "tie_tol": 0.01,
-      "wilcoxon_note": "all paired differences within tolerance (all ties)"
+      "wilcoxon_note": "all paired differences within tolerance (all ties)",
+      "wilcoxon_p_greater_holm": null
     },
     "H_vs_N": {
-      "median_a": 0.999556332019296,
-      "median_b": 0.9978018760687766,
+      "median_a": 0.99959260519228,
+      "median_b": 0.9976581606376589,
       "wins": 0,
       "ties": 3,
       "losses": 0,
@@ -59,9 +63,57 @@
       "p_greater": 0.5902615116112394,
       "p_two_sided": 1.0,
       "rank_biserial_r": 0.0,
+      "rank_biserial_method": "paired_signed_rank",
       "n_tied": 3,
       "tie_tol": 0.01,
-      "wilcoxon_note": "all paired differences within tolerance (all ties)"
+      "wilcoxon_note": "all paired differences within tolerance (all ties)",
+      "wilcoxon_p_greater_holm": null
     }
-  }
+  },
+  "failures_per_arm": {
+    "P": [
+      "Arrhenius",
+      "Henderson-Hasselbalch",
+      "Rate Law",
+      "Kinetic Energy",
+      "Gravitational Force",
+      "Ideal Gas Law",
+      "Impermanent Loss",
+      "Price Impact",
+      "Constant Product",
+      "Value at Risk",
+      "Liquidation Price",
+      "Portfolio Std Dev"
+    ],
+    "H": [
+      "Arrhenius",
+      "Henderson-Hasselbalch",
+      "Rate Law",
+      "Kinetic Energy",
+      "Gravitational Force",
+      "Ideal Gas Law",
+      "Impermanent Loss",
+      "Price Impact",
+      "Constant Product",
+      "Value at Risk",
+      "Liquidation Price",
+      "Portfolio Std Dev"
+    ],
+    "N": [
+      "Arrhenius",
+      "Henderson-Hasselbalch",
+      "Rate Law",
+      "Kinetic Energy",
+      "Gravitational Force",
+      "Ideal Gas Law",
+      "Impermanent Loss",
+      "Price Impact",
+      "Constant Product",
+      "Value at Risk",
+      "Liquidation Price",
+      "Portfolio Std Dev"
+    ]
+  },
+  "primary_test": "wilcoxon_signed_rank",
+  "multiplicity": "holm_across_3_comparisons"
 }
