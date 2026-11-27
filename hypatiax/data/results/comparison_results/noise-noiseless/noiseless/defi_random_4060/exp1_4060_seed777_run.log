@@ -480,11 +480,11 @@ NOTE: All percentages use FIXED denominator (standard cases only).
   hard   | hybrid        : median=0.9913, >0.99: 57.1%  (n=21)
 
 ── Timing summary (per-case wall time) ──────────────────────────────────
-  Neural Network: total=11.012s, mean=0.149s, median=0.197s (n=74)
-  Hybrid        : total=118.841s, mean=1.606s, median=1.364s (n=74)
-  Hybrid end-to-end components: NN=11.012s, LLM/routing/evaluation=107.829s
-  Hybrid provider request: total=103.392s, mean=1.397s, median=1.123s (n=74)
-  Hybrid LLM token usage: input=12193 (n=74), output=4746 (n=74)
+  Neural Network: total=26.627s, mean=0.360s, median=0.476s (n=74)
+  Hybrid        : total=133.955s, mean=1.810s, median=1.525s (n=74)
+  Hybrid end-to-end components: NN=26.627s, LLM/routing/evaluation=107.329s
+  Hybrid provider request: total=97.046s, mean=1.311s, median=1.029s (n=74)
+  Hybrid LLM token usage: input=12193 (n=74), output=4407 (n=74)
 
 ================================================================================
 
