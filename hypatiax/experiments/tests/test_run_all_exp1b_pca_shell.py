@@ -35,7 +35,6 @@ def test_exp1b_pca_validator_requires_complete_seed_case_sets_and_provenance():
     assert "SEEDS = (42, 99, 123, 777, 2024)" in helper
     assert "EXPECTED_CASES = 74" in helper
     assert "observed != {seed}" in helper
-    assert "len(set(equation_ids))" not in helper  # validation uses the normalized equation_ids list
     assert "len(set(equation_ids)) != EXPECTED_CASES" in helper
     assert "expected_case_records" in helper
     assert "validated_case_records" in helper
