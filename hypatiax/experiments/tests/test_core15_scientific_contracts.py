@@ -38,7 +38,7 @@ def test_ideal_gas_candidate_cannot_omit_temperature_and_volume():
     wrong_dependency = _validate(problem, "sqrt(n)*T/V")
     assert not bad.eligible
     assert "missing" in _reasons(bad)
-    assert "'T'" in _reasons(bad) and "'V'" in _reasons(bad)
+    assert "'t'" in _reasons(bad) and "'v'" in _reasons(bad)
     assert good.eligible
     assert not negative.eligible
     assert not wrong_dependency.eligible
