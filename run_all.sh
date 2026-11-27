@@ -2801,6 +2801,7 @@ EXPERIMENTS = {
     "exp1b":                  RESULTS / "comparison_results/noise-noiseless/defi",
     "exp1_pca":               RESULTS / "comparison_results/noise-noiseless/noiseless/defi_pca",
     "exp1b_pca":              RESULTS / "comparison_results/noise-noiseless/15_pca",
+    "exp1_4060_seeds":       RESULTS / "comparison_results/noise-noiseless/noiseless/defi_random_4060",
     "extrap":                 RESULTS / "comparison_results/extrapolation",
     "hybrid_all_domains":     RESULTS / "hybrid_llm_nn/all_domains",
     "instability":            RESULTS / "figures",
