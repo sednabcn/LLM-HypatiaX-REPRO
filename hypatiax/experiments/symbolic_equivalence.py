@@ -69,6 +69,8 @@ def _parse_llm_function(source: str, variables: list[str]) -> Any:
     if not isinstance(source, str) or not source.strip() or len(source) > 20000:
         raise FormulaParseError("missing or oversized LLM formula")
     tree = ast.parse(source, mode="exec")
+    if len(list(ast.walk(tree))) > 256:
+        raise FormulaParseError("formula is too complex")
     if len(tree.body) != 1 or not isinstance(tree.body[0], ast.FunctionDef):
         raise FormulaParseError("expected exactly one def formula(...)")
     fn = tree.body[0]
@@ -107,8 +109,6 @@ def _parse_ground_truth(source: str, variables: list[str],
     if not isinstance(source, str) or not source.strip() or len(source) > 20000:
         raise FormulaParseError("missing or oversized ground-truth expression")
     alias_map = aliases or {}
-    if any(k not in (variables + list(alias_map)) for k in []):
-        raise FormulaParseError("invalid alias map")
     env = {name: sp.Symbol(name) for name in variables}
     for alias, canonical in alias_map.items():
         if canonical not in env or not alias.isidentifier():
