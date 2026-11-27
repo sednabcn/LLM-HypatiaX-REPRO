@@ -1168,6 +1168,7 @@ jobs:
               "exp2_feynman_extrap": FEYNMAN_DOMAINS,
               "exp2_feynman_pca":   FEYNMAN_DOMAINS,
               "exp1_pca":          DEFI_TASKS,
+              "exp1_4060_seeds":   DEFI_TASKS,
               "exp1b_pca":         [f"portfolio_seed{s}" for s in SEEDS],
               "exp2":              EXP2_DOMAINS,
               "exp2_five":         EXP2_DOMAINS,
@@ -1229,7 +1230,7 @@ jobs:
           # Core-15 has its own per-equation resumable checkpoints in isolated shard
           # directories. The planner checkpoint is not authoritative for this protocol;
           # dispatch all 15 equation IDs so the aggregate can prove full coverage.
-          if EXP in ("exp1_four_way_matched", "exp2_protocol30_random_8020", "exp2_protocol30_pca_4060", "exp2_protocol30_smoke_random_8020", "exp2_protocol30_smoke_pca_4060"):
+          if EXP in ("exp1_four_way_matched", "exp2_protocol30_random_8020", "exp2_protocol30_pca_4060", "exp2_protocol30_smoke_random_8020", "exp2_protocol30_smoke_pca_4060", "exp1_4060_seeds"):
               # These protocols have no resumable per-equation checkpoint contract in this
               # workflow. Every dispatch must execute the full assigned registry exactly.
               done = set()
