@@ -3,23 +3,23 @@
     {
       "equation": "Arrhenius",
       "domain": "Chemistry",
-      "extrap_r2_near": -5.631654268726541,
+      "extrap_r2_near": null,
       "extrap_r2_far": null,
       "instability_index": null
     },
     {
       "equation": "Henderson-Hasselbalch",
       "domain": "Chemistry",
-      "extrap_r2_near": 0.9989601884750956,
-      "extrap_r2_far": 0.9989601884750956,
-      "instability_index": 0.0
+      "extrap_r2_near": null,
+      "extrap_r2_far": null,
+      "instability_index": null
     },
     {
       "equation": "Rate Law",
       "domain": "Chemistry",
-      "extrap_r2_near": 0.9994766945032844,
-      "extrap_r2_far": 0.9950261158505168,
-      "instability_index": 0.004450578652767545
+      "extrap_r2_near": 0.9994590958791881,
+      "extrap_r2_far": 0.994692455519156,
+      "instability_index": 0.004766640360032159
     },
     {
       "equation": "Allometric Scaling",
