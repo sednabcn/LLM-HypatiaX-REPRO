@@ -6,6 +6,7 @@ It never executes generated Python and never treats predictive R² as symbolic r
 from __future__ import annotations
 
 import ast
+import math
 from typing import Any
 
 import sympy as sp
@@ -65,7 +66,18 @@ def _expr(node: ast.AST, env: dict[str, Any]) -> Any:
     raise FormulaParseError(f"unsupported syntax: {type(node).__name__}")
 
 
-def _parse_llm_function(source: str, variables: list[str]) -> Any:
+def _numeric_constants(constants: dict[str, Any] | None) -> dict[str, Any]:
+    env = {}
+    for name, value in (constants or {}).items():
+        if (isinstance(name, str) and name.isidentifier() and name not in {"pi", "e", "E"}
+                and isinstance(value, (int, float)) and not isinstance(value, bool)
+                and math.isfinite(float(value))):
+            env[name] = sp.sympify(value)
+    return env
+
+
+def _parse_llm_function(source: str, variables: list[str],
+                        constants: dict[str, Any] | None = None) -> Any:
     if not isinstance(source, str) or not source.strip() or len(source) > 20000:
         raise FormulaParseError("missing or oversized LLM formula")
     tree = ast.parse(source, mode="exec")
@@ -81,7 +93,11 @@ def _parse_llm_function(source: str, variables: list[str]) -> Any:
     params = [arg.arg for arg in args.args]
     if len(params) != len(variables) or len(set(params)) != len(params):
         raise FormulaParseError("formula arity does not match saved variable order")
-    env = {param: sp.Symbol(variable) for param, variable in zip(params, variables)}
+    env = _numeric_constants(constants)
+    for param, variable in zip(params, variables):
+        if param in env or variable in env:
+            raise FormulaParseError("constant name collides with a formula variable")
+        env[param] = sp.Symbol(variable)
     statements = list(fn.body)
     if statements and isinstance(statements[0], ast.Expr):
         if isinstance(statements[0].value, ast.Constant) and isinstance(statements[0].value.value, str):
@@ -105,11 +121,16 @@ def _parse_llm_function(source: str, variables: list[str]) -> Any:
 
 
 def _parse_ground_truth(source: str, variables: list[str],
-                        aliases: dict[str, str] | None = None) -> Any:
+                        aliases: dict[str, str] | None = None,
+                        constants: dict[str, Any] | None = None) -> Any:
     if not isinstance(source, str) or not source.strip() or len(source) > 20000:
         raise FormulaParseError("missing or oversized ground-truth expression")
     alias_map = aliases or {}
-    env = {name: sp.Symbol(name) for name in variables}
+    env = _numeric_constants(constants)
+    for name in variables:
+        if name in env:
+            raise FormulaParseError("constant name collides with a ground-truth variable")
+        env[name] = sp.Symbol(name)
     for alias, canonical in alias_map.items():
         if canonical not in env or not alias.isidentifier():
             raise FormulaParseError(f"invalid ground-truth alias: {alias}")
