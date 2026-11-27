@@ -152,6 +152,9 @@ def _parse_ground_truth(
         if canonical not in env or not isinstance(alias, str) or not alias.isidentifier():
             raise FormulaParseError(f"invalid ground-truth alias: {alias}")
         env[alias] = env[canonical]
+    tree = ast.parse(source, mode="eval")
+    if len(list(ast.walk(tree))) > 256:
+        raise FormulaParseError("ground-truth expression is too complex")
     return _expr(tree.body, env)
 
 
