@@ -15,34 +15,36 @@
   "n_seeds_observed": 5,
   "expected_cases_per_seed": 74,
   "validated_case_records": 370,
-  "n_pass": 0,
-  "n_total": 370,
-  "solve_rate": 0.0,
+  "metric_definition": "fraction of finite hybrid held-out R2 scores >= 0.999999; not symbolic equivalence",
+  "threshold": 0.999999,
+  "n_near_perfect_predictive_r2": 0,
+  "n_finite_test_r2": 370,
+  "near_perfect_predictive_r2_rate": 0.0,
   "per_seed": {
     "42": {
-      "n_pass": 0,
-      "n_total": 74,
-      "solve_rate": 0.0
+      "n_near_perfect_predictive_r2": 0,
+      "n_finite_test_r2": 74,
+      "near_perfect_predictive_r2_rate": 0.0
     },
     "99": {
-      "n_pass": 0,
-      "n_total": 74,
-      "solve_rate": 0.0
+      "n_near_perfect_predictive_r2": 0,
+      "n_finite_test_r2": 74,
+      "near_perfect_predictive_r2_rate": 0.0
     },
     "123": {
-      "n_pass": 0,
-      "n_total": 74,
-      "solve_rate": 0.0
+      "n_near_perfect_predictive_r2": 0,
+      "n_finite_test_r2": 74,
+      "near_perfect_predictive_r2_rate": 0.0
     },
     "777": {
-      "n_pass": 0,
-      "n_total": 74,
-      "solve_rate": 0.0
+      "n_near_perfect_predictive_r2": 0,
+      "n_finite_test_r2": 74,
+      "near_perfect_predictive_r2_rate": 0.0
     },
     "2024": {
-      "n_pass": 0,
-      "n_total": 74,
-      "solve_rate": 0.0
+      "n_near_perfect_predictive_r2": 0,
+      "n_finite_test_r2": 74,
+      "near_perfect_predictive_r2_rate": 0.0
     }
   },
   "source_files": [
@@ -52,5 +54,5 @@
     "hypatiax_defi_benchmark_v3c_4060_results_seed777.json",
     "hypatiax_defi_benchmark_v3c_4060_results_seed2024.json"
   ],
-  "timestamp": "2026-11-27T15:11:02.551107+00:00"
+  "timestamp": "2026-11-27T19:13:25.620946+00:00"
 }
