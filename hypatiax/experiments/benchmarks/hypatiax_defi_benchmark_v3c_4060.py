@@ -1640,6 +1640,10 @@ def _random_split_random_40_60(
         "shuffle": True,
         "test_fraction": 0.6,
         "selection_rule": "seeded_random_permutation; first ceil(0.6*n) rows held out",
+        # Persist original row identities so later audits can prove that outer
+        # train/test membership is disjoint and reconstruct the exact split.
+        "train_indices": train_indices.astype(int).tolist(),
+        "test_indices": test_indices.astype(int).tolist(),
         # These fields describe the NN's inner training-only validation slice,
         # not the random outer train/test split.
         "validation_split_var_idx": 0,
@@ -2532,6 +2536,12 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 "formula_context": {
                     "variable_names": list(var_names),
                     "constants": metadata.get("constants") or {},
+                    # Ground truth is retained only as an audit answer key. It
+                    # is deliberately excluded from _generate_llm_formula's
+                    # prompt; this field enables independent symbolic checks.
+                    "ground_truth_expression": metadata.get("ground_truth"),
+                    "ground_truth_source": "protocol_metadata",
+                    "ground_truth_excluded_from_prompt": True,
                     "llm_model": LLM_MODEL,
                 },
                 "llm_comparison_protocol": {

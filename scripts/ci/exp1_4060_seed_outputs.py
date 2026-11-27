@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Validate and summarize the isolated exp1_4060_seeds random 40/60 sweep."""
+"""Validate and summarize the exp1_4060 random 40/60 sweep.
+
+The R² threshold is a predictive-score diagnostic, not a symbolic-solve metric.
+"""
 from __future__ import annotations
 import argparse, json, math, shutil
 from datetime import datetime, timezone
@@ -53,6 +56,12 @@ def finite_r2(row: dict) -> float | None:
         return None
     return score if math.isfinite(score) and score <= 1.01 else None
 
+def is_near_perfect_predictive_pass(row: dict, threshold: float = THRESHOLD) -> bool:
+    """Classify a finite held-out R² threshold pass; never call it symbolic recovery."""
+    score = finite_r2(row)
+    return score is not None and score >= threshold
+
+
 def validate(args):
     rows = load_rows(args.source, args.seed)
     args.destination.parent.mkdir(parents=True, exist_ok=True)
@@ -67,17 +76,20 @@ def finalize(args):
         path = result_file(directory, seed)
         rows = load_rows(path, seed)
         sources.append(path.name)
-        n_pass = n_valid = 0
+        n_predictive_pass = n_valid = 0
         for row in rows:
             score = finite_r2(row)
             if score is not None:
                 n_valid += 1
-                n_pass += int(score >= THRESHOLD)
+                n_predictive_pass += int(is_near_perfect_predictive_pass(row))
         per_seed[str(seed)] = {
-            "n_pass": n_pass, "n_total": n_valid,
-            "solve_rate": n_pass / n_valid if n_valid else None,
+            "n_near_perfect_predictive_r2": n_predictive_pass,
+            "n_finite_test_r2": n_valid,
+            "near_perfect_predictive_r2_rate": (
+                n_predictive_pass / n_valid if n_valid else None
+            ),
         }
-        total_pass += n_pass
+        total_pass += n_predictive_pass
         total_valid += n_valid
     summary = {
         "experiment_id": "exp1_4060_seeds",
@@ -88,8 +100,13 @@ def finalize(args):
         "seeds_observed": list(SEEDS), "n_seeds_observed": len(SEEDS),
         "expected_cases_per_seed": EXPECTED_CASES,
         "validated_case_records": EXPECTED_CASES * len(SEEDS),
-        "n_pass": total_pass, "n_total": total_valid,
-        "solve_rate": total_pass / total_valid if total_valid else None,
+        "metric_definition": "fraction of finite hybrid held-out R2 scores >= 0.999999; not symbolic equivalence",
+        "threshold": THRESHOLD,
+        "n_near_perfect_predictive_r2": total_pass,
+        "n_finite_test_r2": total_valid,
+        "near_perfect_predictive_r2_rate": (
+            total_pass / total_valid if total_valid else None
+        ),
         "per_seed": per_seed, "source_files": sources,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
@@ -108,7 +125,7 @@ def finalize(args):
     }
     (directory / "split_protocol_disclosure.json").write_text(json.dumps(disclosure, indent=2), encoding="utf-8")
     print(f"PASS: validated {EXPECTED_CASES * len(SEEDS)} raw case records across {len(SEEDS)} seeds")
-    print(f"Random 40/60 exact solve rate: {total_pass}/{total_valid} ({summary['solve_rate']:.6f})" if total_valid else "No valid hybrid R2 records")
+    print(f"Random 40/60 near-perfect predictive R2 pass rate (NOT symbolic recovery): {total_pass}/{total_valid} ({summary['near_perfect_predictive_r2_rate']:.6f})" if total_valid else "No valid hybrid R2 records")
 
 def main():
     parser = argparse.ArgumentParser()
