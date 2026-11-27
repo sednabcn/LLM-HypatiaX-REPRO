@@ -289,7 +289,7 @@ ONLY_STEP=""
 FROM_STEP=""
 DRY_RUN=false
 
-_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1_ablation exp1_ablation_seeds exp1_llm_sens exp1_ablation_aggregate exp1_four_way_matched exp1_four_way_matched_aggregate exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_regression_tests exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2_protocol30_random_8020 exp2_protocol30_pca_4060 exp2_protocol30_random_8020_aggregate exp2_protocol30_pca_4060_aggregate exp2 exp2_all_domains_pca_4060 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
+_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1_ablation exp1_ablation_seeds exp1_llm_sens exp1_ablation_aggregate exp1_four_way_matched exp1_four_way_matched_aggregate exp1_five exp1_pca exp1b_pca exp1_4060_seeds extrap hybrid_all_domains instability exp2_regression_tests exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2_protocol30_random_8020 exp2_protocol30_pca_4060 exp2_protocol30_random_8020_aggregate exp2_protocol30_pca_4060_aggregate exp2 exp2_all_domains_pca_4060 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
 _DEFERRED_STEPS="instability exp2_all_domains_pca_4060 exp1_four_way_matched_aggregate exp2_protocol30_random_8020_aggregate exp2_protocol30_pca_4060_aggregate"
 RUN_DEFERRED="${RUN_DEFERRED:-0}"
 
@@ -1374,6 +1374,7 @@ PYEOF_FINGERPRINT_1
 "
 
 run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (five isolated seeds)" bash "${REPO_ROOT}/scripts/ci/run_exp1b_pca.sh"
+run exp1_4060_seeds "DeFi all-74 benchmark: seeded random 40/60 split (five isolated seeds)" bash "${REPO_ROOT}/scripts/ci/run_exp1_4060_seeds.sh"
 run extrap "OOD extrapolation comparative run (Tab 9 OOD columns)" bash -c "
   cd '${REPO_ROOT}'
   mkdir -p '${RESULTS_DIR}/comparison_results/extrapolation'
