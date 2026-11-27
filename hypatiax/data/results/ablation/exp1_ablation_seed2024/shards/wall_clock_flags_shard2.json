@@ -1,0 +1,272 @@
+{
+  "0": {
+    "name": "Arrhenius",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia_nollm": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    }
+  },
+  "1": {
+    "name": "Henderson-Hasselbalch",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia_nollm": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    }
+  },
+  "2": {
+    "name": "Rate Law",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia_nollm": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    }
+  },
+  "3": {
+    "name": "Allometric Scaling",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 1112.7467641830444
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 4.736640214920044
+    },
+    "hypatia_nollm": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 502.17660093307495
+    }
+  },
+  "4": {
+    "name": "Michaelis-Menten",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 1101.3164525032043
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 361.04315090179443
+    },
+    "hypatia_nollm": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 355.24445033073425
+    }
+  },
+  "5": {
+    "name": "Logistic Growth",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 1101.533467054367
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 14.970575094223022
+    },
+    "hypatia_nollm": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 370.2167317867279
+    }
+  },
+  "6": {
+    "name": "Kinetic Energy",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia_nollm": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    }
+  },
+  "7": {
+    "name": "Gravitational Force",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia_nollm": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    }
+  },
+  "8": {
+    "name": "Ideal Gas Law",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia_nollm": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    }
+  },
+  "9": {
+    "name": "Impermanent Loss",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia_nollm": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    }
+  },
+  "10": {
+    "name": "Price Impact",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia_nollm": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    }
+  },
+  "11": {
+    "name": "Constant Product",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia_nollm": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    }
+  },
+  "12": {
+    "name": "Value at Risk",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia_nollm": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    }
+  },
+  "13": {
+    "name": "Liquidation Price",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia_nollm": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    }
+  },
+  "14": {
+    "name": "Portfolio Std Dev",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia_nollm": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    }
+  }
+}
