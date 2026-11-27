@@ -30,7 +30,7 @@ def test_audit_uses_saved_formula_and_preserves_route_provenance():
     assert result["route"]["final_predictor_source"] == "nn_abstention_signed_ridge"
     assert result["route"]["decision"] == "ensemble"
     assert result["route"]["structural_risk_tokens"] == ["division"]
-    assert result["route"]["llm_degradation_status"] == "not_calibrated"
+    assert result["route"]["llm_degradation_status"] == "not_serialized_in_4060_case_record"\n    assert result["route"]["nn_degradation_probe"] is None
     assert result["llm_call_status"]["called"] is True
     assert result["audit_scope"]["audit_data_shapes"]["X_train"] == {
         "rows": 1, "columns": 1
