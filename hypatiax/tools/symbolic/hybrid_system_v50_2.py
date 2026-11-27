@@ -2160,76 +2160,92 @@ class HybridDiscoverySystem:
                 raise TypeError(
                     "metadata['training_only_search_validation'] must be a dict"
                 )
-            from hypatiax.tools.symbolic.hybrid_fold_search import (
-                select_hybrid_search_configuration,
-            )
-            _selection_seed = self._active_training_validation_seed
-            try:
-                _selection, _parsimony_options = select_hybrid_search_configuration(
-                    X,
-                    y,
-                    variable_names=var_names,
-                    equation_name=str(metadata.get("equation_name", description or "unknown")),
-                    domain=str(metadata.get("domain") or self.domain),
-                    base_config=self.symbolic_engine.config,
-                    seed=_selection_seed,
-                    n_splits=int(_validation_settings.get("n_splits", 2)),
-                    validation_fraction=float(
-                        _validation_settings.get("validation_fraction", 0.2)
-                    ),
-                    fold_iterations=int(_validation_settings.get("fold_iterations", 20)),
-                    fold_timeout_seconds=int(
-                        _validation_settings.get("fold_timeout_seconds", 20)
-                    ),
-                    allow_pow=metadata.get("allow_pow"),
-                    max_mean_normalized_rmse=_validation_settings.get(
-                        "max_mean_normalized_rmse"
-                    ),
-                    budget_runtime=self._active_budget_runtime,
+            if not bool(_validation_settings.get("select_search_configuration", True)):
+                # Keep the caller-declared base search configuration and still
+                # activate candidate-level training-fold validation/Pareto
+                # selection. This avoids an additional PySR configuration sweep.
+                self._training_only_search_selection = {
+                    "status": "configured_default",
+                    "selected_strategy": "configured_default",
+                    "selection_scope": "training_region_only",
+                    "selection_method": "experiment_declared_base_config",
+                    "far_test_data_used": False,
+                }
+                self._selected_training_search_strategy = "configured_default"
+                self._selected_training_search_parsimony = (
+                    self.symbolic_engine.config.parsimony
                 )
-                self._training_only_search_selection = _selection.to_dict()
-                if _selection.status != "selected" or not _selection.selected_strategy:
+            else:
+                from hypatiax.tools.symbolic.hybrid_fold_search import (
+                    select_hybrid_search_configuration,
+                )
+                _selection_seed = self._active_training_validation_seed
+                try:
+                    _selection, _parsimony_options = select_hybrid_search_configuration(
+                        X,
+                        y,
+                        variable_names=var_names,
+                        equation_name=str(metadata.get("equation_name", description or "unknown")),
+                        domain=str(metadata.get("domain") or self.domain),
+                        base_config=self.symbolic_engine.config,
+                        seed=_selection_seed,
+                        n_splits=int(_validation_settings.get("n_splits", 2)),
+                        validation_fraction=float(
+                            _validation_settings.get("validation_fraction", 0.2)
+                        ),
+                        fold_iterations=int(_validation_settings.get("fold_iterations", 20)),
+                        fold_timeout_seconds=int(
+                            _validation_settings.get("fold_timeout_seconds", 20)
+                        ),
+                        allow_pow=metadata.get("allow_pow"),
+                        max_mean_normalized_rmse=_validation_settings.get(
+                            "max_mean_normalized_rmse"
+                        ),
+                        budget_runtime=self._active_budget_runtime,
+                    )
+                    self._training_only_search_selection = _selection.to_dict()
+                    if _selection.status != "selected" or not _selection.selected_strategy:
+                        return {
+                            "success": False,
+                            "error": "NO_CREDIBLE_CANDIDATE",
+                            "message": (
+                                "No PySR search configuration met the training-only "
+                                "fold-validation requirements; full-training discovery "
+                                "was not run."
+                            ),
+                            "training_only_search_selection": self._training_only_search_selection,
+                            "discovery_budget": (
+                                self._active_budget_runtime.to_dict()
+                                if self._active_budget_runtime is not None else None
+                            ),
+                        }
+                    self._selected_training_search_strategy = _selection.selected_strategy
+                    self._selected_training_search_parsimony = _parsimony_options[
+                        _selection.selected_strategy
+                    ]
+                    logger.info(
+                        "[TRAINING-VALIDATION] selected strategy=%s parsimony=%s",
+                        self._selected_training_search_strategy,
+                        self._selected_training_search_parsimony,
+                    )
+                except Exception as _selection_error:
+                    self._training_only_search_selection = {
+                        "status": "NO_CREDIBLE_CANDIDATE",
+                        "selected_strategy": None,
+                        "selection_scope": "training_region_only",
+                        "error": f"{type(_selection_error).__name__}: {_selection_error}"[:400],
+                        "far_test_data_used": False,
+                    }
                     return {
                         "success": False,
                         "error": "NO_CREDIBLE_CANDIDATE",
-                        "message": (
-                            "No PySR search configuration met the training-only "
-                            "fold-validation requirements; full-training discovery "
-                            "was not run."
-                        ),
+                        "message": "Training-only search configuration validation failed closed.",
                         "training_only_search_selection": self._training_only_search_selection,
                         "discovery_budget": (
                             self._active_budget_runtime.to_dict()
                             if self._active_budget_runtime is not None else None
                         ),
                     }
-                self._selected_training_search_strategy = _selection.selected_strategy
-                self._selected_training_search_parsimony = _parsimony_options[
-                    _selection.selected_strategy
-                ]
-                logger.info(
-                    "[TRAINING-VALIDATION] selected strategy=%s parsimony=%s",
-                    self._selected_training_search_strategy,
-                    self._selected_training_search_parsimony,
-                )
-            except Exception as _selection_error:
-                self._training_only_search_selection = {
-                    "status": "NO_CREDIBLE_CANDIDATE",
-                    "selected_strategy": None,
-                    "selection_scope": "training_region_only",
-                    "error": f"{type(_selection_error).__name__}: {_selection_error}"[:400],
-                    "far_test_data_used": False,
-                }
-                return {
-                    "success": False,
-                    "error": "NO_CREDIBLE_CANDIDATE",
-                    "message": "Training-only search configuration validation failed closed.",
-                    "training_only_search_selection": self._training_only_search_selection,
-                    "discovery_budget": (
-                        self._active_budget_runtime.to_dict()
-                        if self._active_budget_runtime is not None else None
-                    ),
-                }
 
         _noise_level = metadata.get("noise_level", None)
         self._current_noise_level = _noise_level
