@@ -131,3 +131,108 @@ The PCA strict-threshold rate ranges from 6.85% to 10.96% across the five seeds.
 
 ---
 *Prepared from the committed run metadata, experiment summaries, pooled report, split disclosures, and per-seed random-run logs available on 2026-11-27. Approximate values and known provenance limitations are explicitly identified above.*
+
+
+## 6. Symbolic-equivalence and measurement-integrity follow-up
+
+The later measurement-integrity work changes how the 40/60 results should be interpreted. The strict (R^2 \ge 0.999999) count is a **near-perfect held-out predictive-R² rate**, not a symbolic solve/recovery rate.
+
+Relevant repository changes:
+- [PR #424 — make 4060 recovery measurement auditable](https://github.com/sednabcn/LLM-HypatiaX-REPRO/pull/424) renamed the threshold metric, records its definition, and adds ground-truth expression provenance plus original outer split row indices for future runs. It explicitly notes that historical records do not contain these new fields and cannot be retrospectively adjudicated.
+- [PR #426 — independent symbolic equivalence and route audit](https://github.com/sednabcn/LLM-HypatiaX-REPRO/pull/426) adds a conservative offline adjudicator. Generated formulas are parsed through a restricted AST allowlist and converted to SymPy expressions without executing generated code. Variable aliases require explicit mappings; unmapped aliases are not assessable. This is formal symbolic identity under the declared mapping, not a proof of domain restrictions, branch equivalence, or singularity behaviour.
+- [PR #429 — fix ground-truth parsing and persist PCA answer keys](https://github.com/sednabcn/LLM-HypatiaX-REPRO/pull/429) fixes ground-truth parsing and persists PCA answer-key context for offline evaluation, while explicitly excluding the answer key from the LLM prompt.
+
+### Historical 740-record audit
+
+The offline audit inspected five seed files for each of the two committed 40/60 protocols:
+
+| Protocol | Records | Generated formula present | Route fields present | Ground-truth expression present |
+|---|---:|---:|---:|---:|
+| Random 40/60 | 370 | 370 | 370 | 0 |
+| PCA 40/60 | 370 | 370 | 370 | 0 |
+| **Total** | **740** | **740** | **740** | **0** |
+
+All 740 historical records contain formula context, split protocol, audit data, generated hybrid formula, and core route fields, but none contains `formula_context.ground_truth_expression`. Their symbolic-audit status is therefore **ground-truth missing / not assessable**. This is neither evidence of symbolic success nor evidence of symbolic failure. No answer keys were guessed or backfilled from a potentially different protocol revision.
+
+The 365 finite PCA scores (one undefined constant-target R² per seed) and 370 finite random scores also mean that the selected-predictor comparison below uses 365 matched seed-case observations.
+
+## 7. Routing and selected-predictor audit
+
+The 40/60 system is a **routed hybrid predictor**, not simply an LLM formula predictor. The LLM was called and a formula was saved for every case in both protocols, but the final selected predictor often came from a fallback or another route.
+
+### Route counts across five seeds
+
+| Route | Random 40/60 | PCA 40/60 |
+|---|---:|---:|
+| NN abstention / replacement fallback | 248 | 254 |
+| Ensemble | 62 | 59 |
+| NN route | 60 | 57 |
+| LLM called and formula saved | 370 | 370 |
+| Trust gate passed | 262 | 260 |
+
+For ensemble-routed cases, mean per-query LLM weight was **0.630** for random and **0.968** for PCA. The source implementation uses query-wise OOD-dependent weighting:
+
+- (w_{LLM} = 0.3 + 0.7p_{OOD})
+- (w_{NN} = 1 - w_{LLM})
+
+When the NN abstains, both blend weights are zero and a replacement predictor is selected. These are query-dependent weights, **not one global scalar \(\tau\)**. Do not attribute this specific 40/60 mechanism to the scalar-\(\tau\) Exp1 mechanism without a source-level experiment mapping.
+
+### Selected-predictor test R²
+
+The independent route audit reports the score of the predictor actually selected for each case:
+
+| Statistic | Random 40/60 | PCA 40/60 |
+|---|---:|---:|
+| Finite selected-predictor scores | 370 | 365 |
+| Median selected-predictor test R² | **0.9973** | **0.9661** |
+
+On the 365 matched seed-case pairs, random had higher selected-predictor R² in **280** pairs and PCA in **85**. The median paired difference (PCA minus random) was **-0.0126**. The mean paired difference (-6.57) is dominated by extreme negative outliers and should not be used as a standalone summary. These are descriptive repeated-seed results, not an inferential test.
+
+**Do not conflate these selected-predictor statistics with the hybrid held-out R² means in Sections 2–3.** They are different estimands: one describes the hybrid metric field used in the earlier benchmark summary; the other describes the predictor selected by the route logic. Their different distributions are not inherently contradictory. Future reports must label the metric source, predictor source, aggregation, and denominator explicitly.
+
+## 8. Reconciliation with the EXP1 redesign document
+
+The design baseline reviewed was [`docs/EXP1_SCIENTIFIC_VALUE_AND_REDESIGN.md`](https://github.com/sednabcn/LLM-HypatiaX-REPRO/blob/docs/exp1-scientific-value-redesign-2026-11-25/docs/EXP1_SCIENTIFIC_VALUE_AND_REDESIGN.md) on branch `docs/exp1-scientific-value-redesign-2026-11-25`. The requested branch name without the `-2026-11-25` suffix was not the branch used for this comparison.
+
+The design document identifies the standard DeFi random benchmark as **80/20** and its PCA counterpart as **40/60**. The present report compares **random 40/60** with **PCA 40/60**. Therefore:
+- Random 40/60 is an additional, separately named protocol; it must not be silently substituted for the documented standard random 80/20 benchmark.
+- The two 40/60 protocols align the nominal train/test fraction, but their split construction and test-set geometry still differ.
+- Random 80/20, random 40/60, and PCA 40/60 should have separate protocol IDs, manifests, and cohort-specific summaries. Do not pool their R² values into one estimate.
+
+The redesign document's broader principles remain applicable:
+1. Separate task breadth from independent equation-family evidence; related tasks and repeated seeds do not create independent families.
+2. Treat seeds as repeated measurements and aggregate within equation/family before cohort-level inference.
+3. Preserve formula, NN, fallback, selected-predictor, and route-reason provenance.
+4. Keep execution completion, provenance completion, scientific aggregation, and statistical analysis as distinct statuses.
+5. Keep PCA and random protocols separate, and do not tune routing against test outcomes.
+6. Treat the proposed independent 30-equation DeFi sensitivity cohort as **future work**, subject to a family-overlap audit and preregistration. The existing 21-sensitive-plus-6-control protocol is not the same cohort and must not be relabelled or padded to 30.
+7. Keep Core-15 attribution, the existing LLM-sensitive cohort, fallback-model comparisons, and PCA protocols as separate scientific questions even if they share infrastructure.
+8. Evaluate fallback candidates (including signed-feature Ridge, Lasso, and Elastic Net) with training-only fitting, validation-only selection, and untouched test evaluation.
+
+## 9. Updated scientific interpretation
+
+The strongest defensible description from the combined evidence is that HypatiaX 40/60 is a **routed hybrid prediction system**: it obtains candidate formulas from the LLM, applies trust/routing logic, and often selects a replacement or alternative predictor. The central scientific questions are therefore:
+
+- When does the LLM-generated formula itself match the evaluator's ground truth under an explicit variable mapping?
+- When does the LLM contribute useful predictive information to the final selected predictor?
+- When does the system need NN abstention, ensemble blending, or replacement fallback?
+- Does including the LLM improve the final predictor relative to an otherwise comparable no-LLM system?
+
+The current 740 historical records cannot answer the first question because their ground-truth expression is absent. The route audit helps characterize the second and third questions descriptively, but does not establish causal LLM benefit. A properly controlled no-LLM comparison (including the relevant Core-15 or LLM-sensitive protocol) is needed for the fourth.
+
+High predictive R², including a near-perfect held-out score, is not evidence of symbolic recovery. Symbolic statuses should be reported separately as **assessed-equivalent**, **assessed-non-equivalent**, **not-assessable**, or **evaluation-failed**, with parser/evaluator failures distinguished from mathematical non-equivalence.
+
+## 10. Reporting and analysis actions
+
+1. Keep the original hybrid-R² comparison and the selected-predictor route audit in separate tables, with exact field names and aggregation methods.
+2. Use the term **near-perfect held-out predictive-R² rate** for the (R^2 \ge 0.999999) metric; never call it a solve or symbolic recovery rate.
+3. Report symbolic-equivalence denominators and statuses separately, and do not classify historical ground-truth-missing records as failures.
+4. Preserve query-wise OOD weights and route counts; do not describe this 40/60 implementation as using a global scalar \(\tau\).
+5. Publish separate random 80/20, random 40/60, and PCA 40/60 protocol summaries.
+6. Add exact raw-JSON distributional analysis and paired uncertainty estimates before making inferential claims. Five seeds and descriptive counts alone do not establish statistical significance.
+7. Preserve the independent 30-family sensitivity cohort as proposed work until its inclusion ledger, overlap audit, and preregistration are complete.
+8. Keep run provenance attached to every aggregate and do not use stale summaries as current-run evidence.
+
+### Scope and execution boundary
+
+This report update is a documentation-only synthesis of existing workflow records, committed artifacts, the offline 740-record audit, the referenced pull-request descriptions, and the EXP1 redesign document. **No benchmark, training job, LLM request, workflow dispatch, or merge was initiated for this update.**
