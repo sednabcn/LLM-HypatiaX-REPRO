@@ -177,7 +177,7 @@ def adjudicate_symbolic_equivalence(
         return {"status": "ground_truth_missing", "symbolically_equivalent": None}
     if (not isinstance(variable_names, list) or not variable_names
             or not all(isinstance(name, str) and name.isidentifier() for name in variable_names)
-            or len(set(variable_names)) != len(variable_names):
+            or len(set(variable_names)) != len(variable_names)):
         return {
             "status": "variable_schema_missing",
             "symbolically_equivalent": None,
