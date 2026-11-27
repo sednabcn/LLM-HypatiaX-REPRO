@@ -1,0 +1,492 @@
+🎲 SEED=777  (output tag '_seed777')
+✅ Loaded experiment_protocol_defi.py
+📁 Output dir overridden via --output-dir: /home/runner/work/_temp/exp1_4060_seed777
+
+  DEFI_SEEDS='777': will run seeds [777]
+================================================================================
+HypatiaX DeFi Benchmark v3c — Random 40/60 seed experiment
+================================================================================
+Cases: 74 | Fresh run
+Seed      : 777  (NN seed 2759)
+Checkpoint: /home/runner/work/_temp/exp1_4060_seed777/hypatiax_defi_benchmark_v3c_4060_checkpoint_seed777.json
+Output    : /home/runner/work/_temp/exp1_4060_seed777/hypatiax_defi_benchmark_v3c_4060_results_seed777.json
+================================================================================
+
+[01/74] Value at Risk at 95%  (EASY)
+  Split → train=80, test=120
+  neural_network : train=0.9977, test=0.9973
+  hybrid         : train=0.9977, test=0.9973 [nn_abstention_fallback]
+  💾 Checkpoint saved (1/74)
+
+[02/74] Value at Risk at 99%  (EASY)
+  Split → train=80, test=120
+  neural_network : train=0.9960, test=0.9946
+  hybrid         : train=0.9960, test=0.9946 [nn_abstention_fallback]
+  💾 Checkpoint saved (2/74)
+
+[03/74] Partial liquidation amount  (EASY)
+  Split → train=80, test=120
+  neural_network : train=0.9998, test=0.9998
+  hybrid         : train=0.9998, test=0.9998 [nn_abstention_fallback]
+  💾 Checkpoint saved (3/74)
+
+[04/74] Constant product formula  (EASY)
+  Split → train=80, test=120
+  neural_network : train=0.9962, test=0.9950
+  hybrid         : train=0.9962, test=0.9950 [nn_abstention_fallback]
+  💾 Checkpoint saved (4/74)
+
+[05/74] Simple Staking APY  (EASY)
+  Split → train=80, test=120
+  neural_network : train=0.9975, test=0.9972
+  hybrid         : train=0.9975, test=0.9972 [nn_abstention_fallback]
+  💾 Checkpoint saved (5/74)
+
+[06/74] Loan-to-Value  (EASY)
+  Split → train=80, test=120
+  neural_network : train=0.9996, test=0.9992
+  hybrid         : train=1.0000, test=0.9999 [ensemble]
+  💾 Checkpoint saved (6/74)
+
+[07/74] Spot price from AMM  (EASY)
+  Split → train=80, test=120
+  neural_network : train=0.9994, test=0.9995
+  hybrid         : train=0.9994, test=0.9995 [nn_abstention_fallback]
+  💾 Checkpoint saved (7/74)
+
+[08/74] LP share percentage  (EASY)
+  Split → train=80, test=120
+  neural_network : train=0.9997, test=0.9960
+  hybrid         : train=0.9997, test=0.9960 [nn]
+  💾 Checkpoint saved (8/74)
+
+[09/74] Long position unrealized PnL  (EASY)
+  Split → train=80, test=120
+  neural_network : train=0.8268, test=0.8373
+  hybrid         : train=1.0000, test=0.9937 [ensemble]
+  💾 Checkpoint saved (9/74)
+
+[10/74] Short position unrealized PnL  (EASY)
+  Split → train=80, test=120
+  neural_network : train=0.9278, test=0.7924
+  hybrid         : train=1.0000, test=0.9934 [ensemble]
+  💾 Checkpoint saved (10/74)
+
+[11/74] Funding rate cost  (EASY)
+  Split → train=80, test=120
+  neural_network : train=0.6998, test=0.6028
+  hybrid         : train=1.0000, test=0.9992 [ensemble]
+  💾 Checkpoint saved (11/74)
+
+[12/74] Validator commission adjusted  (EASY)
+  Split → train=80, test=120
+  neural_network : train=0.9957, test=0.9956
+  hybrid         : train=0.9957, test=0.9956 [nn_abstention_fallback]
+  💾 Checkpoint saved (12/74)
+
+[13/74] Slashing penalty  (EASY)
+  Split → train=80, test=120
+  neural_network : train=0.9989, test=0.9985
+  hybrid         : train=0.9989, test=0.9985 [nn_abstention_fallback]
+  💾 Checkpoint saved (13/74)
+
+[14/74] Protocol reserve accumulation  (EASY)
+  Split → train=80, test=120
+  neural_network : train=0.9998, test=0.9998
+  hybrid         : train=0.9998, test=0.9998 [nn_abstention_fallback]
+  💾 Checkpoint saved (14/74)
+
+[15/74] Leveraged position notional  (EASY)
+  Split → train=80, test=120
+  neural_network : train=0.9980, test=0.9974
+  hybrid         : train=0.9980, test=0.9974 [nn_abstention_fallback]
+  💾 Checkpoint saved (15/74)
+
+[16/74] Cross-margin available balance  (EASY)
+  Split → train=80, test=120
+  neural_network : train=0.9986, test=0.9985
+  hybrid         : train=0.9986, test=0.9985 [nn_abstention_fallback]
+  💾 Checkpoint saved (16/74)
+
+[17/74] Realized PnL for long  (EASY)
+  Split → train=80, test=120
+  neural_network : train=0.9248, test=0.8690
+  hybrid         : train=1.0000, test=0.9930 [ensemble]
+  💾 Checkpoint saved (17/74)
+
+[18/74] LP fee earnings  (EASY)
+  Split → train=80, test=120
+  neural_network : train=0.9852, test=0.9828
+  hybrid         : train=0.9852, test=0.9828 [nn_abstention_fallback]
+  💾 Checkpoint saved (18/74)
+
+[19/74] Multi-day Value at Risk  (EASY)
+  Split → train=80, test=120
+  neural_network : train=0.9992, test=0.9992
+  hybrid         : train=0.9992, test=0.9992 [nn_abstention_fallback]
+  💾 Checkpoint saved (19/74)
+
+[20/74] ES scaling for multi-day  (EASY)
+  Split → train=80, test=120
+  neural_network : train=0.9990, test=0.9988
+  hybrid         : train=0.9990, test=0.9988 [nn_abstention_fallback]
+  💾 Checkpoint saved (20/74)
+
+[21/74] Annualised Portfolio tracking error  (EASY)
+  Split → train=80, test=120
+  neural_network : train=0.9998, test=0.9998
+  hybrid         : train=0.9998, test=0.9998 [nn_abstention_fallback]
+  💾 Checkpoint saved (21/74)
+
+[22/74] Incremental VaR  (EASY)
+  Split → train=80, test=120
+  neural_network : train=0.0000, test=-0.0726
+  hybrid         : train=0.0000, test=-0.0726 [nn_abstention_fallback]
+  💾 Checkpoint saved (22/74)
+
+[23/74] Reserve ratio  (EASY)
+  Split → train=80, test=120
+  neural_network : train=0.9996, test=0.9996
+  hybrid         : train=0.9996, test=0.9996 [nn_abstention_fallback]
+  💾 Checkpoint saved (23/74)
+
+[24/74] Impermanent loss breakeven fee rate  (EASY — INTRACTABLE)
+  Split → train=80, test=120
+  neural_network : train=0.6266, test=0.8580
+  hybrid         : train=1.0000, test=0.9979 [ensemble]
+  💾 Checkpoint saved (24/74)
+
+[25/74] Liquidation Price Long  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=0.9868, test=0.9899
+  hybrid         : train=0.9868, test=0.9899 [nn_abstention_fallback]
+  💾 Checkpoint saved (25/74)
+
+[26/74] Liquidation Price Short  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=0.9995, test=0.9995
+  hybrid         : train=0.9995, test=0.9995 [nn_abstention_fallback]
+  💾 Checkpoint saved (26/74)
+
+[27/74] Constant Product Price Impact  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=0.9992, test=0.9988
+  hybrid         : train=1.0000, test=0.9999 [ensemble]
+  💾 Checkpoint saved (27/74)
+
+[28/74] Effective Leverage  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=0.9875, test=0.9753
+  hybrid         : train=0.9875, test=0.9753 [nn]
+  💾 Checkpoint saved (28/74)
+
+[29/74] Borrowing Interest  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=0.9865, test=0.9850
+  hybrid         : train=0.9865, test=0.9850 [nn_abstention_fallback]
+  💾 Checkpoint saved (29/74)
+
+[30/74] Compounding Staking Returns  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=0.9979, test=0.9958
+  hybrid         : train=0.9979, test=0.9958 [nn_abstention_fallback]
+  💾 Checkpoint saved (30/74)
+
+[31/74] Portfolio Sharpe Ratio  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=0.7970, test=0.8272
+  hybrid         : train=1.0000, test=0.9837 [ensemble]
+  💾 Checkpoint saved (31/74)
+
+[32/74] APY calculation  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=0.9963, test=0.9958
+  hybrid         : train=0.9963, test=0.9958 [nn_abstention_fallback]
+  💾 Checkpoint saved (32/74)
+
+[33/74] Capital efficiency  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=1.0000, test=1.0000
+  hybrid         : train=1.0000, test=1.0000 [nn_abstention_fallback]
+  💾 Checkpoint saved (33/74)
+
+[34/74] AMM output amount  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=0.9997, test=0.9997
+  hybrid         : train=0.9997, test=0.9997 [nn_abstention_fallback]
+  💾 Checkpoint saved (34/74)
+
+[35/74] Price slippage percentage  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=0.9975, test=0.9979
+  hybrid         : train=0.9975, test=0.9979 [nn_abstention_fallback]
+  💾 Checkpoint saved (35/74)
+
+[36/74] Information ratio  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=0.9513, test=0.9582
+  hybrid         : train=1.0000, test=0.9991 [ensemble]
+  💾 Checkpoint saved (36/74)
+
+[37/74] Utilization rate of DeFi  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=0.9993, test=0.9981
+  hybrid         : train=0.9993, test=0.9981 [nn]
+  💾 Checkpoint saved (37/74)
+
+[38/74] Borrow APY from utilization  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=0.9998, test=0.9998
+  hybrid         : train=0.9998, test=0.9998 [nn_abstention_fallback]
+  💾 Checkpoint saved (38/74)
+
+[39/74] Supply APY from borrow  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=0.9987, test=0.9983
+  hybrid         : train=0.9987, test=0.9983 [nn_abstention_fallback]
+  💾 Checkpoint saved (39/74)
+
+[40/74] Health factor  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=0.9984, test=0.9945
+  hybrid         : train=1.0000, test=0.9995 [ensemble]
+  💾 Checkpoint saved (40/74)
+
+[41/74] Impermanent loss percentage  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=0.9489, test=0.9058
+  hybrid         : train=0.9489, test=0.9058 [nn]
+  💾 Checkpoint saved (41/74)
+
+[42/74] Options Delta  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=0.9986, test=0.9966
+  hybrid         : train=0.9987, test=0.9967 [nn]
+  💾 Checkpoint saved (42/74)
+
+[43/74] Collateral ratio  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=0.8074, test=0.8359
+  hybrid         : train=1.0000, test=0.9498 [ensemble]
+  💾 Checkpoint saved (43/74)
+
+[44/74] Funding rate cost (extended)  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=0.2171, test=0.1658
+  hybrid         : train=0.2171, test=0.1658 [nn_abstention_fallback]
+  💾 Checkpoint saved (44/74)
+
+[45/74] Staking reward for fixed lock-up  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=0.9960, test=0.9949
+  hybrid         : train=0.9960, test=0.9949 [nn_abstention_fallback]
+  💾 Checkpoint saved (45/74)
+
+[46/74] Expected Shortfall at 95%  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=0.9981, test=0.9979
+  hybrid         : train=0.9981, test=0.9979 [nn_abstention_fallback]
+  💾 Checkpoint saved (46/74)
+
+[47/74] Expected Shortfall at 99%  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=0.9960, test=0.9946
+  hybrid         : train=0.9960, test=0.9946 [nn_abstention_fallback]
+  💾 Checkpoint saved (47/74)
+
+[48/74] Optimal LP Position (Kelly)  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=0.0000, test=-0.0043
+  hybrid         : train=0.0000, test=-0.0043 [nn_abstention_fallback]
+  💾 Checkpoint saved (48/74)
+
+[49/74] Concentrated liquidity position width  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=0.9931, test=0.9890
+  hybrid         : train=0.9931, test=0.9890 [nn]
+  💾 Checkpoint saved (49/74)
+
+[50/74] Portfolio VaR for two correlated  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=0.9912, test=0.9913
+  hybrid         : train=0.9912, test=0.9913 [nn_abstention_fallback]
+  💾 Checkpoint saved (50/74)
+
+[51/74] Position margin ratio  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=0.0000, test=-0.0029
+  hybrid         : train=0.0000, test=-0.0029 [nn_abstention_fallback]
+  💾 Checkpoint saved (51/74)
+
+[52/74] Concentrated liquidity position width (v2)  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=0.9945, test=0.9869
+  hybrid         : train=1.0000, test=0.9997 [ensemble]
+  💾 Checkpoint saved (52/74)
+
+[53/74] Spot price from AMM reserve  (MEDIUM)
+  Split → train=80, test=120
+  neural_network : train=0.0000, test=-0.0146
+  hybrid         : train=0.0000, test=-0.0146 [nn_abstention_fallback]
+  💾 Checkpoint saved (53/74)
+
+[54/74] Black-Scholes Call Price  (HARD)
+  Split → train=80, test=120
+  neural_network : train=0.9219, test=0.8352
+  hybrid         : train=0.9219, test=0.8352 [nn]
+  💾 Checkpoint saved (54/74)
+
+[55/74] Black-Scholes Put Price  (HARD)
+  Split → train=80, test=120
+  neural_network : train=0.9981, test=0.9924
+  hybrid         : train=0.9981, test=0.9924 [nn]
+  💾 Checkpoint saved (55/74)
+
+[56/74] Component ES  (HARD)
+  Split → train=80, test=120
+  neural_network : train=0.9913, test=0.9797
+  hybrid         : train=0.9913, test=0.9797 [nn_abstention_fallback]
+  💾 Checkpoint saved (56/74)
+
+[57/74] Gamma of option  (HARD)
+  Split → train=80, test=120
+  neural_network : train=0.9972, test=0.9932
+  hybrid         : train=0.9972, test=0.9932 [nn]
+  💾 Checkpoint saved (57/74)
+
+[58/74] Vega of option  (HARD)
+  Split → train=80, test=120
+  neural_network : train=0.9987, test=0.9982
+  hybrid         : train=0.9987, test=0.9982 [nn]
+  💾 Checkpoint saved (58/74)
+
+[59/74] Multi-Collateral LTV  (HARD)
+  Split → train=80, test=120
+  neural_network : train=0.9972, test=0.9964
+  hybrid         : train=0.9972, test=0.9964 [nn_abstention_fallback]
+  💾 Checkpoint saved (59/74)
+
+[60/74] Correlated Portfolio VaR  (HARD)
+  Split → train=80, test=120
+  neural_network : train=0.9912, test=0.9913
+  hybrid         : train=0.9912, test=0.9913 [nn_abstention_fallback]
+  💾 Checkpoint saved (60/74)
+
+[61/74] Impermanent loss in constant product  (HARD)
+  Split → train=80, test=120
+  neural_network : train=0.0000, test=-0.0100
+  hybrid         : train=0.0000, test=-0.0100 [nn_abstention_fallback]
+  💾 Checkpoint saved (61/74)
+
+[62/74] Constant product formula (multivariate)  (HARD)
+  Split → train=80, test=120
+  neural_network : train=0.9967, test=0.9967
+  hybrid         : train=0.9967, test=0.9967 [nn_abstention_fallback]
+  💾 Checkpoint saved (62/74)
+
+[63/74] Convexity Adjustment  (HARD)
+  Split → train=80, test=120
+  neural_network : train=1.0000, test=1.0000
+  hybrid         : train=1.0000, test=1.0000 [nn_abstention_fallback]
+  💾 Checkpoint saved (63/74)
+
+[64/74] Liquidation price for leveraged long  (HARD)
+  Split → train=80, test=120
+  neural_network : train=0.9289, test=0.9188
+  hybrid         : train=0.9289, test=0.9188 [nn_abstention_fallback]
+  💾 Checkpoint saved (64/74)
+
+[65/74] Liquidation price for leveraged short  (HARD)
+  Split → train=80, test=120
+  neural_network : train=0.0000, test=-0.0796
+  hybrid         : train=0.0000, test=-0.0796 [nn_abstention_fallback]
+  💾 Checkpoint saved (65/74)
+
+[66/74] Maximum safe leverage  (HARD)
+  Split → train=80, test=120
+  neural_network : train=0.0000, test=-0.0140
+  hybrid         : train=0.0000, test=-0.0140 [nn_abstention_fallback]
+  💾 Checkpoint saved (66/74)
+
+[67/74] Required collateral  (HARD)
+  Split → train=80, test=120
+  neural_network : train=0.0000, test=-0.0110
+  hybrid         : train=0.0000, test=-0.0110 [nn_abstention_fallback]
+  💾 Checkpoint saved (67/74)
+
+[68/74] Forward price for derivative  (HARD)
+  Split → train=80, test=120
+  neural_network : train=0.9991, test=0.9990
+  hybrid         : train=0.9991, test=0.9990 [nn_abstention_fallback]
+  💾 Checkpoint saved (68/74)
+
+[69/74] Portfolio Expected Shortfall for correlated  (HARD)
+  Split → train=80, test=120
+  neural_network : train=0.9906, test=0.9904
+  hybrid         : train=0.9906, test=0.9904 [nn_abstention_fallback]
+  💾 Checkpoint saved (69/74)
+
+[70/74] Call option intrinsic  (HARD)
+  Split → train=80, test=120
+  neural_network : train=0.9881, test=0.9842
+  hybrid         : train=1.0000, test=0.9973 [ensemble]
+  💾 Checkpoint saved (70/74)
+
+[71/74] Put-call parity  (HARD)
+  Split → train=80, test=120
+  neural_network : train=0.9998, test=0.9998
+  hybrid         : train=0.9998, test=0.9998 [nn_abstention_fallback]
+  💾 Checkpoint saved (71/74)
+
+[72/74] Simple options moneyness  (HARD)
+  Split → train=80, test=120
+  neural_network : train=0.9998, test=0.9998
+  hybrid         : train=0.9998, test=0.9998 [nn_abstention_fallback]
+  💾 Checkpoint saved (72/74)
+
+[73/74] Uniswap V3 virtual  (HARD)
+  Split → train=80, test=120
+  neural_network : train=0.9832, test=0.9480
+  hybrid         : train=0.9832, test=0.9480 [nn]
+  💾 Checkpoint saved (73/74)
+
+[74/74] Theta of option  (HARD)
+  Split → train=80, test=120
+  neural_network : train=0.9918, test=0.9833
+  hybrid         : train=0.9918, test=0.9833 [nn]
+  💾 Checkpoint saved (74/74)
+
+================================================================================
+STATISTICAL REPORT — HypatiaX DeFi Benchmark v3.0
+================================================================================
+Total cases run : 74
+  Standard      : 73  (used in aggregate, denominator = 73)
+  Intractable   : 1  (reported separately, excluded from aggregate)
+
+NOTE: All percentages use FIXED denominator (standard cases only).
+      NaN / failure counts as 0 toward the denominator.\n
+  Neural Network: median=0.9946, mean(clip-10)=0.8496, >0.9: 78.1%, >0.99: 60.3%  (catastrophic R²<-10.0: 0)
+  Hybrid: median=0.9958, mean(clip-10)=0.8663, >0.9: 86.3%, >0.99: 69.9%  (catastrophic R²<-10.0: 0)
+
+── Intractable cases (1) ─────────────────────────────────────
+  Impermanent loss breakeven fee rate         Neural Network=0.8580 | Hybrid=0.9979
+
+── By difficulty ─────────────────────────────────────────────────────────
+  easy   | neural_network: median=0.9973, >0.99: 73.9%  (n=23)
+  easy   | hybrid        : median=0.9974, >0.99: 91.3%  (n=23)
+  medium | neural_network: median=0.9945, >0.99: 55.2%  (n=29)
+  medium | hybrid        : median=0.9958, >0.99: 62.1%  (n=29)
+  hard   | neural_network: median=0.9904, >0.99: 52.4%  (n=21)
+  hard   | hybrid        : median=0.9913, >0.99: 57.1%  (n=21)
+
+── Timing summary (per-case wall time) ──────────────────────────────────
+  Neural Network: total=11.012s, mean=0.149s, median=0.197s (n=74)
+  Hybrid        : total=118.841s, mean=1.606s, median=1.364s (n=74)
+  Hybrid end-to-end components: NN=11.012s, LLM/routing/evaluation=107.829s
+  Hybrid provider request: total=103.392s, mean=1.397s, median=1.123s (n=74)
+  Hybrid LLM token usage: input=12193 (n=74), output=4746 (n=74)
+
+================================================================================
+
+✅ Final results saved → /home/runner/work/_temp/exp1_4060_seed777/hypatiax_defi_benchmark_v3c_4060_results_seed777.json
+🗑️  Checkpoint removed (run complete)
