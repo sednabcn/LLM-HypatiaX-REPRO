@@ -596,7 +596,7 @@ jobs:
           if [[ "$EXP" == "exp1b_pca" || "$EXP" == "exp2_feynman_pca" || "$EXP" == "exp1_ablation_seeds" || "$EXP" == "exp1_4060_seeds" ]]; then
             echo "is_pca=true"    >> "$GITHUB_OUTPUT"
             echo "skip_plan=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::${EXP} is a PCA experiment — pca_run_* jobs will handle it."
+            echo "::notice::${EXP} uses its dedicated five-seed matrix; generic planning is disabled."
           else
             echo "is_pca=false"    >> "$GITHUB_OUTPUT"
             echo "skip_plan=false" >> "$GITHUB_OUTPUT"
@@ -5269,9 +5269,9 @@ jobs:
 
 
   random_run_exp1_4060:
-    name: "C5c-3 · Run exp1_4060_seeds (seed \${{ matrix.seed }}, all 74 equations)"
+    name: "C5c-3 · Run exp1_4060_seeds (seed ${{ matrix.seed }}, all 74 equations)"
     needs: [credential_preflight]
-    if: \${{ always() && github.event.inputs.experiment == 'exp1_4060_seeds' && needs.credential_preflight.result == 'success' }}
+    if: ${{ always() && github.event.inputs.experiment == 'exp1_4060_seeds' && needs.credential_preflight.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 340
     strategy:
@@ -5283,19 +5283,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4.2.2
         with:
-          token: \${{ secrets.PAT_TOKEN }}
+          token: ${{ secrets.PAT_TOKEN }}
           fetch-depth: 1
       - name: Check this seed's result
         id: check_random
         env:
-          RESULTS_DIR: \${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
-          SEED: \${{ matrix.seed }}
-          FORCE_RERUN: \${{ github.event.inputs.force_rerun || 'false' }}
+          RESULTS_DIR: ${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
+          SEED: ${{ matrix.seed }}
+          FORCE_RERUN: ${{ github.event.inputs.force_rerun || 'false' }}
         run: |
           set -euo pipefail
           SUFFIX=""
-          [[ "$SEED" == "42" ]] || SUFFIX="_seed\${SEED}"
-          RESULT="\${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi_random_4060/hypatiax_defi_benchmark_v3c_4060_results\${SUFFIX}.json"
+          [[ "$SEED" == "42" ]] || SUFFIX="_seed${SEED}"
+          RESULT="${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi_random_4060/hypatiax_defi_benchmark_v3c_4060_results${SUFFIX}.json"
           if [[ "$FORCE_RERUN" != "true" && -s "$RESULT" ]]; then
             echo "already_done=true" >> "$GITHUB_OUTPUT"
           else
@@ -5305,7 +5305,7 @@ jobs:
         if: steps.check_random.outputs.already_done != 'true'
         uses: actions/setup-python@v5.3.0
         with:
-          python-version: \${{ env.PYTHON_VERSION || '3.12' }}
+          python-version: ${{ env.PYTHON_VERSION || '3.12' }}
           cache: pip
           cache-dependency-path: .github/workflows/ci_runner_repro.yml
       - name: Set up Julia 1.11
@@ -5318,9 +5318,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.julia
-          key: julia-depot-\${{ runner.os }}-\${{ hashFiles('**/Project.toml', '**/Manifest.toml', '.github/workflows/ci_runner_repro.yml') }}
+          key: julia-depot-${{ runner.os }}-${{ hashFiles('**/Project.toml', '**/Manifest.toml', '.github/workflows/ci_runner_repro.yml') }}
           restore-keys: |
-            julia-depot-\${{ runner.os }}-
+            julia-depot-${{ runner.os }}-
       - name: Install dependencies
         if: steps.check_random.outputs.already_done != 'true'
         run: |
@@ -5346,34 +5346,40 @@ jobs:
       - name: Run and validate this seed (all 74 equations)
         if: steps.check_random.outputs.already_done != 'true'
         env:
-          REPO_ROOT: \${{ github.workspace }}
-          RESULTS_DIR: \${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
-          EXPERIMENTS_DIR: \${{ github.workspace }}/hypatiax/experiments/benchmarks
-          RUNNER_TEMP: \${{ runner.temp }}
-          SEED: \${{ matrix.seed }}
-          ANTHROPIC_API_KEY: \${{ secrets.ANTHROPIC_API_KEY }}
-          OPENAI_API_KEY: \${{ secrets.OPENAI_API_KEY }}
-        run: bash scripts/ci/run_exp1_4060_seeds.sh "$SEED"
+          REPO_ROOT: ${{ github.workspace }}
+          RESULTS_DIR: ${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
+          EXPERIMENTS_DIR: ${{ github.workspace }}/hypatiax/experiments/benchmarks
+          RUNNER_TEMP: ${{ runner.temp }}
+          SEED: ${{ matrix.seed }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          if [[ "$DRY_RUN" == "true" ]]; then
+            echo "[dry-run] Would run all 74 equations for seed $SEED."
+            exit 0
+          fi
+          bash scripts/ci/run_exp1_4060_seeds.sh "$SEED"
       - name: Commit and push this seed's result
         if: success() && github.event.inputs.dry_run != 'true' && steps.check_random.outputs.already_done != 'true'
         env:
-          RESULTS_DIR: \${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
-          SEED: \${{ matrix.seed }}
+          RESULTS_DIR: ${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
+          SEED: ${{ matrix.seed }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          DIR="\${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi_random_4060"
+          DIR="${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi_random_4060"
           SUFFIX=""
-          [[ "$SEED" == "42" ]] || SUFFIX="_seed\${SEED}"
-          git add "$DIR/hypatiax_defi_benchmark_v3c_4060_results\${SUFFIX}.json"
-          git add "$DIR/exp1_4060_seed\${SEED}_run.log" 2>/dev/null || true
+          [[ "$SEED" == "42" ]] || SUFFIX="_seed${SEED}"
+          git add "$DIR/hypatiax_defi_benchmark_v3c_4060_results${SUFFIX}.json"
+          git add "$DIR/exp1_4060_seed${SEED}_run.log" 2>/dev/null || true
           git commit -m "ci: exp1_4060_seeds result for seed $SEED [skip ci]"
           PUSHED=false
           for i in 1 2 3 4 5; do
             git rebase --abort 2>/dev/null || true
             git stash --include-untracked --quiet || true
-            if git pull --rebase -X ours origin "\${{ github.ref_name }}" && git push origin HEAD:"\${{ github.ref_name }}"; then
+            if git pull --rebase -X ours origin "${{ github.ref_name }}" && git push origin HEAD:"${{ github.ref_name }}"; then
               git stash pop --quiet 2>/dev/null || true
               PUSHED=true; break
             fi
@@ -5386,30 +5392,30 @@ jobs:
   aggregate_exp1_4060_seeds:
     name: "Aggregate five exp1_4060_seeds workers"
     needs: [random_run_exp1_4060]
-    if: \${{ always() && github.event.inputs.experiment == 'exp1_4060_seeds' && needs.random_run_exp1_4060.result == 'success' }}
+    if: ${{ always() && github.event.inputs.experiment == 'exp1_4060_seeds' && github.event.inputs.dry_run != 'true' && needs.random_run_exp1_4060.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout latest committed seed outputs
         uses: actions/checkout@v4.2.2
         with:
-          token: \${{ secrets.PAT_TOKEN }}
-          ref: \${{ github.ref_name }}
+          token: ${{ secrets.PAT_TOKEN }}
+          ref: ${{ github.ref_name }}
           fetch-depth: 1
       - name: Set up Python
         uses: actions/setup-python@v5.3.0
         with:
-          python-version: \${{ env.PYTHON_VERSION || '3.12' }}
+          python-version: ${{ env.PYTHON_VERSION || '3.12' }}
       - name: Validate coverage and write aggregate metadata
         env:
-          RESULTS_DIR: \${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
+          RESULTS_DIR: ${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
         run: |
           set -euo pipefail
           python3 scripts/ci/exp1_4060_seed_outputs.py finalize --directory "$RESULTS_DIR/comparison_results/noise-noiseless/noiseless/defi_random_4060"
       - name: Commit aggregate summary and split disclosure
         if: github.event.inputs.dry_run != 'true'
         env:
-          RESULTS_DIR: \${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
+          RESULTS_DIR: ${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
@@ -5417,7 +5423,7 @@ jobs:
           DIR="$RESULTS_DIR/comparison_results/noise-noiseless/noiseless/defi_random_4060"
           git add "$DIR/exp1_4060_seeds_summary.json" "$DIR/split_protocol_disclosure.json"
           git commit -m "ci: aggregate exp1_4060_seeds five-seed results [skip ci]"
-          git push origin HEAD:"\${{ github.ref_name }}"
+          git push origin HEAD:"${{ github.ref_name }}"
 
 
   gate_a_split_protocol_test:
