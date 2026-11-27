@@ -58,6 +58,8 @@ def test_exp1b_pca_runs_each_canonical_seed_in_an_isolated_process():
     for variable in ("DEFI_SEEDS", "PYSR_SEED", "EXPERIMENT_SEED", "NN_SEED"):
         assert variable + "=" + escaped_quote + escaped_dollar + "{_SEED}" + escaped_quote in block
     assert "_SEED_SCRATCH=" + escaped_quote + escaped_dollar + "{_PCA_SCRATCH_ROOT}/seed" + escaped_dollar + "{_SEED}" + escaped_quote in block
+    for inherited_filter in ("TASK_IDS", "SHARD_IDS", "DOMAIN_FILTER", "DEFI_TASK_FILTER", "ONE_EQUATION", "CASE_RANGE_START", "CASE_RANGE_END"):
+        assert inherited_filter + '=""' in block
     assert "74 case records" in block
     assert "seed provenance verified" in block
     assert "python3 '${EXPERIMENTS_DIR}/portfolio_variance_v3c2.py'" not in block
