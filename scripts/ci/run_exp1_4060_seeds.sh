@@ -26,7 +26,7 @@ for seed in "${SEEDS[@]}"; do
     HYPATIAX_ENGINE_SEED="${seed}" \
     TASK_IDS="" SHARD_IDS="" DOMAIN_FILTER="" DEFI_TASK_FILTER="" \
     ONE_EQUATION="" CASE_RANGE_START="" CASE_RANGE_END="" \
-      python3 "${BENCHMARK}" --output-dir "${scratch}" --force-fresh \
+      python3 "${BENCHMARK}" --output-dir "${scratch}" \
         2>&1 | tee -a "${RESULTS_DIR}/exp1_4060_seeds_run.log"
 
   if [[ "${seed}" == "42" ]]; then
