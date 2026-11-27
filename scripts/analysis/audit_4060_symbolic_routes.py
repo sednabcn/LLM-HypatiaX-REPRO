@@ -33,7 +33,7 @@ def audit_record(record: dict[str, Any]) -> dict[str, Any]:
         "llm_call_status": {
             "called": hybrid.get("llm_called"),
             "bypass_kind": hybrid.get("bypass_kind"),
-            "source": hybrid.get("llm_source"),
+            "source": hybrid.get("llm_source"),\n            "api_request_time_s": hybrid.get("llm_api_request_time_s"),\n            "temperature_sent": hybrid.get("llm_temperature_sent"),
             "formula_present": bool(hybrid.get("formula")),
         },
         "trust_gate": hybrid.get("trust_gate_diagnostics"),
@@ -56,7 +56,7 @@ def audit_record(record: dict[str, Any]) -> dict[str, Any]:
             "hybrid_test_r2": hybrid.get("test_r2"),
         },
         "audit_scope": {
-            "formula_compared": "saved hybrid.formula (LLM formula), not final selected predictor",
+            "formula_compared": "saved results.hybrid.formula (serialized from hybrid llm_code), not final selected predictor",\n            "constants_used": context.get("constants") or {},
             "ground_truth_source": context.get("ground_truth_source"),
             "ground_truth_excluded_from_prompt": context.get("ground_truth_excluded_from_prompt"),
             "split_protocol": record.get("split_protocol"),
@@ -72,7 +72,7 @@ def build_audit(records: list[dict[str, Any]]) -> dict[str, Any]:
         status = case["symbolic_equivalence"]["status"]
         counts[status] = counts.get(status, 0) + 1
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "metric_definition": (
             "Exact symbolic identity after safe AST-to-SymPy conversion and explicit "
             "variable mapping. Predictive R2 is reported separately and is not a solve."
