@@ -922,6 +922,7 @@ class HybridDiscoverySystem:
                 _candidate_envelope_handled = bool(
                     result.get("discovery_candidates_schema") == "discovery_candidates_v1"
                     and getattr(self, "_active_discovery_problem", None) is not None
+                    and bool(getattr(self, "_active_training_validation_settings", None))
                 )
                 if _candidate_envelope_handled:
                     # Every inner-engine proposal gets its own scientific gate
