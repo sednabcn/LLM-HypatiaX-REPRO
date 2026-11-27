@@ -11,7 +11,7 @@ from typing import Any
 import sympy as sp
 
 _FUNCTIONS = {
-    "sqrt": sp.sqrt, "exp": sp.exp, "log": sp.log,
+    "sqrt": sp.sqrt, "exp": sp.exp, "log": sp.log, "log10": sp.log,\n    "power": lambda a, b: a ** b, "floor": sp.floor, "ceil": sp.ceiling,
     "sin": sp.sin, "cos": sp.cos, "tan": sp.tan,
     "asin": sp.asin, "arcsin": sp.asin, "acos": sp.acos, "arccos": sp.acos,
     "atan": sp.atan, "arctan": sp.atan, "sinh": sp.sinh, "cosh": sp.cosh,
@@ -134,7 +134,7 @@ def _parse_ground_truth(
         if canonical not in env or not isinstance(alias, str) or not alias.isidentifier():
             raise FormulaParseError(f"invalid ground-truth alias: {alias}")
         env[alias] = env[canonical]
-    return _expr(ast.parse(source, mode="eval").body, env)
+    return _expr(tree.body, env)
 
 
 def adjudicate_symbolic_equivalence(
