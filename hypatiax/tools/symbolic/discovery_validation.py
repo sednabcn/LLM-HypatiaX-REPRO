@@ -618,6 +618,12 @@ class CandidateValidator:
                 for value in values
             )
             passed = violations == 0
+        elif kind == "nonpositive_output_screen":
+            violations = sum(
+                (not math.isfinite(value)) or value > self.tolerance
+                for value in values
+            )
+            passed = violations == 0
         elif not finite:
             violations = sum(
                 (not math.isfinite(value)) or (
@@ -677,7 +683,7 @@ class CandidateValidator:
         }
         if not passed:
             return "fail", f"declared {kind} constraint failed on deterministic domain samples", evidence
-        if kind in {"finite_output_screen", "positive_output_screen", "positive_output", "nonnegative_output"}:
+        if kind in {"finite_output_screen", "positive_output_screen", "nonpositive_output_screen", "positive_output", "nonnegative_output"}:
             return "pass", f"candidate passed the sampled {kind} screen", evidence
         return (
             "unknown",
