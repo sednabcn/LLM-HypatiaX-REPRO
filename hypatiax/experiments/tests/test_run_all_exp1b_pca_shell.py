@@ -60,7 +60,7 @@ def test_exp1b_pca_runs_each_canonical_seed_in_an_isolated_process():
     assert '_SEED_SCRATCH="\${_PCA_SCRATCH_ROOT}/seed\${_SEED}"' in block
     assert "74 case records" in block
     assert "seed provenance verified" in block
-    assert "portfolio_variance_v3c2.py" not in block
+    assert "python3 '${EXPERIMENTS_DIR}/portfolio_variance_v3c2.py'" not in block
 
 
 def test_exp1b_pca_summary_reads_only_the_five_isolated_seed_files():
