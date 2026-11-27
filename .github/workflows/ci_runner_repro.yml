@@ -1483,10 +1483,16 @@ jobs:
         if: ${{ needs.plan.outputs.needs_julia == 'true' }}
         run: |
           set -euo pipefail
+          # Never reuse the generated JuliaCall project from the shared Python
+          # environment cache. Its Manifest is Julia-version-specific; a manifest
+          # produced by juliapkg's downloaded Julia can be incompatible with the
+          # Julia 1.11 executable installed by setup-julia. Recreate it only after
+          # setup-julia has put the pinned runner Julia on PATH.
+          rm -rf "${GITHUB_WORKSPACE}/.venv/julia_env"
+          julia -e 'VERSION.major == 1 && VERSION.minor == 11 || error("Expected Julia 1.11, got $(VERSION)")'
           # Resolve the package requirements declared by the installed PySR and
           # JuliaCall distributions without importing PySR/JuliaCall first.
-          # force=True repairs stale juliapkg metadata that can claim resolution
-          # even when the Manifest packages are absent from the depot.
+          # force=True regenerates the project/manifest for the active Julia.
           .venv/bin/python -c "import juliapkg; juliapkg.resolve(force=True)"
           # PythonCall 0.9.28 defaults to a CondaPkg-managed interpreter.
           # On current conda-forge that can resolve to Python builds without
