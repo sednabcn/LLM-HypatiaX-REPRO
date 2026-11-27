@@ -6,8 +6,8 @@ Allometric Scaling,Biology,,,
 Michaelis-Menten,Biology,,,
 Logistic Growth,Biology,,,
 Kinetic Energy,Physics,1.0,1.0,0.0
-Gravitational Force,Physics,1.0,1.0,0.0
-Ideal Gas Law,Physics,-2.863595128587435,-15.503899634510859,12.640304505923424
+Gravitational Force,Physics,,,
+Ideal Gas Law,Physics,,,
 Impermanent Loss,DeFi AMM,,,
 Price Impact,DeFi AMM,,,
 Constant Product,DeFi AMM,,,
