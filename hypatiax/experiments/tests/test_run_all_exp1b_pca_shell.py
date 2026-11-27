@@ -53,6 +53,7 @@ def test_exp1b_pca_runs_each_canonical_seed_in_an_isolated_process():
     block = run_all[start:end]
 
     assert "_PCA_SEEDS=(42 99 123 777 2024)" in block
+    assert "rm -f" in block and "exp1b_pca_summary.json" in block
     escaped_quote = chr(92) + chr(34)
     escaped_dollar = chr(92) + "$"
     for variable in ("DEFI_SEEDS", "PYSR_SEED", "EXPERIMENT_SEED", "NN_SEED"):
