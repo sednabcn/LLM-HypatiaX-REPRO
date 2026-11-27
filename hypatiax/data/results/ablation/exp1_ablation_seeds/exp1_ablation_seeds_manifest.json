@@ -1,6 +1,9 @@
 {
-  "all_complete": true,
-  "cross_seed_problems": [],
+  "all_complete": false,
+  "cross_seed_problems": [
+    "cross-seed provenance mismatch: source_revision differs across seeds",
+    "cross-seed provenance mismatch: benchmark_script_sha256 differs across seeds"
+  ],
   "expected_arms": [
     "pysr_only",
     "hypatia",
@@ -8,14 +11,14 @@
   ],
   "expected_equations": 15,
   "experiment": "exp1_ablation_seeds",
-  "generated_at": "2026-11-27T05:21:32Z",
+  "generated_at": "2026-11-27T23:51:15Z",
   "per_seed": {
     "123": {
       "directory": "hypatiax/data/results/ablation/exp1_ablation_seed123",
       "files": {
         "exp1_ablation_results.json": {
-          "bytes": 105161,
-          "sha256": "0955e6cbd28722edc32d90c81b9031568869bd9700abfc08ee2156e6ae16071e",
+          "bytes": 268672,
+          "sha256": "73fca3390b53615e6e7441a7f4ca090e9ce37b683a2b8ab71e370652492ca9ce",
           "structure": {
             "keys": [
               "0",
@@ -39,8 +42,8 @@
           }
         },
         "exp1_llm_contribution.json": {
-          "bytes": 2948,
-          "sha256": "985c7b3f667f07fe401faac511591e3ac2b3bba762c8c1856844cdbb31bb6545",
+          "bytes": 2798,
+          "sha256": "e147eb2b0b766dcd689d3ef1c0cb4bd866c8c990b6b4f30f76cbc321dbdaed7d",
           "structure": {
             "keys": [
               "H_far",
@@ -58,8 +61,8 @@
           }
         },
         "exp1_rf01_mannwhitney.json": {
-          "bytes": 3770,
-          "sha256": "142127678722a0b5fe489ef3482c23606deaf94cc79318f2f0c028490f33ca0c",
+          "bytes": 3573,
+          "sha256": "8c8550bac545f6c75f01b737db0e6941147dd2c6ba7c511a85624c2e30e4a370",
           "structure": {
             "keys": [
               "rf01_mann_whitney"
@@ -69,8 +72,8 @@
           }
         },
         "provenance_map_exp1.json": {
-          "bytes": 5430,
-          "sha256": "e8e2bd16af7b2804fa4a237c4806a1c5a0b724941cc538626f27af6f2e4e1e8c",
+          "bytes": 5513,
+          "sha256": "107034727850232e78cb755aca34636302322c671b2358d43a4b6d9e287cf082",
           "structure": {
             "keys": [
               "benchmark_script_path",
@@ -101,12 +104,12 @@
         }
       },
       "last_commit": {
-        "commit": "6adab37a240a14debb4a12ff4968f4ee6406a481",
-        "committed_at": "2026-11-27T05:20:09Z"
+        "commit": "b62b6d7650f108830cf8bf669695d1b4ec1b39d7",
+        "committed_at": "2026-11-27T23:50:35Z"
       },
       "problems": [],
       "provenance": {
-        "benchmark_script_sha256": "5a5eae79a57eeee3d0fcfd01f2dcf48fb2bfe5c924560db1a278891491fa0d70",
+        "benchmark_script_sha256": "cf697d2aa07f42c76f91f48f58684b4df0692302de5544b8fd54ee9ab6d3163d",
         "engine_version": "5.4",
         "flags": {
           "HYPATIAX_ALLOW_LEGACY": null,
@@ -120,17 +123,17 @@
         "niterations": 1000,
         "populations": 30,
         "seed": 123,
-        "source_revision": "1bb4c9d7ccf4813b10014fc85a67b4a28d8f18c4"
+        "source_revision": "5a196c3e4ed04a744416b9154d3920d12ce6ab1e"
       },
       "status": "complete",
-      "workflow_run_id": "45915423319"
+      "workflow_run_id": "46060088116"
     },
     "2024": {
       "directory": "hypatiax/data/results/ablation/exp1_ablation_seed2024",
       "files": {
         "exp1_ablation_results.json": {
-          "bytes": 106360,
-          "sha256": "c8e18dabad1ee14b70ed8e4a1cf02c5e77312424e605cbc9adcc60a0ccf4d803",
+          "bytes": 266705,
+          "sha256": "d2e102f2a983e79119999e2c08f75cf72d0f07c663c1d0095038575295703575",
           "structure": {
             "keys": [
               "0",
@@ -154,8 +157,8 @@
           }
         },
         "exp1_llm_contribution.json": {
-          "bytes": 2959,
-          "sha256": "0702f5412dad39ff09be7b72b043b220fadfbceebf17a1ef00f75daea56b5b48",
+          "bytes": 2771,
+          "sha256": "900793bf4a2a891df6ed284e35d33b74825abd179b5772cf354de6fd6453f33c",
           "structure": {
             "keys": [
               "H_far",
@@ -173,8 +176,8 @@
           }
         },
         "exp1_rf01_mannwhitney.json": {
-          "bytes": 3802,
-          "sha256": "df9a265af2c09b94ac40a45e65cbf90dd3503e44870557015dd821883f8310c0",
+          "bytes": 3501,
+          "sha256": "a957d68a3c962be9d021e1d1e55ecd3189265ea0a1e8b662b9cd880939e2aeae",
           "structure": {
             "keys": [
               "rf01_mann_whitney"
@@ -184,8 +187,8 @@
           }
         },
         "provenance_map_exp1.json": {
-          "bytes": 5272,
-          "sha256": "3f53f606969dfc48584468a439ff3fa8bb5e78573e3527434607d9c5cd5757d9",
+          "bytes": 5439,
+          "sha256": "079d154996bd583ecc268d87c70ba96016fa2fd5ef2579e26c59494ade9c7b0f",
           "structure": {
             "keys": [
               "benchmark_script_path",
@@ -216,12 +219,12 @@
         }
       },
       "last_commit": {
-        "commit": "6adab37a240a14debb4a12ff4968f4ee6406a481",
-        "committed_at": "2026-11-27T05:20:09Z"
+        "commit": "b62b6d7650f108830cf8bf669695d1b4ec1b39d7",
+        "committed_at": "2026-11-27T23:50:35Z"
       },
       "problems": [],
       "provenance": {
-        "benchmark_script_sha256": "5a5eae79a57eeee3d0fcfd01f2dcf48fb2bfe5c924560db1a278891491fa0d70",
+        "benchmark_script_sha256": "cf697d2aa07f42c76f91f48f58684b4df0692302de5544b8fd54ee9ab6d3163d",
         "engine_version": "5.4",
         "flags": {
           "HYPATIAX_ALLOW_LEGACY": null,
@@ -235,17 +238,17 @@
         "niterations": 1000,
         "populations": 30,
         "seed": 2024,
-        "source_revision": "1bb4c9d7ccf4813b10014fc85a67b4a28d8f18c4"
+        "source_revision": "5a196c3e4ed04a744416b9154d3920d12ce6ab1e"
       },
       "status": "complete",
-      "workflow_run_id": "45915428001"
+      "workflow_run_id": "46060093241"
     },
     "42": {
       "directory": "hypatiax/data/results/ablation/exp1_ablation",
       "files": {
         "exp1_ablation_results.json": {
-          "bytes": 105287,
-          "sha256": "f0b4c07d084991ebc852e9b394c26029172f3bca64d641bfa9c822f21e197573",
+          "bytes": 265695,
+          "sha256": "6829b0753c3ad52c789cd025cc40fb0028fdbe08162a5305b018ad17a80eebdc",
           "structure": {
             "keys": [
               "0",
@@ -269,8 +272,8 @@
           }
         },
         "exp1_llm_contribution.json": {
-          "bytes": 2976,
-          "sha256": "6eeba956568da12737f1051eac7705cecc0dd3029dea486eb42aebc3035ab65c",
+          "bytes": 2837,
+          "sha256": "3f6ba9af2aa6ee445fe33fdcf4a6e62f71de6b162d8fceaaea38775523bcf500",
           "structure": {
             "keys": [
               "H_far",
@@ -288,8 +291,8 @@
           }
         },
         "exp1_rf01_mannwhitney.json": {
-          "bytes": 3827,
-          "sha256": "0c0f592892f7048136c8c65d9ebf7af3e41c784e37c3897285cc86b8e56c4275",
+          "bytes": 3622,
+          "sha256": "af2d1f916a9dd97e3c678dc99b390524a2308796d8ad0478f47b646a388f5071",
           "structure": {
             "keys": [
               "rf01_mann_whitney"
@@ -300,7 +303,7 @@
         },
         "provenance_map_exp1.json": {
           "bytes": 5395,
-          "sha256": "051c887dd6d6db21348bb7b687564d58e7a55c02f92ee88407996f3eee6c29c4",
+          "sha256": "86862d62c12708e091efa9e62e00d5fc526cd19c49ddafb382c2b3f8091024dd",
           "structure": {
             "keys": [
               "benchmark_script_path",
@@ -331,12 +334,12 @@
         }
       },
       "last_commit": {
-        "commit": "6adab37a240a14debb4a12ff4968f4ee6406a481",
-        "committed_at": "2026-11-27T05:20:09Z"
+        "commit": "b62b6d7650f108830cf8bf669695d1b4ec1b39d7",
+        "committed_at": "2026-11-27T23:50:35Z"
       },
       "problems": [],
       "provenance": {
-        "benchmark_script_sha256": "5a5eae79a57eeee3d0fcfd01f2dcf48fb2bfe5c924560db1a278891491fa0d70",
+        "benchmark_script_sha256": "cf697d2aa07f42c76f91f48f58684b4df0692302de5544b8fd54ee9ab6d3163d",
         "engine_version": "5.4",
         "flags": {
           "HYPATIAX_ALLOW_LEGACY": null,
@@ -350,10 +353,10 @@
         "niterations": 1000,
         "populations": 30,
         "seed": 42,
-        "source_revision": "1bb4c9d7ccf4813b10014fc85a67b4a28d8f18c4"
+        "source_revision": "5a196c3e4ed04a744416b9154d3920d12ce6ab1e"
       },
       "status": "complete",
-      "workflow_run_id": "45915418515"
+      "workflow_run_id": "46060083149"
     },
     "777": {
       "directory": "hypatiax/data/results/ablation/exp1_ablation_seed777",
@@ -446,8 +449,8 @@
         }
       },
       "last_commit": {
-        "commit": "6adab37a240a14debb4a12ff4968f4ee6406a481",
-        "committed_at": "2026-11-27T05:20:09Z"
+        "commit": "b62b6d7650f108830cf8bf669695d1b4ec1b39d7",
+        "committed_at": "2026-11-27T23:50:35Z"
       },
       "problems": [],
       "provenance": {
@@ -468,14 +471,14 @@
         "source_revision": "1bb4c9d7ccf4813b10014fc85a67b4a28d8f18c4"
       },
       "status": "complete",
-      "workflow_run_id": "45915425333"
+      "workflow_run_id": "46060090453"
     },
     "99": {
       "directory": "hypatiax/data/results/ablation/exp1_ablation_seed99",
       "files": {
         "exp1_ablation_results.json": {
-          "bytes": 106671,
-          "sha256": "78f18aed54f62788dc272f4bd61cfa9c46a6240b2cad6edf5a8432b1e8aff2a9",
+          "bytes": 263371,
+          "sha256": "9f93703aed012e64d85caa9daafd2f8560cf5d80efe39ef2e0860dc75b88ecb8",
           "structure": {
             "keys": [
               "0",
@@ -499,8 +502,8 @@
           }
         },
         "exp1_llm_contribution.json": {
-          "bytes": 2895,
-          "sha256": "036a719f3b414523281df40b96fad586db9aa7f7392699cca424179b8a4c880f",
+          "bytes": 2712,
+          "sha256": "b1347fe8cda344b0e2115c121d7ee315f3155f8a4cf64078b5ef0c893c4460c8",
           "structure": {
             "keys": [
               "H_far",
@@ -518,8 +521,8 @@
           }
         },
         "exp1_rf01_mannwhitney.json": {
-          "bytes": 3514,
-          "sha256": "2bb7b3d20b48082be9a7dfbae122d61634c77413c4c294366042ab1461433a2a",
+          "bytes": 3372,
+          "sha256": "cc27ebc833305d76d3f500579cf1f94f15446d54a5476a71deed5f3d21494d28",
           "structure": {
             "keys": [
               "rf01_mann_whitney"
@@ -530,7 +533,7 @@
         },
         "provenance_map_exp1.json": {
           "bytes": 5504,
-          "sha256": "99db92f4f890309f499c05cbc0c86956d5d4dd47b948a5cbc5b34a72bd7e24dd",
+          "sha256": "b0ffecfb6b657f8bb970908cfd869804833f6c95117b01bf2e57c4cc0ad6d04f",
           "structure": {
             "keys": [
               "benchmark_script_path",
@@ -561,12 +564,12 @@
         }
       },
       "last_commit": {
-        "commit": "6adab37a240a14debb4a12ff4968f4ee6406a481",
-        "committed_at": "2026-11-27T05:20:09Z"
+        "commit": "b62b6d7650f108830cf8bf669695d1b4ec1b39d7",
+        "committed_at": "2026-11-27T23:50:35Z"
       },
       "problems": [],
       "provenance": {
-        "benchmark_script_sha256": "5a5eae79a57eeee3d0fcfd01f2dcf48fb2bfe5c924560db1a278891491fa0d70",
+        "benchmark_script_sha256": "cf697d2aa07f42c76f91f48f58684b4df0692302de5544b8fd54ee9ab6d3163d",
         "engine_version": "5.4",
         "flags": {
           "HYPATIAX_ALLOW_LEGACY": null,
@@ -580,10 +583,10 @@
         "niterations": 1000,
         "populations": 30,
         "seed": 99,
-        "source_revision": "1bb4c9d7ccf4813b10014fc85a67b4a28d8f18c4"
+        "source_revision": "5a196c3e4ed04a744416b9154d3920d12ce6ab1e"
       },
       "status": "complete",
-      "workflow_run_id": "45915420657"
+      "workflow_run_id": "46060085826"
     }
   },
   "required_files": [
