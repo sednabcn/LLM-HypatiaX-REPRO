@@ -53,11 +53,11 @@ def test_exp1b_pca_runs_each_canonical_seed_in_an_isolated_process():
     block = run_all[start:end]
 
     assert "_PCA_SEEDS=(42 99 123 777 2024)" in block
-    assert 'DEFI_SEEDS="\${_SEED}"' in block
-    assert 'PYSR_SEED="\${_SEED}"' in block
-    assert 'EXPERIMENT_SEED="\${_SEED}"' in block
-    assert 'NN_SEED="\${_SEED}"' in block
-    assert '_SEED_SCRATCH="\${_PCA_SCRATCH_ROOT}/seed\${_SEED}"' in block
+    escaped_quote = chr(92) + chr(34)
+    escaped_dollar = chr(92) + "$"
+    for variable in ("DEFI_SEEDS", "PYSR_SEED", "EXPERIMENT_SEED", "NN_SEED"):
+        assert variable + "=" + escaped_quote + escaped_dollar + "{_SEED}" + escaped_quote in block
+    assert "_SEED_SCRATCH=" + escaped_quote + escaped_dollar + "{_PCA_SCRATCH_ROOT}/seed" + escaped_dollar + "{_SEED}" + escaped_quote in block
     assert "74 case records" in block
     assert "seed provenance verified" in block
     assert "python3 '${EXPERIMENTS_DIR}/portfolio_variance_v3c2.py'" not in block
