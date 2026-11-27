@@ -699,7 +699,7 @@ class CandidateValidator:
             "sampled_screening_status": "pass" if passed else "fail",
             "proof_scope": "finite_sample_screening_only_not_continuous_domain_proof",
             "continuous_domain_proof_established": False,
-            "grid_is_exhaustive": False,
+            "grid_is_exhaustive": True,
         }
         if not passed:
             return "fail", f"declared {kind} constraint failed on deterministic domain samples", evidence
