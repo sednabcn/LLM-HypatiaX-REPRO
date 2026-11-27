@@ -142,19 +142,26 @@ def test_pipeline_forwards_force_rerun_to_runner():
 def test_exp1b_pca_fails_closed_on_missing_required_inputs_and_outputs():
     runner = (ROOT / "run_all.sh").read_text()
     start = runner.index('run exp1b_pca "')
-    end = runner.find("\nrun ", start + 1)
-    block = runner[start: end if end >= 0 else len(runner)]
-    assert "set -euo pipefail" in block
-    assert "portfolio_variance_v3c2.py skipped" in block
-    assert "::error::split_protocol_disclosure.json not found" in block
-    assert "::error::exp1b_pca_summary.json not found" in block
-    assert "HYPATIAX_RESULTS_DIR=" in block
+    block = runner[start:start + 400]
+    helper = (ROOT / "scripts/ci/run_exp1b_pca.sh").read_text()
+    assert "run_exp1b_pca.sh" in block
+    assert "set -euo pipefail" in helper
+    assert "hypatiax_defi_benchmark_pca_results_seed" in helper
+    assert "exp1b_pca_seed_outputs.py" in helper
+    assert "exp1b_pca_summary.json" in helper
+    assert "split_protocol_disclosure.json" in helper
+    assert "portfolio_variance_v3c2.py" not in helper
 
-def test_exp1b_pca_analysis_uses_the_actual_pca_benchmark_file():
-    runner = (ROOT / "run_all.sh").read_text()
-    analyzer = (ROOT / "hypatiax/experiments/benchmarks/portfolio_variance_v3c2.py").read_text()
-    assert 'HYPATIAX_V3C3_RESULTS=' in runner
-    assert "'HYPATIAX_V3C3_RESULTS'" in analyzer
+def test_exp1b_pca_summary_uses_only_validated_pca_seed_outputs():
+    helper = (ROOT / "scripts/ci/exp1b_pca_seed_outputs.py").read_text()
+    runner = (ROOT / "scripts/ci/run_exp1b_pca.sh").read_text()
+    assert "SEEDS = (42, 99, 123, 777, 2024)" in helper
+    assert "EXPECTED_CASES = 74" in helper
+    assert "load_and_validate(path, seed)" in helper
+    assert "expected_case_records" in helper
+    assert "validated_case_records" in helper
+    assert "hypatiax_defi_benchmark_pca_results_seed" in helper
+    assert "portfolio_variance_v3c2.py" not in runner
 
 def test_pipeline_check_defaults_to_fail_closed():
     check = (ROOT / ".github/workflows/ci_pipeline_check.yml").read_text()
@@ -302,7 +309,7 @@ def test_exp1_optional_analysis_script_does_not_fail_when_absent():
 def test_all_portfolio_seed_parsers_allow_empty_unsharded_task_ids():
     runner = (ROOT / "run_all.sh").read_text()
     safe_parser = "sed -nE 's/^portfolio_seed([0-9]+)$/\\\\1/p'"
-    assert runner.count(safe_parser) == 3
+    assert runner.count(safe_parser) == 2
     exp1b_start = runner.index('run exp1b "')
     exp1b_end = runner.index('run portfolio "', exp1b_start)
     exp1b = runner[exp1b_start:exp1b_end]

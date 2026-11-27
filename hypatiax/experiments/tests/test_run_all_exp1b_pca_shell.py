@@ -1,38 +1,47 @@
-"""Regression tests for the exp1b_pca run_all.sh shell wrapper."""
+"""Regression tests for the isolated exp1b_pca five-seed runner."""
 
 from pathlib import Path
-import re
 import subprocess
 
 
-def test_exp1b_pca_bash_c_payload_is_valid_shell():
-    """Catch quoting regressions hidden inside run_all.sh's nested bash -c string."""
-    repo_root = Path(__file__).resolve().parents[3]
-    run_all = (repo_root / "run_all.sh").read_text(encoding="utf-8")
+ROOT = Path(__file__).resolve().parents[3]
 
-    start = re.search(r'^run exp1b_pca .* bash -c "\n', run_all, flags=re.MULTILINE)
-    assert start is not None, "exp1b_pca run_all.sh step was not found"
 
-    remainder = run_all[start.end() :]
-    end = re.search(r'^"\s*$', remainder, flags=re.MULTILINE)
-    assert end is not None, "exp1b_pca bash -c payload has no closing delimiter"
-
-    raw_payload = remainder[: end.start()]
-    # Decode the escapes applied by the outer bash double-quoted argument.
-    payload = re.sub(r'\\(["$\\])', r'\1', raw_payload)
-    checked = subprocess.run(
-        ["bash", "-n", "-c", payload],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
+def test_exp1b_pca_runner_is_standalone_and_shell_valid():
+    run_all = (ROOT / "run_all.sh").read_text(encoding="utf-8")
+    helper = ROOT / "scripts/ci/run_exp1b_pca.sh"
+    assert 'run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (five isolated seeds)" bash "${REPO_ROOT}/scripts/ci/run_exp1b_pca.sh"' in run_all
+    checked = subprocess.run(["bash", "-n", str(helper)], capture_output=True, text=True)
     assert checked.returncode == 0, checked.stderr
 
 
+def test_exp1b_pca_runs_all_five_seeds_with_fresh_rng_and_isolated_outputs():
+    helper = (ROOT / "scripts/ci/run_exp1b_pca.sh").read_text(encoding="utf-8")
+    for seed in (42, 99, 123, 777, 2024):
+        assert str(seed) in helper
+    for variable in ("DEFI_SEEDS", "PYSR_SEED", "EXPERIMENT_SEED", "NN_SEED", "HYPATIAX_ENGINE_SEED"):
+        assert variable in helper
+    for inherited_filter in ("TASK_IDS", "SHARD_IDS", "DOMAIN_FILTER", "DEFI_TASK_FILTER",
+                             "ONE_EQUATION", "CASE_RANGE_START", "CASE_RANGE_END"):
+        assert inherited_filter + '=""' in helper
+    assert "--output-dir" in helper and "--force-fresh" in helper
+    assert "seed${seed}" in helper
+    assert "exp1b_pca_seed_outputs.py" in helper
+
+
+def test_exp1b_pca_validator_requires_complete_seed_case_sets_and_provenance():
+    helper = (ROOT / "scripts/ci/exp1b_pca_seed_outputs.py").read_text(encoding="utf-8")
+    assert "SEEDS = (42, 99, 123, 777, 2024)" in helper
+    assert "EXPECTED_CASES = 74" in helper
+    assert "observed != {seed}" in helper
+    assert "len(set(equation_ids)) != EXPECTED_CASES" in helper
+    assert "expected_case_records" in helper
+    assert "validated_case_records" in helper
+    assert "source_files" in helper
+
 
 def test_exp1b_pca_skip_guard_requires_all_five_seed_results_and_summaries():
-    repo_root = Path(__file__).resolve().parents[3]
-    workflow = (repo_root / ".github/workflows/ci_runner_repro.yml").read_text()
+    workflow = (ROOT / ".github/workflows/ci_runner_repro.yml").read_text()
     guard = workflow.split("- name: Check if exp1b_pca results already exist", 1)[1].split(
         "- name: Set up Python", 1
     )[0]
