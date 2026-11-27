@@ -66,7 +66,10 @@ from pathlib import Path
 import numpy as np
 from sklearn.model_selection import train_test_split
 
-from hypatiax.experiments.benchmarks.exp1_ablation_contracts import formula_pathology_reasons
+from hypatiax.experiments.benchmarks.exp1_ablation_contracts import (
+    build_core15_discovery_problem,
+    formula_pathology_reasons,
+)
 
 warnings.filterwarnings("ignore")
 
@@ -822,6 +825,11 @@ def run_condition(eq, condition, seed=42, niterations=None,
             "variable_units":         {sv: "" for sv in safe_var_names},
             "noise_level":            0.05,
             "domain":                 _dom_slug,
+            # Explicit scientific assumptions are applied to candidate
+            # admission only. No held-out/far target values enter the selector.
+            "discovery_problem":      build_core15_discovery_problem(
+                eq, safe_var_names, eq_seed
+            ),
         }
         t0 = time.time()
         try:
