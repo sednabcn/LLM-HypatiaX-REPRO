@@ -12,6 +12,11 @@ from hypatiax.experiments.audit import audit_formula
 
 SOURCE = "hypatiax/protocols/experiment_protocol_defi.py"
 # Equation-specific shorthand-to-schema mappings taken from the protocol generator.
+SOURCE_BACKED_CONSTANTS = {
+    # Theta's generator defines these scalars in code but omits them from metadata.
+    "Theta of option": {"K": 100.0, "r": 0.04},
+}
+
 ALIASES = {
  "AMM output amount":{"x":"reserve_x","y":"reserve_y"},
  "Annualised Portfolio tracking error":{"daily_te":"daily_tracking_error"},
@@ -59,7 +64,7 @@ ALIASES = {
  "Slashing penalty":{"staked":"staked_amount"},
  "Staking reward for fixed lock-up":{"staked":"staked_amount","days":"lock_days"},
  "Supply APY from borrow":{"util":"utilization"},
- "Theta of option":{"S":"spot_price","K":"strike","r":"risk_free_rate","sigma":"implied_volatility","T":"time_to_expiry"},
+ "Theta of option":{"S":"spot_price","sigma":"implied_volatility","T":"time_to_expiry"},
  "Uniswap V3 virtual":{"amount":"token_amount","P_upper":"price_upper","P_lower":"price_lower"},
  "Utilization rate of DeFi":{"borrowed":"total_borrowed","supplied":"total_supplied"},
  "Validator commission adjusted":{"commission":"commission_rate"},
@@ -101,7 +106,8 @@ def adjudicate(protocol, records):
         eq = str(rec.get("equation_id"))
         ctx = rec.get("formula_context") or {}
         vars_ = ctx.get("variable_names")
-        constants = ctx.get("constants") if isinstance(ctx.get("constants"), dict) else {}
+        constants = dict(ctx.get("constants")) if isinstance(ctx.get("constants"), dict) else {}
+        constants.update(SOURCE_BACKED_CONSTANTS.get(eq, {}))
         aliases = dict(ctx.get("ground_truth_aliases") or {})
         aliases.update(ALIASES.get(eq, {}))
         allowed = set(vars_ or []) | set(constants)
@@ -139,7 +145,8 @@ def main():
     report = {"schema_version": 1, "seeds": list(SEEDS), "read_only": True,
               "experiments_rerun": False, "llm_calls": 0, "source_file": SOURCE,
               "alias_policy": "equation-specific aliases; targets must exist in saved variable_names or constants",
-              "aliases": ALIASES, "protocols": protocols}
+              "aliases": ALIASES, "source_backed_constants": SOURCE_BACKED_CONSTANTS,
+              "protocols": protocols}
     args.output_json.parent.mkdir(parents=True, exist_ok=True)
     args.output_md.parent.mkdir(parents=True, exist_ok=True)
     args.output_json.write_text(json.dumps(report, indent=2, allow_nan=False) + "\n", encoding="utf-8")
