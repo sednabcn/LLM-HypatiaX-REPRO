@@ -157,6 +157,7 @@ from hypatiax.core.routing import (
     kde_ood_probability, route_decision_from_diagnostics, structural_risk_tokens,
     training_edge_split_indices,
 )
+from hypatiax.experiments.audit import validate_generated_formula
 
 # ── env / API key ─────────────────────────────────────────────────────────────
 for _ep in [
@@ -1170,6 +1171,20 @@ def _hybrid_predict_and_eval(
     llm_result = _generate_llm_formula(description, domain, var_names, metadata)
     llm_code = llm_result.get("python_code") or ""
     has_formula = bool(llm_code and "def formula" in llm_code)
+    constants = metadata.get("constants") or {}
+    # This offline symbolic gate runs before numerical formula evaluation.
+    # It controls exact-match eligibility only; predictive R² and routing remain
+    # separate empirical diagnostics and are not silently redefined by identity.
+    source_aliases = metadata.get("ground_truth_aliases")
+    symbolic_validation = validate_generated_formula(
+        formula_source=llm_code if has_formula else None,
+        ground_truth=metadata.get("ground_truth"),
+        variable_names=var_names,
+        ground_truth_aliases=(
+            source_aliases if isinstance(source_aliases, dict) else None
+        ),
+        constants=constants if isinstance(constants, dict) else None,
+    )
     if llm_attempt_state is not None:
         llm_attempt_state.update({
             "llm_called": bool(llm_result.get("llm_called", False)),
@@ -1183,7 +1198,6 @@ def _hybrid_predict_and_eval(
             "llm_temperature_sent": llm_result.get("temperature_sent", False),
             "llm_code": llm_code if has_formula else None,
         })
-    constants = metadata.get("constants") or {}
     llm_train_r2, llm_train_ok = (
         _eval_formula_r2(llm_code, X_train, y_train, constants=constants)
         if has_formula else (float("nan"), False)
@@ -1568,6 +1582,7 @@ def _hybrid_predict_and_eval(
         "structural_risk_flag": structural_risk_flag,
         "structural_risk_tokens": structural_tokens,
         "trust_gate_diagnostics": trust_gate_diagnostics,
+        "symbolic_validation": symbolic_validation,
         "nn_prediction_validation": nn_prediction_validation,
         # Keep the legacy name as an alias while making its NN provenance explicit.
         "degradation_probe": nn_degradation_probe,
@@ -2191,6 +2206,7 @@ def _hybrid_metric_provenance_record(hy_m):
         "selected_predictor_test_r2": hy_m.get("selected_predictor_test_r2"),
         "selected_predictor_source": hy_m.get("selected_predictor_source"),
         "trust_gate_diagnostics": hy_m.get("trust_gate_diagnostics"),
+        "symbolic_validation": hy_m.get("symbolic_validation"),
         "nn_prediction_validation": hy_m.get("nn_prediction_validation"),
     }
 
