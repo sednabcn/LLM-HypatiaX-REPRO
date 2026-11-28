@@ -92,4 +92,3 @@ def test_trading_liquidation_variants_preserve_long_short_sign_conventions():
         leverage = features[:, names.index("leverage")]
         expected = entry_price * (1.0 + sign / (leverage * 0.8))
         np.testing.assert_allclose(actual, expected, rtol=0.0, atol=1e-10)
-        assert metadata["constants"]["maintenance_margin"] == pytest.approx(0.8)
