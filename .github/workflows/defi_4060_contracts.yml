@@ -6,6 +6,7 @@ on:
       - ".github/workflows/defi_4060_contracts.yml"
       - "tests/test_4060_*.py"
       - "hypatiax/protocols/experiment_protocol_defi.py"
+      - "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c_4060.py"
       - "hypatiax/experiments/audit/**"
       - "hypatiax/experiments/symbolic_equivalence.py"
 
