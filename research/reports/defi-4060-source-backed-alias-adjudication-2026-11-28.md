@@ -101,7 +101,7 @@ This confirms the stored ground-truth expressions. The four generated-formula mi
 - Source-backed adjudication workflow: [run 46137673314](https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/46137673314) — successful.
 - Retrospective audit workflow: [run 46137673343](https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/46137673343) — successful.
 - Offline smoke workflow: [run 46137673330](https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/46137673330) — successful.
-- Focused regression suite: 11 tests passed.
+- Focused regression suite: 12 tests passed.
 - Machine-readable and Markdown case-level outputs are uploaded as the workflow artifact named defi-4060-source-backed-aliases (30-day retention).
 
 This report distinguishes exact symbolic identity, non-equivalence, and not-assessable cases. It does not treat predictive R² or routing decisions as evidence of formula correctness.
