@@ -28,7 +28,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install symbolic audit dependency
-        run: python -m pip install "numpy==2.3.5" "sympy==1.14.0"
+        run: python -m pip install "numpy==2.3.5" "sympy==1.14.0" "pytest==8.4.2"
       - name: Validate canonical 40/60 artifact integrity
         run: python -m pytest -q tests/test_4060_artifact_integrity.py
       - name: Run offline retrospective audit
