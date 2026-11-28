@@ -102,7 +102,10 @@ def _expr(node: ast.AST, env: dict[str, Any]) -> Any:
             raise FormulaParseError("unsupported comparison operator")
         return comparison(_expr(node.left, env), _expr(node.comparators[0], env))
     if isinstance(node, ast.IfExp):
-        condition = _expr(node.test, env)
+        if isinstance(node.test, ast.Constant) and isinstance(node.test.value, bool):
+            condition = sp.true if node.test.value else sp.false
+        else:
+            condition = _expr(node.test, env)
         if condition is sp.true:
             return _expr(node.body, env)
         if condition is sp.false:
