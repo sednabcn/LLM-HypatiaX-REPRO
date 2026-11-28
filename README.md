@@ -54,9 +54,25 @@ The maintained workflow set includes:
 | `ci_r2_policy.yml` | Enforces the configured R² scoring policy |
 | `ci_bypass_audit.yml` | Audits safeguards against bypassed model outputs or prompts |
 | `ci_smoke_test_exp3.yml` | Smoke-checks the exp3 workflow path |
+| `defi_4060_contracts.yml` | Runs offline DeFi 40/60 formula, unit, semantic, and artifact-integrity contracts on relevant pull requests |
+| `adjudicate_4060_source_backed_aliases.yml` | Runs the read-only source-backed DeFi 40/60 adjudication workflow on matching pull requests or manual dispatch |
 | `claude.yml` | Repository assistant workflow |
 | `clean-old-workflows.yml` | Removes old workflow runs according to its configured retention policy |
 | `cleanup-cache-actions.yml` | Performs configured Actions cache cleanup |
+
+The DeFi 40/60 contract workflow is a focused, offline validation gate; it does not launch benchmark experiments, train models, or call LLM providers. It runs these six test modules:
+
+```bash
+LLM_MODE=offline python -m pytest -q \
+  tests/test_4060_artifact_integrity.py \
+  tests/test_4060_defi_formula_contracts.py \
+  tests/test_4060_defi_units_and_semantics.py \
+  tests/test_4060_generated_formula_gate.py \
+  tests/test_4060_remaining_family_contracts.py \
+  tests/test_4060_defi_theta_and_domain_contracts.py
+```
+
+The workflow is triggered by its configured pull-request path filters (and can also be inspected or dispatched from the Actions tab); consult `.github/workflows/defi_4060_contracts.yml` for the authoritative event and path scope. For the fail-closed generated-formula API and its interpretation, see [the reusable formula audit utilities](hypatiax/experiments/audit/README.md). The source-backed adjudication findings are recorded in [the DeFi 40/60 adjudication report](research/reports/defi-4060-source-backed-alias-adjudication-2026-11-28.md).
 
 Legacy orchestration definitions are not documented as supported run entry points. Use `ci_runner_repro.yml` for experiment dispatch and `ci_pipeline_check.yml` for completion and qualification checks.
 
