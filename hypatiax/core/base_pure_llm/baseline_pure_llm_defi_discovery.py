@@ -582,7 +582,11 @@ CRITICAL REQUIREMENTS:
 - Do not infer coefficients from training data or fit any parameters.
 - NO scipy imports (use only numpy)
 - NO markdown code blocks
-- Ensure operations work element-wise on numpy arrays"""
+- Ensure operations work element-wise on numpy arrays
+- In VARIABLES, state the meaning and unit of every declared input (for example, decimal fraction vs percentage points, price units, token amount, or annual rate); do not silently rescale values.
+- In ASSUMPTIONS and EXPLANATION, state the output meaning and unit (for example, total compounded balance vs interest earned), the applicable domain restrictions, and any direction/sign convention (for example, long liquidation below entry and short liquidation above entry).
+- Keep the returned expression mathematically identical to the stated target; do not replace strict symbolic identity with a numerical-fit or sampled-domain approximation.
+- A generated formula is not an exact match until the offline symbolic formula gate confirms exact symbolic equivalence. Unsupported or malformed formulas must remain not assessable."""
 
     # Canonical section headers this parser understands, in the order the
     # prompt asks the model to emit them. A single regex finds every header
