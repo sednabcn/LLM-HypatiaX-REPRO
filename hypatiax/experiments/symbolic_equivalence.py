@@ -15,6 +15,11 @@ def _clip(value: Any, lower: Any, upper: Any) -> Any:
     return sp.Min(sp.Max(value, lower), upper)
 
 
+def _log10(value: Any) -> Any:
+    """Base-10 logarithm (distinct from the natural logarithm)."""
+    return sp.log(value, 10)
+
+
 def _norm_cdf(value: Any) -> Any:
     return (1 + sp.erf(value / sp.sqrt(2))) / 2
 
@@ -23,7 +28,7 @@ def _norm_pdf(value: Any) -> Any:
     return sp.exp(-(value ** 2) / 2) / sp.sqrt(2 * sp.pi)
 
 _FUNCTIONS = {
-    "sqrt": sp.sqrt, "exp": sp.exp, "log": sp.log, "log10": sp.log,
+    "sqrt": sp.sqrt, "exp": sp.exp, "log": sp.log, "log10": _log10,
     "power": lambda a, b: a ** b, "floor": sp.floor, "ceil": sp.ceiling,
     "sin": sp.sin, "cos": sp.cos, "tan": sp.tan,
     "asin": sp.asin, "arcsin": sp.asin, "acos": sp.acos, "arccos": sp.acos,
@@ -171,8 +176,13 @@ def adjudicate_symbolic_equivalence(
     if not ground_truth:
         return {"status": "ground_truth_missing", "symbolically_equivalent": None}
     if (not isinstance(variable_names, list) or not variable_names
-            or not all(isinstance(name, str) and name.isidentifier() for name in variable_names)):
-        return {"status": "variable_schema_missing", "symbolically_equivalent": None}
+            or not all(isinstance(name, str) and name.isidentifier() for name in variable_names)
+            or len(set(variable_names)) != len(variable_names)):
+        return {
+            "status": "variable_schema_missing",
+            "symbolically_equivalent": None,
+            "reason": "variable_names must be a non-empty list of unique identifiers",
+        }
     try:
         llm_expr = _parse_llm_function(llm_formula, variable_names, constants)
         truth_expr = _parse_ground_truth(

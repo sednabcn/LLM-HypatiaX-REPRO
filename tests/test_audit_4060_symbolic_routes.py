@@ -38,8 +38,35 @@ def test_audit_uses_saved_formula_and_preserves_route_provenance():
     assert result["audit_scope"]["audit_data_shapes"]["X_train"] == {
         "rows": 1, "columns": 1
     }
+    assert result["audit_scope"]["ground_truth_present"] is True
 
 
 def test_audit_counts_not_assessable_separately():
     report = build_audit([{"results": {"hybrid": {}}, "formula_context": {}}])
     assert report["symbolic_status_counts"] == {"no_llm_formula": 1}
+    assert report["coverage"]["ground_truth_present"] == 0
+    assert report["coverage"]["llm_formula_present"] == 0
+    assert report["coverage"]["symbolically_not_assessable"] == 1
+    assert report["coverage"]["split_protocol_counts"] == {"unspecified": 1}
+
+
+
+def test_audit_reports_duplicate_equation_seed_pairs_and_protocol_coverage():
+    record = {
+        "equation_id": "toy", "seed": 7,
+        "split_protocol": {"name": "pca_40_60"},
+        "formula_context": {
+            "variable_names": ["x"], "ground_truth_expression": "x",
+        },
+        "results": {"hybrid": {"formula": "def formula(x):\n    return x"}},
+        "audit_data": {"X_train": [[1.0]]},
+    }
+    report = build_audit([record, record])
+    coverage = report["coverage"]
+    assert coverage["ground_truth_present"] == 2
+    assert coverage["llm_formula_present"] == 2
+    assert coverage["audit_data_present"] == 2
+    assert coverage["identified_equation_seed_pairs"] == 2
+    assert coverage["unique_equation_seed_pairs"] == 1
+    assert coverage["duplicate_equation_seed_pairs"] == 1
+    assert coverage["split_protocol_counts"] == {"pca_40_60": 2}
