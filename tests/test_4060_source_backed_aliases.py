@@ -100,3 +100,14 @@ def test_numpy_infinity_is_a_safe_symbolic_constant():
         ["x"],
     )
     assert result["status"] == "not_symbolically_equivalent"
+
+
+
+def test_decorated_redefinition_is_not_admitted():
+    result = audit_formula(
+        "@unsafe\ndef formula(x):\n    return x + 1\n"
+        "def formula(x):\n    return 2 * x",
+        "2 * x",
+        ["x"],
+    )
+    assert result["status"] == "not_assessable"
