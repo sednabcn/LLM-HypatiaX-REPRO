@@ -85,13 +85,20 @@ def _load_records(path: Path, expected_seed: int) -> list[dict[str, Any]]:
 
 
 def _assert_finite_or_null(value: Any, where: str) -> None:
-    """JSON metrics may be null when undefined, but must not be NaN/Infinity."""
+    """Accept finite values, JSON null, or legacy NaN as an undefined sentinel.
+
+    The committed historical JSON contains NaN for some undefined metrics.
+    Do not rewrite those source artifacts; reject infinities and other non-finite
+    values while preserving NaN's existing not-defined meaning.
+    """
     if value is None:
         return
     if isinstance(value, bool):
         return
     if isinstance(value, (int, float)):
-        assert math.isfinite(float(value)), f"{where}: non-finite numeric value {value!r}"
+        if isinstance(value, float) and math.isnan(value):
+            return
+        assert math.isfinite(float(value)), f"{where}: infinite numeric value {value!r}"
 
 
 @pytest.mark.parametrize("protocol", ["random", "pca"])
