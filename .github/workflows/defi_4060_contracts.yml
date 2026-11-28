@@ -1,0 +1,42 @@
+name: DeFi 40/60 contract verification
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/defi_4060_contracts.yml"
+      - "tests/test_4060_*.py"
+      - "hypatiax/protocols/experiment_protocol_defi.py"
+      - "hypatiax/experiments/audit/**"
+      - "hypatiax/experiments/symbolic_equivalence.py"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: defi-4060-contracts-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  focused-contracts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      LLM_MODE: offline
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install offline test dependencies
+        run: python -m pip install --upgrade pip pytest numpy scipy sympy
+      - name: Run DeFi 40/60 artifact integrity and source-backed contracts
+        run: |
+          python -m pytest -q \
+            tests/test_4060_artifact_integrity.py \
+            tests/test_4060_defi_formula_contracts.py \
+            tests/test_4060_defi_units_and_semantics.py \
+            tests/test_4060_generated_formula_gate.py \
+            tests/test_4060_remaining_family_contracts.py \
+            tests/test_4060_defi_theta_and_domain_contracts.py
