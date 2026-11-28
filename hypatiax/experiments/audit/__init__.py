@@ -9,7 +9,7 @@ from .audit_schema import (
     NUMERICALLY_DISAGREE,
     VARIABLE_SCHEMA_MISSING,
 )
-from .formula_validation import validate_formula_metadata
+from .formula_validation import validate_formula_metadata, validate_generated_formula
 from .numerical_audit import compare_callables
 from .symbolic_audit import audit_formula
 
@@ -17,6 +17,7 @@ __all__ = [
     "audit_formula",
     "compare_callables",
     "validate_formula_metadata",
+    "validate_generated_formula",
     "EXACT_SYMBOLIC_EQUIVALENT",
     "NOT_SYMBOLICALLY_EQUIVALENT",
     "NOT_ASSESSABLE",
