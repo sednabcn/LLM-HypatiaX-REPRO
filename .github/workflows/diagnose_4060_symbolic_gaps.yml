@@ -1,0 +1,46 @@
+name: DeFi 40/60 symbolic remediation diagnostics
+
+on:
+  pull_request:
+    paths:
+      - "scripts/analysis/diagnose_4060_symbolic_gaps.py"
+      - "scripts/analysis/audit_4060_reusable.py"
+      - ".github/workflows/diagnose_4060_symbolic_gaps.yml"
+      - "hypatiax/experiments/audit/**"
+      - "hypatiax/experiments/symbolic_equivalence.py"
+      - "hypatiax/data/results/comparison_results/noise-noiseless/noiseless/defi_random_4060/**"
+      - "hypatiax/data/results/comparison_results/noise-noiseless/noiseless/defi_pca/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install diagnostic dependencies
+        run: python -m pip install "numpy==2.3.5" "sympy==1.14.0"
+      - name: Generate read-only case-level diagnostics
+        run: |
+          set -euo pipefail
+          PYTHONPATH=. python scripts/analysis/diagnose_4060_symbolic_gaps.py \
+            --output-json /tmp/defi-4060-symbolic-gaps.json \
+            --output-md /tmp/defi-4060-symbolic-gaps.md
+          cat /tmp/defi-4060-symbolic-gaps.md
+      - name: Upload diagnostic report
+        uses: actions/upload-artifact@v4
+        with:
+          name: defi-4060-symbolic-gap-diagnostics
+          path: |
+            /tmp/defi-4060-symbolic-gaps.json
+            /tmp/defi-4060-symbolic-gaps.md
+          if-no-files-found: error
+          retention-days: 30
