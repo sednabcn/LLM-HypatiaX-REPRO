@@ -101,6 +101,16 @@ def _expr(node: ast.AST, env: dict[str, Any]) -> Any:
         if comparison is None:
             raise FormulaParseError("unsupported comparison operator")
         return comparison(_expr(node.left, env), _expr(node.comparators[0], env))
+    if isinstance(node, ast.IfExp):
+        condition = _expr(node.test, env)
+        if condition is sp.true:
+            return _expr(node.body, env)
+        if condition is sp.false:
+            return _expr(node.orelse, env)
+        return sp.Piecewise(
+            (_expr(node.body, env), condition),
+            (_expr(node.orelse, env), True),
+        )
     if (isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name)
             and node.value.id == "np" and node.attr in {"pi", "e"}):
         return sp.pi if node.attr == "pi" else sp.E
