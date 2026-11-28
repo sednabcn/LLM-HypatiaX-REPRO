@@ -15,8 +15,8 @@ SOURCE = "hypatiax/protocols/experiment_protocol_defi.py"
 ALIASES = {
  "AMM output amount":{"x":"reserve_x","y":"reserve_y"},
  "Annualised Portfolio tracking error":{"daily_te":"daily_tracking_error"},
- "Black-Scholes Call Price":{"S":"spot_price","K":"strike","r":"risk_free_rate","T":"time_to_expiry"},
- "Black-Scholes Put Price":{"S":"spot_price","K":"strike","r":"risk_free_rate","T":"time_to_expiry"},
+ "Black-Scholes Call Price":{"S":"spot_price","K":"strike","r":"risk_free_rate","sigma":"implied_volatility","T":"time_to_expiry"},
+ "Black-Scholes Put Price":{"S":"spot_price","K":"strike","r":"risk_free_rate","sigma":"implied_volatility","T":"time_to_expiry"},
  "Borrow APY from utilization":{"utilization":"utilization_rate"},
  "Borrowing Interest":{"rate":"interest_rate","t":"time_years"},
  "Call option intrinsic":{"S":"spot_at_expiry","K":"strike"},
