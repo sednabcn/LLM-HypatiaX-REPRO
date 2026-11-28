@@ -88,7 +88,7 @@ def test_missing_formula_and_ground_truth_are_explicitly_not_assessable():
     assert no_formula["eligible_for_exact_match"] is False
 
     no_ground_truth = validate_generated_formula(
-        "def formula(x):\\n    return x", None, ["x"]
+        "def formula(x):\n    return x", None, ["x"]
     )
     assert no_ground_truth["status"] == "ground_truth_missing"
     assert no_ground_truth["eligible_for_exact_match"] is False
