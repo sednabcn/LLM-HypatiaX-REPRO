@@ -115,8 +115,12 @@ def _expr(node: ast.AST, env: dict[str, Any]) -> Any:
             (_expr(node.orelse, env), True),
         )
     if (isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name)
-            and node.value.id == "np" and node.attr in {"pi", "e"}):
-        return sp.pi if node.attr == "pi" else sp.E
+            and node.value.id == "np" and node.attr in {"pi", "e", "inf"}):
+        if node.attr == "pi":
+            return sp.pi
+        if node.attr == "e":
+            return sp.E
+        return sp.oo
     if isinstance(node, ast.Call):
         if isinstance(node.func, ast.Name):
             name = node.func.id
