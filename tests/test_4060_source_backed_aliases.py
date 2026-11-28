@@ -1,4 +1,4 @@
-from scripts.analysis.adjudicate_4060_source_backed_aliases import ALIASES
+from scripts.analysis.adjudicate_4060_source_backed_aliases import (\n    ALIASES, SOURCE_BACKED_CONSTANTS, expand_source_defined_d1_d2,\n)
 from hypatiax.experiments.audit import audit_formula
 
 
@@ -75,3 +75,26 @@ def test_literal_conditional_selects_the_effective_branch():
         ["x"],
     )
     assert result["status"] == "exact_symbolic_equivalent"
+
+
+
+def test_theta_constants_are_recovered_from_protocol_source():
+    assert SOURCE_BACKED_CONSTANTS["Theta of option"] == {"K": 100.0, "r": 0.04}
+
+
+def test_black_scholes_helper_symbols_are_expanded_from_source_definition():
+    expanded = expand_source_defined_d1_d2(
+        "Gamma of option", "norm_pdf(d1) / (S * sigma * sqrt(T))"
+    )
+    assert "d1" not in expanded
+    assert "sigma" in expanded
+
+
+
+def test_numpy_infinity_is_a_safe_symbolic_constant():
+    result = audit_formula(
+        "def formula(x):\n    return np.where(x > 0, 1 / x, np.inf)",
+        "1 / x",
+        ["x"],
+    )
+    assert result["status"] == "not_symbolically_equivalent"
