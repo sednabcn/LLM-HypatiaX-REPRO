@@ -1,4 +1,5 @@
 from scripts.analysis.adjudicate_4060_source_backed_aliases import ALIASES
+from hypatiax.experiments.audit import audit_formula
 
 
 def test_alias_manifest_is_equation_specific_and_well_formed():
@@ -25,3 +26,42 @@ def test_liquidation_formulas_do_not_receive_symbol_aliases():
 def test_aliases_are_not_generalized_across_equations():
     assert ALIASES["Impermanent loss in constant product"]["r"] == "price_ratio"
     assert ALIASES["Forward price for derivative"]["r"] == "risk_free_rate"
+
+
+
+def test_scalar_dot_is_adjudicated_as_multiplication():
+    result = audit_formula(
+        "def formula(x, y):\n    return np.dot(x, y)",
+        "x * y",
+        ["x", "y"],
+    )
+    assert result["status"] == "exact_symbolic_equivalent"
+
+
+def test_where_comparison_is_preserved_as_piecewise():
+    result = audit_formula(
+        "def formula(x):\n    return np.where(x == 0, 0, 1 / x)",
+        "1 / x",
+        ["x"],
+    )
+    assert result["status"] == "not_symbolically_equivalent"
+
+
+def test_identical_constant_reassignment_is_safe():
+    result = audit_formula(
+        "def formula(x):\n    scale = 2.0\n    return x * scale",
+        "x * scale",
+        ["x"],
+        constants={"scale": 2.0},
+    )
+    assert result["status"] == "exact_symbolic_equivalent"
+
+
+def test_final_redefinition_is_the_effective_python_function():
+    result = audit_formula(
+        "def formula(x):\n    return x + 100\n"
+        "def formula(x):\n    return 2 * x",
+        "2 * x",
+        ["x"],
+    )
+    assert result["status"] == "exact_symbolic_equivalent"
