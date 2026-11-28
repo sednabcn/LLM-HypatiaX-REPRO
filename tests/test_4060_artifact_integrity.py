@@ -164,21 +164,27 @@ def test_4060_case_records_preserve_auditable_structure(protocol: str):
 
 
 @pytest.mark.parametrize("protocol", ["random", "pca"])
-def test_historical_missing_answer_keys_remain_not_assessable(protocol: str):
-    """Do not infer symbolic correctness from R² or fill historical answer keys."""
+def test_historical_answer_keys_are_present_and_provenanced(protocol: str):
+    """The current canonical records carry protocol-sourced answer keys.
+
+    This assertion deliberately does not claim that every key is symbolically
+    assessable: variable aliases and formula parser support are audited separately.
+    """
     records = [
         record
         for seed, path in _artifact_files(protocol).items()
         for record in _load_records(path, seed)
     ]
-    missing = [
-        record for record in records
-        if not (record.get("formula_context") or {}).get("ground_truth_expression")
-    ]
-    # Regression assertion for the historical master artifacts only. Never
-    # infer ground truth from predictive scores or silently fill missing keys.
-    assert len(missing) == len(records), (
-        "Historical artifact set changed: review answer-key provenance before "
-        "changing this expectation; never infer ground truth from predictive scores."
-    )
     assert len(records) == len(EXPECTED_SEEDS) * EXPECTED_CASES_PER_SEED
+    for index, record in enumerate(records):
+        context = record.get("formula_context") or {}
+        assert isinstance(context.get("ground_truth_expression"), str)
+        assert context["ground_truth_expression"].strip(), (
+            f"{protocol}[{index}]: missing persisted ground-truth expression"
+        )
+        assert context.get("ground_truth_source") == "protocol_metadata", (
+            f"{protocol}[{index}]: unexpected answer-key provenance"
+        )
+        assert context.get("ground_truth_excluded_from_prompt") is True, (
+            f"{protocol}[{index}]: answer key must be excluded from the LLM prompt"
+        )
