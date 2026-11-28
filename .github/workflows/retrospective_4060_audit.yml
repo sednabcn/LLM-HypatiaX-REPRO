@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "scripts/analysis/audit_4060_reusable.py"
+      - "scripts/analysis/diagnose_4060_symbolic_gaps.py"
       - "tests/test_4060_artifact_integrity.py"
       - "research/reports/defi-4060-retrospective-audit-2026-11-28.md"
       - ".github/workflows/retrospective_4060_audit.yml"
@@ -38,6 +39,13 @@ jobs:
             --output-json /tmp/defi-4060-retrospective-audit.json \
             --output-md /tmp/defi-4060-retrospective-audit.md
           cat /tmp/defi-4060-retrospective-audit.md
+      - name: Run read-only symbolic-gap diagnostics
+        run: |
+          set -euo pipefail
+          PYTHONPATH=. python scripts/analysis/diagnose_4060_symbolic_gaps.py \
+            --output-json /tmp/defi-4060-symbolic-gaps.json \
+            --output-md /tmp/defi-4060-symbolic-gaps.md
+          cat /tmp/defi-4060-symbolic-gaps.md
       - name: Upload audit report
         uses: actions/upload-artifact@v4
         with:
@@ -45,5 +53,14 @@ jobs:
           path: |
             /tmp/defi-4060-retrospective-audit.json
             /tmp/defi-4060-retrospective-audit.md
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload symbolic-gap diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: defi-4060-symbolic-gap-diagnostics
+          path: |
+            /tmp/defi-4060-symbolic-gaps.json
+            /tmp/defi-4060-symbolic-gaps.md
           if-no-files-found: error
           retention-days: 30
