@@ -65,3 +65,13 @@ def test_final_redefinition_is_the_effective_python_function():
         ["x"],
     )
     assert result["status"] == "exact_symbolic_equivalent"
+
+
+
+def test_literal_conditional_selects_the_effective_branch():
+    result = audit_formula(
+        "def formula(x):\n    return x + 1 if False else x * 2",
+        "2 * x",
+        ["x"],
+    )
+    assert result["status"] == "exact_symbolic_equivalent"
