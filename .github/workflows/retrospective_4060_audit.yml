@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - "scripts/analysis/audit_4060_reusable.py"
+      - "tests/test_4060_artifact_integrity.py"
+      - "research/reports/defi-4060-retrospective-audit-2026-11-28.md"
       - ".github/workflows/retrospective_4060_audit.yml"
       - "hypatiax/experiments/audit/**"
       - "hypatiax/experiments/symbolic_equivalence.py"
