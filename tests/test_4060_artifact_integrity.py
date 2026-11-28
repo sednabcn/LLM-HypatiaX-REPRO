@@ -34,31 +34,38 @@ def _seed_from_path(path: Path) -> int | None:
 
 
 def _artifact_files(protocol: str) -> dict[int, Path]:
-    """Find one committed raw artifact per expected seed, excluding checkpoints."""
-    directory = RESULTS_ROOT / ("defi_pca" if protocol == "pca" else "defi")
-    if not directory.is_dir():
-        pytest.fail(f"Committed {protocol} artifact directory is missing: {directory}")
+    """Resolve the canonical committed 40/60 files, not legacy result mirrors.
 
+    Random seed 42 is the unsuffixed v3c_4060 result file; the other four
+    random seeds have explicit seed suffixes. PCA stores all five with suffixes.
+    """
     if protocol == "pca":
-        candidates = directory.rglob("hypatiax_defi_benchmark_pca_results_seed*.json")
+        directory = RESULTS_ROOT / "defi_pca"
+        candidates = directory.glob("hypatiax_defi_benchmark_pca_results_seed*.json")
+        by_seed = {
+            seed: path
+            for path in candidates
+            if (seed := _seed_from_path(path)) in EXPECTED_SEEDS
+        }
+    elif protocol == "random":
+        directory = RESULTS_ROOT / "defi_random_4060"
+        if not directory.is_dir():
+            pytest.fail(f"Committed random 40/60 artifact directory is missing: {directory}")
+        by_seed = {}
+        seed_42 = directory / "hypatiax_defi_benchmark_v3c_4060_results.json"
+        if seed_42.is_file():
+            by_seed[42] = seed_42
+        for path in directory.glob("hypatiax_defi_benchmark_v3c_4060_results_seed*.json"):
+            seed = _seed_from_path(path)
+            if seed in EXPECTED_SEEDS:
+                by_seed[seed] = path
     else:
-        candidates = directory.rglob("hypatiax_defi_benchmark_v3*_results_seed*.json")
+        raise ValueError(f"Unknown protocol: {protocol}")
 
-    by_seed: dict[int, Path] = {}
-    for path in sorted(candidates):
-        if "checkpoint" in path.name.lower() or path.name.startswith("_"):
-            continue
-        seed = _seed_from_path(path)
-        if seed not in EXPECTED_SEEDS:
-            continue
-        # Prefer the canonical file in the protocol directory over a nested
-        # duplicate/multi-seed mirror, while still accepting either layout.
-        current = by_seed.get(seed)
-        if current is None or (len(path.parts), str(path)) < (len(current.parts), str(current)):
-            by_seed[seed] = path
-
+    assert directory.is_dir(), f"Committed {protocol} artifact directory is missing: {directory}"
     missing = EXPECTED_SEEDS - set(by_seed)
     assert not missing, f"{protocol}: missing committed seed artifacts: {sorted(missing)}"
+    assert len(by_seed) == len(EXPECTED_SEEDS)
     return by_seed
 
 
@@ -72,7 +79,7 @@ def _load_records(path: Path, expected_seed: int) -> list[dict[str, Any]]:
         assert record.get("equation_id"), f"{path}[{index}]: missing equation_id"
         assert record.get("seed") == expected_seed, (
             f"{path}[{index}]: record seed {record.get('seed')!r} "
-            f"does not match filename seed {expected_seed}"
+            f"does not match expected seed {expected_seed}"
         )
     return payload
 
@@ -168,8 +175,8 @@ def test_historical_missing_answer_keys_remain_not_assessable(protocol: str):
         record for record in records
         if not (record.get("formula_context") or {}).get("ground_truth_expression")
     ]
-    # This is a regression assertion for the historical master artifacts, not
-    # a rule for future experiment outputs. New runs should carry answer keys.
+    # Regression assertion for the historical master artifacts only. Never
+    # infer ground truth from predictive scores or silently fill missing keys.
     assert len(missing) == len(records), (
         "Historical artifact set changed: review answer-key provenance before "
         "changing this expectation; never infer ground truth from predictive scores."
