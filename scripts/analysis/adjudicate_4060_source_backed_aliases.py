@@ -76,7 +76,7 @@ def expand_source_defined_d1_d2(equation, expression):
     }
     if equation not in eligible:
         return expression
-    expression = re.sub(r"\\brT\\b", "r * T", expression)
+    expression = expression.replace("rT", "r * T")
     d1 = "((log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * sqrt(T)))"
     d2 = "(" + d1 + " - sigma * sqrt(T))"
     replacements = {"d1": d1, "d2": d2}
