@@ -1,4 +1,6 @@
-from scripts.analysis.adjudicate_4060_source_backed_aliases import (\n    ALIASES, SOURCE_BACKED_CONSTANTS, expand_source_defined_d1_d2,\n)
+from scripts.analysis.adjudicate_4060_source_backed_aliases import (
+    ALIASES, SOURCE_BACKED_CONSTANTS, expand_source_defined_d1_d2,
+)
 from hypatiax.experiments.audit import audit_formula
 
 
