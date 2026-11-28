@@ -152,6 +152,13 @@ def _parse_llm_function(
             not isinstance(item, ast.FunctionDef) or item.name != "formula"
             for item in tree.body)):
         raise FormulaParseError("expected one or more plain def formula(...) definitions")
+    for definition in tree.body:
+        signature = definition.args
+        if (definition.decorator_list or definition.returns or signature.vararg
+                or signature.kwarg or signature.kwonlyargs or signature.posonlyargs
+                or signature.defaults or signature.kw_defaults
+                or any(arg.annotation for arg in signature.args)):
+            raise FormulaParseError("formula redefinitions must have plain signatures")
     fn = tree.body[-1]
     args = fn.args
     if (fn.name != "formula" or fn.decorator_list or args.vararg or args.kwarg
