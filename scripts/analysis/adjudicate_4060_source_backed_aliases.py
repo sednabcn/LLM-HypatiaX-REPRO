@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Read-only source-backed alias adjudication for committed DeFi 40/60 results."""
 from __future__ import annotations
-import argparse, json
+import argparse, ast, json, re
 from collections import Counter, defaultdict
 from pathlib import Path
 try:
@@ -36,7 +36,7 @@ ALIASES = {
  "Expected Shortfall at 99%":{"portfolio":"portfolio_value","volatility":"daily_volatility"},
  "Forward price for derivative":{"r":"risk_free_rate","q":"div_yield","T":"maturity"},
  "Funding rate cost (extended)":{"mark":"mark_price","index":"index_price"},
- "Gamma of option":{"S":"spot_price","sigma":"implied_volatility","T":"time_to_expiry"},
+ "Gamma of option":{"S":"spot_price","K":"strike","r":"risk_free_rate","sigma":"implied_volatility","T":"time_to_expiry"},
  "Health factor":{"collateral":"collateral_value"},
  "Impermanent loss in constant product":{"r":"price_ratio"},
  "Impermanent loss percentage":{"r":"price_ratio"},
@@ -59,14 +59,41 @@ ALIASES = {
  "Slashing penalty":{"staked":"staked_amount"},
  "Staking reward for fixed lock-up":{"staked":"staked_amount","days":"lock_days"},
  "Supply APY from borrow":{"util":"utilization"},
- "Theta of option":{"S":"spot_price","sigma":"implied_volatility","T":"time_to_expiry"},
+ "Theta of option":{"S":"spot_price","K":"strike","r":"risk_free_rate","sigma":"implied_volatility","T":"time_to_expiry"},
  "Uniswap V3 virtual":{"amount":"token_amount","P_upper":"price_upper","P_lower":"price_lower"},
  "Utilization rate of DeFi":{"borrowed":"total_borrowed","supplied":"total_supplied"},
  "Validator commission adjusted":{"commission":"commission_rate"},
  "Value at Risk at 95%":{"volatility":"daily_volatility"},
  "Value at Risk at 99%":{"volatility":"daily_volatility"},
- "Vega of option":{"S":"spot_price","sigma":"implied_volatility","T":"time_to_expiry"},
+ "Vega of option":{"S":"spot_price","K":"strike","r":"risk_free_rate","sigma":"implied_volatility","T":"time_to_expiry"},
 }
+
+def expand_source_defined_d1_d2(equation, expression):
+    """Inline d1/d2 exactly as defined by the original Black-Scholes protocol."""
+    eligible = {
+        "Black-Scholes Call Price", "Black-Scholes Put Price",
+        "Gamma of option", "Vega of option", "Theta of option",
+    }
+    if equation not in eligible:
+        return expression
+    expression = re.sub(r"\\brT\\b", "r * T", expression)
+    d1 = "((log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * sqrt(T)))"
+    d2 = "(" + d1 + " - sigma * sqrt(T))"
+    replacements = {"d1": d1, "d2": d2}
+
+    class InlineDerived(ast.NodeTransformer):
+        def visit_Name(self, node):
+            if node.id in replacements:
+                return ast.copy_location(
+                    ast.parse(replacements[node.id], mode="eval").body, node
+                )
+            return node
+
+    tree = ast.parse(expression, mode="eval")
+    tree = InlineDerived().visit(tree)
+    ast.fix_missing_locations(tree)
+    return ast.unparse(tree.body)
+
 
 def adjudicate(protocol, records):
     grouped = defaultdict(list)
@@ -82,7 +109,7 @@ def adjudicate(protocol, records):
         aliases = {a: c for a, c in aliases.items() if c in allowed}
         result = audit_formula(
             (rec.get("results") or {}).get("hybrid", {}).get("formula"),
-            ctx.get("ground_truth_expression"),
+            expand_source_defined_d1_d2(eq, ctx.get("ground_truth_expression")),
             vars_ if isinstance(vars_, list) else None,
             aliases, constants)
         grouped[eq].append({
