@@ -4,7 +4,10 @@ from __future__ import annotations
 import argparse, json
 from collections import Counter, defaultdict
 from pathlib import Path
-from audit_4060_reusable import SEEDS, load_records
+try:
+    from audit_4060_reusable import SEEDS, load_records
+except ModuleNotFoundError:
+    from scripts.analysis.audit_4060_reusable import SEEDS, load_records
 from hypatiax.experiments.audit import audit_formula
 
 SOURCE = "hypatiax/protocols/experiment_protocol_defi.py"
