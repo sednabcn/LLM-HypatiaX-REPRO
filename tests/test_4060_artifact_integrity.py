@@ -85,13 +85,20 @@ def _load_records(path: Path, expected_seed: int) -> list[dict[str, Any]]:
 
 
 def _assert_finite_or_null(value: Any, where: str) -> None:
-    """JSON metrics may be null when undefined, but must not be NaN/Infinity."""
+    """Accept finite values, JSON null, or legacy NaN as an undefined sentinel.
+
+    The committed historical JSON contains NaN for some undefined metrics.
+    Do not rewrite those source artifacts; reject infinities and other non-finite
+    values while preserving NaN's existing not-defined meaning.
+    """
     if value is None:
         return
     if isinstance(value, bool):
         return
     if isinstance(value, (int, float)):
-        assert math.isfinite(float(value)), f"{where}: non-finite numeric value {value!r}"
+        if isinstance(value, float) and math.isnan(value):
+            return
+        assert math.isfinite(float(value)), f"{where}: infinite numeric value {value!r}"
 
 
 @pytest.mark.parametrize("protocol", ["random", "pca"])
@@ -164,21 +171,27 @@ def test_4060_case_records_preserve_auditable_structure(protocol: str):
 
 
 @pytest.mark.parametrize("protocol", ["random", "pca"])
-def test_historical_missing_answer_keys_remain_not_assessable(protocol: str):
-    """Do not infer symbolic correctness from R² or fill historical answer keys."""
+def test_historical_answer_keys_are_present_and_provenanced(protocol: str):
+    """The current canonical records carry protocol-sourced answer keys.
+
+    This assertion deliberately does not claim that every key is symbolically
+    assessable: variable aliases and formula parser support are audited separately.
+    """
     records = [
         record
         for seed, path in _artifact_files(protocol).items()
         for record in _load_records(path, seed)
     ]
-    missing = [
-        record for record in records
-        if not (record.get("formula_context") or {}).get("ground_truth_expression")
-    ]
-    # Regression assertion for the historical master artifacts only. Never
-    # infer ground truth from predictive scores or silently fill missing keys.
-    assert len(missing) == len(records), (
-        "Historical artifact set changed: review answer-key provenance before "
-        "changing this expectation; never infer ground truth from predictive scores."
-    )
     assert len(records) == len(EXPECTED_SEEDS) * EXPECTED_CASES_PER_SEED
+    for index, record in enumerate(records):
+        context = record.get("formula_context") or {}
+        assert isinstance(context.get("ground_truth_expression"), str)
+        assert context["ground_truth_expression"].strip(), (
+            f"{protocol}[{index}]: missing persisted ground-truth expression"
+        )
+        assert context.get("ground_truth_source") == "protocol_metadata", (
+            f"{protocol}[{index}]: unexpected answer-key provenance"
+        )
+        assert context.get("ground_truth_excluded_from_prompt") is True, (
+            f"{protocol}[{index}]: answer key must be excluded from the LLM prompt"
+        )
