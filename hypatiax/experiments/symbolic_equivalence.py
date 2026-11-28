@@ -27,6 +27,15 @@ def _norm_cdf(value: Any) -> Any:
 def _norm_pdf(value: Any) -> Any:
     return sp.exp(-(value ** 2) / 2) / sp.sqrt(2 * sp.pi)
 
+
+def _where(condition: Any, when_true: Any, when_false: Any) -> Any:
+    if condition is sp.true:
+        return when_true
+    if condition is sp.false:
+        return when_false
+    return sp.Piecewise((when_true, condition), (when_false, True))
+
+
 _FUNCTIONS = {
     "sqrt": sp.sqrt, "exp": sp.exp, "log": sp.log, "log10": _log10,
     "power": lambda a, b: a ** b, "floor": sp.floor, "ceil": sp.ceiling,
@@ -37,6 +46,9 @@ _FUNCTIONS = {
     "Min": sp.Min, "min": sp.Min, "minimum": sp.Min,
     "Max": sp.Max, "max": sp.Max, "maximum": sp.Max,
     "clip": _clip, "norm_cdf": _norm_cdf, "norm_pdf": _norm_pdf,
+    # np.dot is multiplication when both validated formula arguments are scalars.
+    "dot": lambda a, b: a * b,
+    "where": _where,
 }
 _BINOPS = {
     ast.Add: lambda a, b: a + b, ast.Sub: lambda a, b: a - b,
@@ -44,6 +56,10 @@ _BINOPS = {
     ast.Pow: lambda a, b: a ** b,
 }
 _UNARY = {ast.UAdd: lambda a: a, ast.USub: lambda a: -a}
+_COMPARISONS = {
+    ast.Eq: sp.Eq, ast.NotEq: sp.Ne, ast.Lt: sp.Lt,
+    ast.LtE: sp.Le, ast.Gt: sp.Gt, ast.GtE: sp.Ge,
+}
 
 
 class FormulaParseError(ValueError):
@@ -78,9 +94,33 @@ def _expr(node: ast.AST, env: dict[str, Any]) -> Any:
         return _BINOPS[type(node.op)](_expr(node.left, env), _expr(node.right, env))
     if isinstance(node, ast.UnaryOp) and type(node.op) in _UNARY:
         return _UNARY[type(node.op)](_expr(node.operand, env))
+    if isinstance(node, ast.Compare):
+        if len(node.ops) != 1 or len(node.comparators) != 1:
+            raise FormulaParseError("only single comparisons are supported")
+        comparison = _COMPARISONS.get(type(node.ops[0]))
+        if comparison is None:
+            raise FormulaParseError("unsupported comparison operator")
+        return comparison(_expr(node.left, env), _expr(node.comparators[0], env))
+    if isinstance(node, ast.IfExp):
+        if isinstance(node.test, ast.Constant) and isinstance(node.test.value, bool):
+            condition = sp.true if node.test.value else sp.false
+        else:
+            condition = _expr(node.test, env)
+        if condition is sp.true:
+            return _expr(node.body, env)
+        if condition is sp.false:
+            return _expr(node.orelse, env)
+        return sp.Piecewise(
+            (_expr(node.body, env), condition),
+            (_expr(node.orelse, env), True),
+        )
     if (isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name)
-            and node.value.id == "np" and node.attr in {"pi", "e"}):
-        return sp.pi if node.attr == "pi" else sp.E
+            and node.value.id == "np" and node.attr in {"pi", "e", "inf"}):
+        if node.attr == "pi":
+            return sp.pi
+        if node.attr == "e":
+            return sp.E
+        return sp.oo
     if isinstance(node, ast.Call):
         if isinstance(node.func, ast.Name):
             name = node.func.id
@@ -105,9 +145,21 @@ def _parse_llm_function(
     tree = ast.parse(source, mode="exec")
     if len(list(ast.walk(tree))) > 256:
         raise FormulaParseError("formula is too complex")
-    if len(tree.body) != 1 or not isinstance(tree.body[0], ast.FunctionDef):
-        raise FormulaParseError("expected exactly one def formula(...)")
-    fn = tree.body[0]
+    # Multiple same-name definitions are legal Python: the last binding wins.
+    # Accept only a sequence of plain formula definitions, with no top-level
+    # executable statements, and adjudicate the final definition.
+    if (not tree.body or any(
+            not isinstance(item, ast.FunctionDef) or item.name != "formula"
+            for item in tree.body)):
+        raise FormulaParseError("expected one or more plain def formula(...) definitions")
+    for definition in tree.body:
+        signature = definition.args
+        if (definition.decorator_list or definition.returns or signature.vararg
+                or signature.kwarg or signature.kwonlyargs or signature.posonlyargs
+                or signature.defaults or signature.kw_defaults
+                or any(arg.annotation for arg in signature.args)):
+            raise FormulaParseError("formula redefinitions must have plain signatures")
+    fn = tree.body[-1]
     args = fn.args
     if (fn.name != "formula" or fn.decorator_list or args.vararg or args.kwarg
             or args.kwonlyargs or args.posonlyargs or args.defaults or args.kw_defaults):
@@ -136,9 +188,16 @@ def _parse_llm_function(
                 or not isinstance(statement.targets[0], ast.Name)):
             raise FormulaParseError("only simple local assignments are supported")
         target = statement.targets[0].id
-        if target in env or target.startswith("_"):
+        if target.startswith("_") or target in params:
             raise FormulaParseError("assignment shadows a parameter or private name")
-        env[target] = _expr(statement.value, env)
+        value = _expr(statement.value, env)
+        if target in env:
+            # Reassigning a declared numeric constant to the identical value is
+            # semantically inert; differing values remain rejected.
+            if sp.simplify(value - env[target]) != 0:
+                raise FormulaParseError("assignment shadows a declared constant")
+            continue
+        env[target] = value
     return _expr(statements[-1].value, env)
 
 

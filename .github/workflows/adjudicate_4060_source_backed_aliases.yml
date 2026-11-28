@@ -1,0 +1,44 @@
+name: DeFi 40/60 source-backed alias adjudication
+
+on:
+  pull_request:
+    paths:
+      - "scripts/analysis/adjudicate_4060_source_backed_aliases.py"
+      - "hypatiax/experiments/audit/**"
+      - "hypatiax/data/results/comparison_results/noise-noiseless/noiseless/defi_random_4060/**"
+      - "hypatiax/data/results/comparison_results/noise-noiseless/noiseless/defi_pca/**"
+      - ".github/workflows/adjudicate_4060_source_backed_aliases.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  adjudicate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install audit dependencies
+        run: python -m pip install numpy==2.3.5 sympy==1.14.0 pytest
+      - name: Run alias manifest and evaluator tests
+        env:
+          PYTHONPATH: .
+        run: pytest -q tests/test_4060_source_backed_aliases.py
+      - name: Run read-only source-backed adjudication
+        env:
+          PYTHONPATH: .
+        run: |
+          python scripts/analysis/adjudicate_4060_source_backed_aliases.py \
+            --output-json artifacts/defi-4060-source-backed-aliases.json \
+            --output-md artifacts/defi-4060-source-backed-aliases.md
+      - name: Upload adjudication report
+        uses: actions/upload-artifact@v4
+        with:
+          name: defi-4060-source-backed-aliases
+          path: artifacts/defi-4060-source-backed-aliases.*
+          if-no-files-found: error
+          retention-days: 30
