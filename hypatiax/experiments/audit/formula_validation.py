@@ -39,3 +39,45 @@ def validate_formula_metadata(
     if errors:
         return audit_result(VARIABLE_SCHEMA_MISSING, valid=False, errors=errors)
     return audit_result("valid_metadata", valid=True, errors=[])
+
+
+
+def validate_generated_formula(
+    formula_source: str | None,
+    ground_truth: str | None,
+    variable_names: list[str] | None,
+    ground_truth_aliases: dict[str, str] | None = None,
+    constants: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Fail-closed, offline gate for a generated formula before exact-match credit.
+
+    Formula text is parsed by the restricted AST-to-SymPy adjudicator and is
+    never executed. Only an exact formal identity is eligible for exact-match
+    credit. A parse failure, missing schema, or unsupported construct remains
+    not assessable; numerical fit and benchmark-domain agreement are not used.
+    """
+    from .symbolic_audit import audit_formula
+
+    metadata = validate_formula_metadata(formula_source, variable_names, constants)
+    if not metadata.get("valid"):
+        return {
+            "status": metadata["status"],
+            "symbolically_equivalent": None,
+            "eligible_for_exact_match": False,
+            "validation_scope": "future_run_offline_gate",
+            "errors": metadata.get("errors", []),
+        }
+
+    result = audit_formula(
+        formula_source,
+        ground_truth,
+        variable_names,
+        ground_truth_aliases=ground_truth_aliases,
+        constants=constants,
+    )
+    result["eligible_for_exact_match"] = (
+        result.get("status") == "exact_symbolic_equivalent"
+        and result.get("symbolically_equivalent") is True
+    )
+    result["validation_scope"] = "future_run_offline_gate"
+    return result
