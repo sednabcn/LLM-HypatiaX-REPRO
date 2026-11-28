@@ -4,7 +4,9 @@ from __future__ import annotations
 import math
 from typing import Any
 
-from .audit_schema import audit_result, VARIABLE_SCHEMA_MISSING
+from .audit_schema import (
+    audit_result, GROUND_TRUTH_MISSING, NO_LLM_FORMULA, VARIABLE_SCHEMA_MISSING,
+)
 
 
 def validate_formula_metadata(
@@ -57,6 +59,23 @@ def validate_generated_formula(
     not assessable; numerical fit and benchmark-domain agreement are not used.
     """
     from .symbolic_audit import audit_formula
+
+    if not isinstance(formula_source, str) or not formula_source.strip():
+        return audit_result(
+            NO_LLM_FORMULA,
+            symbolically_equivalent=None,
+            eligible_for_exact_match=False,
+            validation_scope="future_run_offline_gate",
+            errors=["formula_source must be a non-empty string"],
+        )
+    if not isinstance(ground_truth, str) or not ground_truth.strip():
+        return audit_result(
+            GROUND_TRUTH_MISSING,
+            symbolically_equivalent=None,
+            eligible_for_exact_match=False,
+            validation_scope="future_run_offline_gate",
+            errors=["ground_truth must be a non-empty source-backed expression"],
+        )
 
     metadata = validate_formula_metadata(formula_source, variable_names, constants)
     if not metadata.get("valid"):
