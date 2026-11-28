@@ -20,7 +20,7 @@ def test_liquidation_formulas_do_not_receive_symbol_aliases():
         "Liquidation price for leveraged long",
         "Liquidation price for leveraged short",
     ):
-        assert ALIASES[equation] == {}
+        assert ALIASES.get(equation, {}) == {}
 
 
 def test_aliases_are_not_generalized_across_equations():
